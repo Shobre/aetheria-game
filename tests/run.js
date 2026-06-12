@@ -359,5 +359,41 @@ console.log('=== stash + craft wiring ===');
   ok('blacksmith has a Forge', MAPS.shop_black.npcs.some(n=>n.craft));
 }
 
+console.log('=== enemy-player collision + spawn safety ===');
+{
+  const { World, TILE } = await import('../js/systems/world.js');
+  const { MAPS } = await import('../js/data/maps.js');
+  // nearestOpen must return a walkable tile even when asked about a solid one
+  const ids = Object.keys(MAPS);
+  let checkedDungeon = false;
+  for(const id of ids){
+    const w = new World(id);
+    // the outer border (0,0) is always a solid WALL -> must snap to open
+    const sp = w.nearestOpen(TILE/2, TILE/2);
+    ok('nearestOpen('+id+') returns non-solid', !w.isSolid(sp.x, sp.y));
+    // every map's own portal landing tiles must resolve to open ground
+    for(const p of (w.portals||[])){
+      const o = w.nearestOpen(p.wx, p.wy);
+      ok('portal tile open after snap ('+id+'->'+p.to+')', !w.isSolid(o.x,o.y));
+    }
+    if((MAPS[id].biome==='dungeon'||MAPS[id].biome==='cave') && !checkedDungeon){
+      // dungeons fill solid then carve; centre of map may be rock -> still resolves
+      const c = w.nearestOpen(w.w/2, w.h/2);
+      ok('dungeon centre snaps to open ('+id+')', !w.isSolid(c.x,c.y));
+      checkedDungeon = true;
+    }
+  }
+  // enemy.js must wire solid-body collision against the player
+  const { readFileSync } = await import('node:fs');
+  const enemySrc = readFileSync(new URL('../js/entities/enemy.js', import.meta.url), 'utf8');
+  ok('enemy defines _collidePlayer', enemySrc.includes('_collidePlayer('));
+  ok('enemy calls collision each update', /this\._collidePlayer\(player,world\)/.test(enemySrc));
+  ok('collision uses combined radii (this.r+player.r)', enemySrc.includes('this.r+player.r'));
+  ok('collision is wall-aware (checks isSolid)', /_collidePlayer[\s\S]*?world\.isSolid/.test(enemySrc));
+  // game.js must snap the player off solid tiles on load
+  const gameSrc = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
+  ok('loadMap snaps spawn via nearestOpen', gameSrc.includes('nearestOpen('));
+}
+
 console.log('\n' + (fail === 0 ? '✅ ALL PASS' : '❌ FAILURES') + ` — ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }

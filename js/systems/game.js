@@ -53,7 +53,17 @@ export class Game {
   loadMap(mapId, tx, ty, keepPos){
     this.world=new World(mapId);
     this.currentMap=mapId;
-    if(!keepPos){ this.player.x=tx*TILE+TILE/2; this.player.y=ty*TILE+TILE/2; }
+    if(!keepPos){
+      // snap to nearest walkable tile so we never land inside a wall/decor
+      const sp=this.world.nearestOpen(tx*TILE+TILE/2, ty*TILE+TILE/2);
+      this.player.x=sp.x; this.player.y=sp.y;
+    } else {
+      // initial load / continue: also rescue a player saved inside a solid tile
+      if(this.world.isSolid(this.player.x,this.player.y)){
+        const sp=this.world.nearestOpen(this.player.x,this.player.y);
+        this.player.x=sp.x; this.player.y=sp.y;
+      }
+    }
     // restore opened-chest state for this map
     this.world.chests.forEach(c=>{ if(this.openedChests[mapId+':'+c.idx]) c.opened=true; });
     // Spawn enemies fresh on EVERY area entry so the player can farm xp/gold.

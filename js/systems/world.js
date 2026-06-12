@@ -173,6 +173,22 @@ export class World {
     return SOLID.has(this.map[y][x]);
   }
 
+  // Snap a world point to the centre of the nearest walkable tile.
+  // Keeps the player from spawning inside a wall when a portal landing
+  // tile (or checkpoint) happens to be solid rock/decor.
+  nearestOpen(px,py){
+    const cx=Math.floor(px/TILE), cy=Math.floor(py/TILE);
+    const free=(x,y)=> x>=0&&y>=0&&x<this.cols&&y<this.rows && !SOLID.has(this.map[y][x]);
+    if(free(cx,cy)) return { x:cx*TILE+TILE/2, y:cy*TILE+TILE/2 };
+    for(let rad=1; rad<Math.max(this.cols,this.rows); rad++){
+      for(let dy=-rad; dy<=rad; dy++)for(let dx=-rad; dx<=rad; dx++){
+        if(Math.max(Math.abs(dx),Math.abs(dy))!==rad) continue; // ring only
+        if(free(cx+dx,cy+dy)) return { x:(cx+dx)*TILE+TILE/2, y:(cy+dy)*TILE+TILE/2 };
+      }
+    }
+    return { x:px, y:py };
+  }
+
   // find a walkable spawn near a tile (for enemies)
   randomFloor(rand){
     for(let i=0;i<60;i++){

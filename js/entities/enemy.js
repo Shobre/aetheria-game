@@ -87,6 +87,7 @@ export class Enemy {
     if(this.dead || st.stunned) return;
     this._slowMul=1-st.slow;
     this._applyKnockback(world);
+    this._collidePlayer(player,world);
     const dx=player.x-this.x, dy=player.y-this.y, dist=Math.hypot(dx,dy)||1;
     const nx=dx/dist, ny=dy/dist;
 
@@ -98,6 +99,25 @@ export class Enemy {
     if(this.behavior==='ranged')      this._rangedAI(dt,player,world,game,dist,nx,ny);
     else if(this.behavior==='lunge')  this._lungeAI(dt,player,world,game,dist,nx,ny);
     else                              this._chaseAI(dt,player,world,game,dist,nx,ny);
+  }
+
+  // Solid-body collision with the player: enemies can't walk through them.
+  // The enemy yields (it gets pushed back to the contact surface), so the
+  // player is never shoved into a wall by a swarm.
+  _collidePlayer(player,world){
+    let dx=this.x-player.x, dy=this.y-player.y;
+    const min=this.r+player.r;
+    let d=Math.hypot(dx,dy);
+    if(d>=min) return;
+    if(d<0.0001){ // exactly overlapping: nudge along facing so we have a direction
+      const a=Math.atan2(this.face?this.face.y:1, this.face?this.face.x:0);
+      dx=Math.cos(a); dy=Math.sin(a); d=1;
+    }
+    const push=(min-d);
+    const ox=(dx/d)*push, oy=(dy/d)*push;
+    // yield to the player, but don't get shoved into a wall (resolve per-axis)
+    if(!world || !world.isSolid(this.x+ox+Math.sign(ox)*this.r, this.y)) this.x+=ox;
+    if(!world || !world.isSolid(this.x, this.y+oy+Math.sign(oy)*this.r)) this.y+=oy;
   }
 
   _applyKnockback(world){
