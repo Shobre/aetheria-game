@@ -1,5 +1,8 @@
-// Save system: localStorage-backed, 3 slots.
-const KEY = 'aetheria_saves_v1';
+// Save system: localStorage-backed, 3 slots. Schema v2 (maps, gear, skills).
+import { makeItem } from '../data/gear.js';
+import { STARTING_MAP } from '../data/maps.js';
+
+const KEY = 'aetheria_saves_v2';
 
 export const SaveSystem = {
   _all(){
@@ -13,7 +16,7 @@ export const SaveSystem = {
   },
   save(n, state){
     const all = this._all();
-    all[n] = { ...state, savedAt: Date.now() };
+    all[n] = { ...state, savedAt: Date.now(), version:2 };
     localStorage.setItem(KEY, JSON.stringify(all));
   },
   delete(n){
@@ -23,16 +26,27 @@ export const SaveSystem = {
   },
   newGame(n){
     const state = {
-      slot:n, level:1, xp:0, xpNext:100,
-      hp:100, hpMax:100, mp:50, mpMax:50,
-      gold:0, playtime:0,
-      pos:{ x:400, y:300 },
+      slot:n, version:2,
+      level:1, xp:0, xpNext:100,
+      hp:120, hpMax:120, mp:50, mpMax:50,
+      gold:30, playtime:0,
+      skillPoints:0,
+      // current map + position within it
+      map: STARTING_MAP, pos:{ x:30*32, y:24*32 },
+      // equipment slots
+      equipment:{ weapon:'sword_wood', shield:null, armor:null, helm:null, ring:null },
+      // skill ranks {id:rank}
+      skills:{},
+      // inventory (consumables stack; gear individual)
       inventory:[
-        { id:'potion', name:'Health Potion', icon:'🧪', qty:5, type:'consumable' },
-        { id:'ether',  name:'Mana Ether',    icon:'🔮', qty:3, type:'consumable' },
-        { id:'bomb',   name:'Bomb',          icon:'💣', qty:2, type:'consumable' },
+        makeItem('potion',5),
+        makeItem('ether',3),
+        makeItem('bomb',2),
+        makeItem('shield_wood',1),
       ],
       hotbar:['potion','ether','bomb',null,null,null,null,null,null],
+      // chests opened, keyed "map:index" so each map persists independently
+      openedChests:{},
     };
     this.save(n, state);
     return state;

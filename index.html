@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aetheria - A Top-Down Adventure</title>
+<title>Aetheria - An Action-RPG Adventure</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config = {
@@ -34,7 +34,7 @@ tailwind.config = {
   <div class="absolute inset-0 starfield"></div>
   <div class="relative z-10 h-full flex flex-col items-center justify-center px-4">
     <h1 class="title text-3xl md:text-6xl text-gold mb-2">AETHERIA</h1>
-    <p class="text-[10px] md:text-xs text-gray-400 mb-10 tracking-[0.3em]">A TOP-DOWN ADVENTURE</p>
+    <p class="text-[10px] md:text-xs text-gray-400 mb-10 tracking-[0.3em]">BRAVE THE BIOMES · DELVE THE DUNGEONS · FORGE YOUR LEGEND</p>
 
     <div class="w-full max-w-2xl">
       <h2 class="text-xs text-gray-300 mb-4 text-center tracking-widest">SELECT SAVE SLOT</h2>
@@ -44,7 +44,8 @@ tailwind.config = {
     <div class="mt-10 text-[8px] md:text-[10px] text-gray-500 leading-relaxed text-center max-w-lg">
       <p>WASD MOVE &nbsp;·&nbsp; SPACE DODGE &nbsp;·&nbsp; MOUSE AIM</p>
       <p>L-CLICK ATTACK &nbsp;·&nbsp; R-CLICK BLOCK &nbsp;·&nbsp; F INTERACT</p>
-      <p>Q / E SPELLS &nbsp;·&nbsp; 1-9 ITEMS &nbsp;·&nbsp; B BAG &nbsp;·&nbsp; ESC MENU</p>
+      <p>Q / E / R SPELLS &nbsp;·&nbsp; 1-9 ITEMS &nbsp;·&nbsp; B BAG</p>
+      <p>C CHARACTER &nbsp;·&nbsp; K SKILLS &nbsp;·&nbsp; F PORTAL/SHOP &nbsp;·&nbsp; ESC MENU</p>
     </div>
   </div>
 </div>
@@ -80,6 +81,7 @@ tailwind.config = {
         <div id="xp-fill" class="h-full bg-xp transition-all duration-500" style="width:0%"></div>
       </div>
       <div id="xp-text" class="text-[8px] text-gray-400 mt-0.5">0 / 100 XP</div>
+      <div id="map-name" class="text-[9px] text-gold mt-1">Greenwood Meadow</div>
     </div>
 
     <!-- top-right: minimap -->
@@ -102,6 +104,8 @@ tailwind.config = {
 
     <!-- bottom-right buttons -->
     <div class="absolute bottom-3 right-3 flex gap-2 pointer-events-auto">
+      <button id="char-btn" class="hud-btn relative" title="Character (C)">🧍<span id="skill-badge" class="badge">0</span></button>
+      <button id="skills-btn" class="hud-btn" title="Skill Tree (K)">🌳</button>
       <button id="bag-btn" class="hud-btn" title="Bag (B)">🎒</button>
       <button id="settings-btn" class="hud-btn" title="Settings (Esc)">⚙</button>
     </div>
@@ -152,6 +156,59 @@ tailwind.config = {
       <div class="grid grid-cols-2 gap-2 mt-6">
         <button id="save-game-btn" class="menu-btn">SAVE</button>
         <button id="quit-btn" class="menu-btn">QUIT TO MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARACTER MODAL -->
+  <div id="char-modal" class="modal hidden">
+    <div class="modal-box max-w-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg text-gold">CHARACTER</h2>
+        <button data-close="char-modal" class="text-xl text-gray-400 hover:text-gold">&times;</button>
+      </div>
+      <div class="char-layout">
+        <div>
+          <h3 class="char-sub">EQUIPMENT</h3>
+          <div id="char-equip" class="char-equip"></div>
+          <h3 class="char-sub mt-3">STATS</h3>
+          <div id="char-stats" class="char-stats"></div>
+        </div>
+        <div>
+          <h3 class="char-sub">GEAR (click to equip)</h3>
+          <div id="char-inv" class="grid grid-cols-5 gap-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SKILL TREE MODAL -->
+  <div id="skills-modal" class="modal hidden">
+    <div class="modal-box max-w-3xl">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg text-gold">SKILL TREE</h2>
+        <div class="flex items-center gap-3">
+          <span id="skill-points" class="text-[10px] text-stam">Skill Points: 0</span>
+          <button data-close="skills-modal" class="text-xl text-gray-400 hover:text-gold">&times;</button>
+        </div>
+      </div>
+      <div id="skill-tree" class="skill-tree"></div>
+    </div>
+  </div>
+
+  <!-- SHOP MODAL -->
+  <div id="shop-modal" class="modal hidden">
+    <div class="modal-box max-w-2xl">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg text-gold">MERCHANT</h2>
+        <div class="flex items-center gap-3">
+          <span class="text-[10px]">GOLD <span id="shop-gold" class="text-gold">0</span></span>
+          <button id="shop-close" class="text-xl text-gray-400 hover:text-gold">&times;</button>
+        </div>
+      </div>
+      <div class="shop-layout">
+        <div><h3 class="char-sub">BUY</h3><div id="shop-buy" class="shop-col"></div></div>
+        <div><h3 class="char-sub">SELL</h3><div id="shop-sell" class="shop-col"></div></div>
       </div>
     </div>
   </div>

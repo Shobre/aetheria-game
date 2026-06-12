@@ -90,3 +90,57 @@ body{image-rendering:pixelated}
 @keyframes floatUp{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-40px)}}
 
 .hidden{display:none!important}
+/* ===== map name ===== */
+#map-name{text-shadow:1px 1px 0 #000}
+
+/* ===== skill point badge on char button ===== */
+.badge{position:absolute;top:-4px;right:-4px;background:var(--accent);color:#fff;
+  font-size:7px;min-width:14px;height:14px;border-radius:7px;display:none;
+  align-items:center;justify-content:center;padding:0 3px;border:1px solid #000}
+
+/* ===== character view ===== */
+.char-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.char-sub{font-size:9px;color:var(--gold);margin-bottom:.6rem;letter-spacing:.1em}
+.char-equip{display:flex;flex-direction:column;gap:6px}
+.equip-slot{display:flex;align-items:center;gap:8px;background:var(--gpanel2);
+  border:2px solid #000;padding:6px 8px;cursor:pointer;transition:.15s}
+.equip-slot:hover{border-color:var(--gold)}
+.equip-slot .slot-label{font-size:7px;color:#889;width:48px}
+.equip-slot .slot-icon{font-size:18px;width:24px;text-align:center}
+.equip-slot .slot-name{font-size:8px;color:#cdd;flex:1}
+.char-stats{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.stat-line{display:flex;justify-content:space-between;font-size:8px;
+  border-bottom:1px solid var(--gpanel2);padding:3px 0}
+.stat-label{color:#889}.stat-val{color:var(--stam)}
+.gear-cell{cursor:pointer}
+
+/* ===== skill tree ===== */
+.skill-tree{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;
+  max-height:62vh;overflow-y:auto}
+.skill-branch{display:flex;flex-direction:column;gap:8px}
+.branch-title{font-size:10px;text-align:center;padding:6px;border:2px solid #000;letter-spacing:.1em}
+.branch-combat{background:#4a1f1f;color:#ff8a8a}
+.branch-arcane{background:#2a2050;color:#b89aff}
+.branch-survival{background:#1f3a2a;color:#8affb0}
+.skill-node{background:var(--gpanel2);border:2px solid #000;padding:7px;cursor:pointer;
+  position:relative;transition:.12s}
+.skill-node:hover{transform:translateX(2px)}
+.skill-avail{border-color:var(--gold);box-shadow:0 0 6px rgba(255,207,77,.3)}
+.skill-maxed{border-color:var(--stam);opacity:.85}
+.skill-locked{opacity:.45;cursor:not-allowed}
+.skill-ico{font-size:14px;margin-right:4px}
+.skill-name{font-size:8px;color:#dde}
+.skill-cost{position:absolute;top:6px;right:7px;font-size:7px;color:var(--gold)}
+.skill-desc{font-size:7px;color:#9aa;margin-top:4px;line-height:1.5}
+
+/* ===== shop ===== */
+.shop-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.shop-col{display:flex;flex-direction:column;gap:5px;max-height:56vh;overflow-y:auto}
+.shop-row{display:flex;align-items:center;gap:8px;justify-content:space-between;
+  background:var(--gpanel2);border:1px solid #000;padding:5px 8px;font-size:8px}
+.shop-price{color:var(--gold);font-size:8px}
+.shop-row .menu-btn{padding:3px 8px;font-size:7px}
+
+/* scrollbars */
+.skill-tree::-webkit-scrollbar,.shop-col::-webkit-scrollbar{width:8px}
+.skill-tree::-webkit-scrollbar-thumb,.shop-col::-webkit-scrollbar-thumb{background:var(--gpanel2);border-radius:4px}

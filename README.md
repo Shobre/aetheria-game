@@ -1,18 +1,15 @@
-# Aetheria - A Top-Down Zelda-Like Adventure
+# Aetheria - An Action-RPG Adventure
 
-A pixel-art, top-down action-adventure game built with **Tailwind CSS** + **HTML5 Canvas** (vanilla ES modules, zero build step).
+A pixel-art, top-down action-RPG built with **Tailwind CSS** + **HTML5 Canvas** (vanilla ES modules, zero build step). Explore biomes, delve dungeons, gear up, and master a skill tree.
 
 ## Run it
 
-Because the game uses ES modules, you must serve it over HTTP (not file://):
+ES modules require an HTTP server (not file://). Easiest: **double-click `PLAY.bat`** (auto-starts a server + opens your browser). Or manually:
 
 ```bash
-# from this folder
 python -m http.server 8777
-# then open http://localhost:8777
+# open http://localhost:8777
 ```
-
-Any static server works (VS Code Live Server, `npx serve`, etc.).
 
 ## Controls
 
@@ -21,51 +18,87 @@ Any static server works (VS Code Live Server, `npx serve`, etc.).
 | **WASD** | Move (8-directional) |
 | **SPACE** | Dodge roll (i-frames, costs stamina) |
 | **Mouse** | Aim |
-| **Left Click** | Melee attack (arc swing toward cursor) |
-| **Right Click** | Block (reduces damage from the faced direction) |
-| **F** | Interact (NPCs, chests) |
-| **Q** | Fireball spell (10 MP) |
-| **E** | Ice Shard spell - freezes enemies (15 MP) |
+| **Left Click** | Melee attack |
+| **Right Click** | Block (directional) |
+| **F** | Interact / enter portal / open shop |
+| **Q** | Fireball (10 MP) |
+| **E** | Ice Shard - freezes (15 MP) |
+| **R** | Meteor - unlocked via skill tree (40 MP) |
 | **1-9** | Use hotbar items |
-| **B** | Open/close bag |
-| **ESC** | Settings menu |
+| **C** | Character / equipment screen |
+| **K** | Skill tree |
+| **B** | Bag / inventory |
+| **ESC** | Settings / close menus |
 
 ## Features
 
-- **Start screen** with 3 save slots (localStorage-backed; create/load/delete)
-- **HUD**: health, mana, stamina bars, level + XP bar, minimap, 9 item slots, 2 spell slots, bag & settings buttons
-- **Combat**: melee, blocking, dodging with i-frames, two spells, knockback, freeze
-- **Enemies**: slimes, bats, brutes - each with distinct stats & AI; auto-spawning waves
-- **Progression**: XP, leveling (boosts HP/MP), gold drops
-- **World**: procedural tile map with path, lake, trees, rocks, flowers, NPCs, lootable chests
-- **Camera**: smooth follow + screen shake
-- **Audio**: procedural Web Audio SFX (no asset files needed)
-- **Settings**: music/SFX volume, FPS counter, screen shake, minimap toggle
-- **Death & respawn** screen
+### World & Maps
+- **Multiple connected maps** linked by portals — step on a glowing pad or door to travel
+- **Distinct biomes**: Greenwood Meadow (hub), Whispering Forest, Sunscar Desert, Crystal Cave
+- **Dungeons** with carved room-and-corridor layouts (Forgotten Crypt)
+- **House interiors** (Merchant's Hut) with no enemies
+- **Enemies spawn once on map load** — no endless waves. Clear a map and it stays clear.
+- Each biome has its own enemy roster, palette, and decor
+
+### Combat & Enemies
+- **8 enemy types** with distinct AI:
+  - *Chase* (slime, bat, golem) — pursue and deal touch damage
+  - *Ranged* (archer) — keep distance and fire projectiles
+  - *Telegraphed lunge* (brute, boar, scorpion, skeleton) — wind up (red flash), then dash
+- Melee arc attacks, crits, blocking, dodge i-frames, knockback, freeze
+- Difficulty scales per map (deeper = tougher)
+
+### Progression
+- **XP & leveling** — each level grants +HP, +MP, and **1 skill point**
+- **Skill tree** with 3 branches (Combat / Arcane / Survival), 15 nodes:
+  - Passive stat boosts (HP, ATK, DEF, crit, MP, regen, speed, stamina, gold-find)
+  - **Unlockable abilities**: Berserker (low-HP damage), Meteor (R-key AoE), Lifesteal
+- **Equipment** — 5 slots (weapon, shield, armor, helm, ring), each with stat bonuses; character screen to equip/unequip
+- Stats are fully derived: base + gear + skills
+
+### Economy
+- **Enemies always drop coins** (amount varies by type, boosted by Greed skill)
+- Occasional item drops
+- **Merchant shop** — buy consumables & gear, sell your loot
+- Lootable chests (gold or gear) that persist per-map
+
+### Polish
+- Procedural Web Audio SFX (no asset files)
+- Minimap with portals/NPCs/chests/enemies
+- Floating damage numbers, screen shake, particles, map-transition fades
+- Pause-on-tab-blur
+- 3 save slots (localStorage, schema v2)
 
 ## Structure
 
 ```
-index.html              # markup, HUD, modals (Tailwind via CDN)
-css/style.css           # pixel styling, animations
+index.html              # markup, HUD, all modals
+css/style.css           # pixel styling, character/skill/shop UI
 js/
-  main.js               # entry: start screen, slots, modals, global keys
+  main.js               # entry: slots, modals, global keys
   systems/
-    game.js             # main loop, combat hooks, lifecycle
-    world.js            # tile map gen, collision, camera, rendering
-    input.js            # keyboard + mouse state
-    save.js             # localStorage save slots
-    audio.js            # procedural Web Audio SFX
+    game.js             # loop, map loading/transitions, combat, shop, skills
+    world.js            # biome/dungeon/house generator, portals, camera
+    input.js  audio.js  save.js
   entities/
-    player.js           # movement, dodge, attack, block, spells, stats
-    enemy.js            # enemies, projectiles, particles
+    player.js           # derived stats, abilities
+    enemy.js            # enemy AI, projectiles, particles
   ui/
-    hud.js              # DOM HUD controller, minimap, items, bag
-assets/                 # (empty - all art is canvas-drawn, all SFX synthesized)
+    hud.js              # HUD, character view, skill tree, shop, minimap
+  data/
+    maps.js             # map registry (biomes, portals, enemy tables, shop stock)
+    gear.js             # item & equipment catalog
+    skilltree.js        # skill node definitions
 ```
 
-## Notes
+## Maps & how they connect
 
-- All graphics are drawn procedurally on canvas (no sprite sheets needed - easy to swap in real pixel art later by editing the `draw()` methods).
-- Tailwind runs via CDN for zero-config. For production, install it as a PostCSS plugin.
-- Tested: loads clean with no JS errors; start screen -> new game -> combat -> save -> death/respawn all verified.
+```
+            Crystal Cave
+                 |
+Sunscar Desert — Greenwood Meadow — Whispering Forest — Forgotten Crypt
+                 |
+          Merchant's Hut (shop)
+```
+
+All art is canvas-drawn and all SFX synthesized — swap in real sprite sheets later by editing the `draw()` methods.
