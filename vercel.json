@@ -2,13 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "outputDirectory": ".",
-  "functions": {
-    "api/turso-proxy.js": {
-      "runtime": "nodejs18.x",
-      "memory": 128,
-      "maxDuration": 10
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
