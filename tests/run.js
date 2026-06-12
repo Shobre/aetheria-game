@@ -487,7 +487,7 @@ console.log('=== login + per-user saves ===');
   ok('save uses per-user', gameSrc.includes('SaveSystem.saveUser'));
   ok('autosave uses per-user', gameSrc.includes('SaveSystem.saveUser'));
   const ts2 = readFileSync(new URL('../js/systems/turso.js', import.meta.url), 'utf8');
-  ok('turso uses config object', ts2.includes('window.__TURSO_CONFIG'));
+  ok('turso gets config from window', ts2.includes('window.__TURSO_CONFIG'));
 }
 
 console.log('=== weapon slash animations ===');
@@ -522,6 +522,7 @@ console.log('=== turso module ===');
   const { readFileSync } = await import('node:fs');
   const ts = readFileSync(new URL('../js/systems/turso.js', import.meta.url), 'utf8');
   ok('tursoSave export', ts.includes('export async function tursoSave'));
+  ok('turso calls /v2/pipeline directly', ts.includes('/v2/pipeline'));
   ok('tursoLoad export', ts.includes('export async function tursoLoad'));
   ok('tursoListSlots export', ts.includes('export async function tursoListSlots'));
   ok('tursoInit export', ts.includes('export async function tursoInit'));

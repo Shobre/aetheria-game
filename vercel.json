@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "node build.js",
+  "buildCommand": "node build.cjs",
   "outputDirectory": ".",
   "headers": [
     {

@@ -1,5 +1,5 @@
-// Turso cloud save client - uses HTTP API with build-time config
-function cfg() { return window.__TURSO_CONFIG || {}; }
+// Turso cloud save client - direct API calls (Turso supports CORS)
+function cfg() { return (window.__TURSO_CONFIG || {}); }
 
 async function tursoExec(sql, args) {
   const c = cfg();
@@ -9,6 +9,7 @@ async function tursoExec(sql, args) {
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + c.token },
     body: JSON.stringify({ requests: [{ type: 'execute', stmt: { sql, args: args || [] } }] })
   });
+  if (!res.ok) return { error: 'HTTP ' + res.status };
   const data = await res.json();
   try {
     const r = data.results[0].response.result;
@@ -21,7 +22,7 @@ export async function tursoSave(username, slot, state) {
 }
 export async function tursoLoad(username, slot) {
   const r = (await tursoExec('SELECT data FROM saves WHERE username=? AND slot=?', [username, slot])).rows;
-  if (r[0]) try { return JSON.parse(r[0][0]); } catch(e) {}
+  if (r && r[0]) try { return JSON.parse(r[0][0]); } catch(e) {}
   return null;
 }
 export async function tursoListSlots(username) {
@@ -35,7 +36,7 @@ export async function tursoRegister(username, hash) {
 }
 export async function tursoLogin(username, hash) {
   const r = (await tursoExec('SELECT password_hash FROM users WHERE username=?', [username])).rows;
-  const ok = r[0] && r[0][0] === hash;
+  const ok = r && r[0] && r[0][0] === hash;
   if (ok) await tursoExec('UPDATE users SET last_login=? WHERE username=?', [Date.now(), username]);
   return ok;
 }
