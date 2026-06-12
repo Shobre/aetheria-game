@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "js/main.js"
+  ],
+  "ignorePatterns": [
+    "css/**",
+    "*.bat"
+  ],
+  "duplicates": {
+    "minOccurrences": 3
+  },
+  "rules": {
+    "unused-class-members": "off"
+  }
+}

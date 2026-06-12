@@ -186,7 +186,6 @@ export class HUD {
 
   // ===== SHOP =====
   openShop(){ this.game.paused=true; const m=document.getElementById('shop-modal'); m.classList.remove('hidden'); m.classList.add('flex'); this.refreshShop(); }
-  closeShop(){ const m=document.getElementById('shop-modal'); m.classList.add('hidden'); m.classList.remove('flex'); this.game.paused=false; }
   refreshShop(){
     const p=this.game.player; const g=this.el.shopGold; if(g) g.textContent=p.gold;
     const buy=this.el.shopBuy; const sell=this.el.shopSell;

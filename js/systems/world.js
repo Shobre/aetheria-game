@@ -2,8 +2,8 @@
 import { MAPS } from '../data/maps.js';
 export const TILE = 32;
 
-// tile ids
-export const T = { FLOOR:0, PATH:1, WATER:2, WALL:7, HOLE:8, LAVA:9, FLOORALT:10 };
+// tile ids (internal — no external consumers, so not exported)
+const T = { FLOOR:0, PATH:1, WATER:2, WALL:7, HOLE:8, LAVA:9, FLOORALT:10 };
 
 // Per-biome palettes: [floorA, floorB, pathA, pathB, wallDark, wallLite, accent]
 const BIOMES = {
@@ -127,8 +127,6 @@ export class World {
         this.decor.push({type:this.pal.deco[Math.floor(this._rand()*this.pal.deco.length)],x,y});
     }
   }
-
-  _tileFree(x,y){ return this.map[y]&&this.map[y][x]!==undefined && !SOLID.has(this.map[y][x]); }
 
   // place portals, npcs, chests from the map def, ensuring their tiles are walkable
   _placeFeatures(){

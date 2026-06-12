@@ -47,56 +47,66 @@ export class Player {
     this.lifesteal  = (s.lifesteal||0);
   }
 
-  get aimAngle(){ return this._aim||0; }
   // damage multiplier (berserk when low hp + crit roll handled in game)
   get dmgMul(){ return this.hasBerserk && this.hp<this.hpMax*0.3 ? 1.3 : 1; }
 
   update(dt, input, world, cam, game){
     if(this.dead) return;
+    this._tickTimers(dt);
+    // aim toward mouse (world space)
+    this._aim=Math.atan2((cam.y+input.mouse.y)-this.y, (cam.x+input.mouse.x)-this.x);
+    // regen
+    this.mp=Math.min(this.mpMax, this.mp+dt*3*this.mpRegenMul);
+    if(!this.dodging) this.stam=Math.min(this.stamMax, this.stam+dt*22);
+    this._handleMovement(dt, input, world, game);
+    this.blocking = input.mouseDown.right && !this.dodging;
+    this._handleCombat(input, game);
+  }
+
+  _tickTimers(dt){
     this.attackCd=Math.max(0,this.attackCd-dt);
     this.dodgeCd=Math.max(0,this.dodgeCd-dt);
     this.invuln=Math.max(0,this.invuln-dt);
     this.flash=Math.max(0,this.flash-dt);
     for(const k of ['q','e','r']) this.spellCd[k]=Math.max(0,this.spellCd[k]-dt);
     if(this.attacking>0) this.attacking-=dt;
+  }
 
-    const mwx=cam.x+input.mouse.x, mwy=cam.y+input.mouse.y;
-    this._aim=Math.atan2(mwy-this.y, mwx-this.x);
-
-    // regen
-    this.mp=Math.min(this.mpMax, this.mp+dt*3*this.mpRegenMul);
-    if(!this.dodging) this.stam=Math.min(this.stamMax, this.stam+dt*22);
-
-    // DODGE
+  _handleMovement(dt, input, world, game){
     if(this.dodging>0){
       this.dodging-=dt; const ds=7.0*(this.dodging/0.22);
       this._move(this.dodgeDir.x*ds,this.dodgeDir.y*ds,world);
-    } else {
-      const mv=input.moveVector();
-      if(input.wasPressed(' ') && this.dodgeCd<=0 && this.stam>=25 && (mv.x||mv.y)){
-        this.dodging=0.22; this.dodgeCd=0.6; this.invuln=0.28+this.iframeBonus; this.stam-=25;
-        this.dodgeDir={...mv}; game.sfx('dodge');
-      } else {
-        const sp=this.blocking?this.speed*0.45:this.speed;
-        if(mv.x||mv.y){ this._move(mv.x*sp,mv.y*sp,world); this.dir=mv;
-          this.facing=Math.abs(mv.x)>Math.abs(mv.y)?(mv.x>0?'right':'left'):(mv.y>0?'down':'up'); }
+      return;
+    }
+    const mv=input.moveVector();
+    // start a dodge?
+    if(input.wasPressed(' ') && this.dodgeCd<=0 && this.stam>=25 && (mv.x||mv.y)){
+      this.dodging=0.22; this.dodgeCd=0.6; this.invuln=0.28+this.iframeBonus; this.stam-=25;
+      this.dodgeDir={...mv}; game.sfx('dodge');
+      return;
+    }
+    // walk
+    if(mv.x||mv.y){
+      const sp=this.blocking?this.speed*0.45:this.speed;
+      this._move(mv.x*sp,mv.y*sp,world); this.dir=mv;
+      this.facing=Math.abs(mv.x)>Math.abs(mv.y)?(mv.x>0?'right':'left'):(mv.y>0?'down':'up');
+    }
+  }
+
+  _handleCombat(input, game){
+    const cdMul=1-this.cdr/100;
+    // melee
+    if(input.mousePressed.left && this.attackCd<=0 && !this.blocking && !this.dodging){
+      this.attacking=0.18; this.attackCd=0.32*cdMul; game.sfx('swing'); game.doMeleeAttack(this);
+    }
+    // spells: [key, mpCost, baseCd, kind, sfx]
+    const spells=[['q',10,1.2,'fire','fire'],['e',15,2.0,'ice','ice']];
+    if(this.hasMeteor) spells.push(['r',40,6,'meteor','fire']);
+    for(const [key,cost,cd,kind,sound] of spells){
+      if(input.wasPressed(key) && this.spellCd[key]<=0 && this.mp>=cost){
+        this.mp-=cost; this.spellCd[key]=cd*cdMul; game.castSpell(this,kind); game.sfx(sound);
       }
     }
-    this.blocking = input.mouseDown.right && !this.dodging;
-
-    // ATTACK
-    if(input.mousePressed.left && this.attackCd<=0 && !this.blocking && !this.dodging){
-      this.attacking=0.18; this.attackCd=0.32*(1-this.cdr/100); game.sfx('swing');
-      game.doMeleeAttack(this);
-    }
-    // SPELLS (cooldowns reduced by cdr)
-    if(input.wasPressed('q') && this.spellCd.q<=0 && this.mp>=10){
-      this.mp-=10; this.spellCd.q=1.2*(1-this.cdr/100); game.castSpell(this,'fire'); game.sfx('fire'); }
-    if(input.wasPressed('e') && this.spellCd.e<=0 && this.mp>=15){
-      this.mp-=15; this.spellCd.e=2.0*(1-this.cdr/100); game.castSpell(this,'ice'); game.sfx('ice'); }
-    // METEOR (R) - unlocked via skill tree
-    if(this.hasMeteor && input.wasPressed('r') && this.spellCd.r<=0 && this.mp>=40){
-      this.mp-=40; this.spellCd.r=6*(1-this.cdr/100); game.castSpell(this,'meteor'); game.sfx('fire'); }
   }
 
   _move(dx,dy,world){
