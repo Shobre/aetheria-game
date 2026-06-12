@@ -232,3 +232,17 @@ body{image-rendering:pixelated}
 .craft-btn:disabled{ opacity:.35; }
 .craft-hint{ font-size:8px; color:#69708a; margin:0 0 8px; }
 .inv-cell.sel{ border-color:#ffe24d !important; box-shadow:0 0 6px rgba(255,226,77,.4); }
+
+/* ===== spell rank badge on loadout ===== */
+.spell-rank{font-size:7px;color:#ffe24d;position:absolute;bottom:1px;right:2px;font-weight:700}
+/* ===== town teleport button ===== */
+#town-btn{background:rgba(90,140,90,.3)}
+#town-btn:hover{background:rgba(90,140,90,.6)}
+/* ===== shop spell section ===== */
+.shop-spell-section{margin-top:8px;border-top:1px solid #2a3145;padding-top:6px}
+/* ===== spell picker: show rank ===== */
+.spell-pick-rank{font-size:8px;color:#ffe24d;margin-left:4px}
+/* ===== character window tooltip fix: ensure tooltip escapes modal ===== */
+#tooltip{z-index:200}
+.modal-box{overflow:visible!important}
+.char-inv{overflow-y:auto;max-height:40vh}

@@ -150,7 +150,7 @@ export class Player {
       // so it's blocked when its travel direction is ~opposite our guard direction
       const fa=this._aim!=null?this._aim:0;
       const facingDiff=Math.abs(((fromAngle-(fa+Math.PI)+Math.PI)%(2*Math.PI))-Math.PI);
-      if(facingDiff<1.2){ amt*=0.15; game.sfx('block'); game.floater('BLOCK',this.x,this.y-20,'#4dd28a'); game.cam.shake=4; }
+      if(facingDiff<1.8){ amt*=0.15; game.sfx('block'); game.floater('BLOCK',this.x,this.y-20,'#4dd28a'); game.cam.shake=4; }
     }
     amt=Math.max(1,Math.round(amt));
     this.hp=Math.max(0,this.hp-amt);

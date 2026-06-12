@@ -10,7 +10,7 @@ import { SKILLS, canLearn } from '../data/skilltree.js';
 import { Boss, BOSSES } from '../entities/boss.js';
 import { QuestLog } from './quests.js';
 import { rollRarity, applyRarity, rarityName } from '../data/affixes.js';
-import { SPELLS } from '../data/spells.js';
+import { SPELLS, STARTER_SPELLS, knownSpells, spellRank } from '../data/spells.js';
 import { reforge, upgrade, reforgeCost, upgradeCost, canUpgrade } from './craft.js';
 
 // difficulty scale per map (deeper = tougher enemies)
@@ -41,6 +41,7 @@ export class Game {
     this.openedChests=state.openedChests||{};
     this.stash=(state.stash||[]).map(i=>({...i}));
     this.bossesDead=state.bossesDead||{};
+    this._boughtSpells=state.boughtSpells||{};
     this.checkpoint=state.checkpoint||null;
     this.quests=new QuestLog(this, state);
     this.hud=new HUD(this);
@@ -107,6 +108,7 @@ export class Game {
     if(this.quests) this.quests.onReach(mapId);
     // autosave when entering a new area (but not on the initial load from start())
     if(!keepPos && this.running) this.autosave('Checkpoint saved');
+    if(this.hud) this.hud._updateTownBtn();
   }
 
   _loop(now){
@@ -439,6 +441,45 @@ export class Game {
     this.hud.refreshShop();
   }
 
+  // ---- spell shop (arcane vendor) ----
+  // Track which spell ranks the player has bought (persisted in knownSpells + skill unlocks).
+  // spellRanks: {spellId: true} — persisted via serialize() so bought ranks survive save/load.
+
+  buySpell(id){
+    const sp=SPELLS[id]; if(!sp) return;
+    const cost=sp.learnCost||0;
+    if(cost<=0 || this.player.gold<cost){ this.toast(cost<=0?'Already known!':'Not enough gold!'); this.sfx('hurt'); return; }
+    this.player.gold-=cost;
+    this._boughtSpells=this._boughtSpells||{};
+    this._boughtSpells[id]=true;
+    this.sfx('pickup'); this.toast('Learned '+sp.name+'!');
+    this.hud.refreshShop();
+    this.hud._updateSpellLoadout();
+  }
+  upgradeSpell(id){
+    const sp=SPELLS[id]; if(!sp || !sp.upgrade){ this.toast('No upgrade available!'); return; }
+    const up=sp.upgrade; const upSp=SPELLS[up]; if(!upSp) return;
+    const cost=sp.upgradeCost||0;
+    if(this.player.gold<cost){ this.toast('Not enough gold!'); this.sfx('hurt'); return; }
+    this.player.gold-=cost;
+    this._boughtSpells=this._boughtSpells||{};
+    this._boughtSpells[up]=true;
+    this.sfx('levelup'); this.toast('Upgraded to '+upSp.name+'!');
+    this.hud.refreshShop();
+    this.hud._updateSpellLoadout();
+  }
+  hasSpell(id){
+    // base ranks are always known (starter/spellpower); bought ranks tracked in _boughtSpells;
+    // skill-unlocked spells tracked via knownSpells()
+    const base=spellRank(id).base;
+    if(STARTER_SPELLS.includes(base)) return true;
+    if(['poisonbolt','arcaneorb','holybolt'].includes(base) && (this.player.skills.spellpower||0)>=1) return true;
+    if(this._boughtSpells&&this._boughtSpells[id]) return true;
+    // skill-gated
+    const sp=SPELLS[id]; if(sp&&sp.unlock&&(this.player.skills[sp.unlock]||0)>0) return true;
+    return false;
+  }
+
   // ---- stash (city bank): shared storage, move items bag<->stash ----
   openStash(name){ this.paused=true; this.stashName=name||'Stash'; this.hud.openStash(); }
   STASH_MAX=40;
@@ -512,7 +553,8 @@ export class Game {
       map:this.currentMap, inventory:this.inventory, hotbar:this.hotbar,
       playtime:this.playtime, openedChests:this.openedChests, stash:this.stash,
       bossesDead:this.bossesDead, checkpoint:this.checkpoint,
-      quests:this.quests?this.quests.serialize():undefined };
+      quests:this.quests?this.quests.serialize():undefined,
+      boughtSpells:this._boughtSpells };
   }
   save(){
     SaveSystem.save(this.slot, this._buildState()); this.toast('Game Saved!');
@@ -523,6 +565,15 @@ export class Game {
     SaveSystem.save(this.slot, this._buildState());
     this._autoT=0;
     this.hud.autosaveFlash(reason||'Autosaved');
+  }
+  // dungeons/biome-boss maps: quick-escape to Aldermere City hub
+  canTeleportTown(){ const m=this.currentMap; return m&&(m.startsWith('dungeon')||m.startsWith('cave')||m.startsWith('desert')||m.startsWith('snow')||m.startsWith('swamp')||m.startsWith('forest_deep')||m.startsWith('meadow_glade')); }
+  teleportToTown(){
+    // reset combat state so the player isn't stuck mid-fight
+    this.player.statuses={}; this.enemies=[]; this.projectiles=[]; this.boss=null;
+    this.audio.setMusic(MAPS.city.music,false);
+    this.loadMap('city', 24, 28, false);
+    this.toast('Returned to Aldermere City');
   }
   quitToMenu(){ this.running=false; location.reload(); }
   resize(){ this.canvas.width=window.innerWidth; this.canvas.height=window.innerHeight;

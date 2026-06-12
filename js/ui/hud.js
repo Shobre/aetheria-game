@@ -4,7 +4,7 @@ import { SKILLS, BRANCHES, canLearn } from '../data/skilltree.js';
 import { SHOP_STOCK } from '../data/maps.js';
 import { rarityColor, rarityName, affixText } from '../data/affixes.js';
 import { QUESTS } from '../data/quests.js';
-import { SPELLS, knownSpells } from '../data/spells.js';
+import { SPELLS, knownSpells, spellRank } from '../data/spells.js';
 import { reforgeCost, upgradeCost, canUpgrade } from '../systems/craft.js';
 
 export class HUD {
@@ -25,7 +25,7 @@ export class HUD {
       // skills
       skillPts:$('skill-points'),skillTree:$('skill-tree'),
       // shop
-      shopBuy:$('shop-buy'),shopSell:$('shop-sell'),shopGold:$('shop-gold'),
+      shopBuy:$('shop-buy'),shopSell:$('shop-sell'),shopGold:$('shop-gold'),shopSpells:$('shop-spells'),
       // boss bar + quests
       bossBar:$('boss-bar'),bossName:$('boss-name'),bossFill:$('boss-fill'),bossPips:$('boss-pips'),
       questTracker:$('quest-tracker'),questLog:$('quest-log'),
@@ -130,6 +130,11 @@ export class HUD {
       }
     } else { bar.classList.add('hidden'); }
   }
+  _updateTownBtn(){
+    const btn=document.getElementById('town-btn'); if(!btn) return;
+    const can=this.game.canTeleportTown&&this.game.canTeleportTown();
+    btn.style.display=can?'flex':'none';
+  }
 
   // spell loadout row (q/e/r): drag to swap, click to open the picker
   _updateSpellLoadout(){
@@ -138,8 +143,9 @@ export class HUD {
     if(el.children.length!==3){
       el.innerHTML='';
       for(let i=0;i<3;i++){ const d=document.createElement('div'); d.className='spell-slot'; d.dataset.idx=i;
-        d.innerHTML=`<span class="key">${keys[i].toUpperCase()}</span><span class="ico"></span><div class="cd"></div>`;
+        d.innerHTML=`<span class="key">${keys[i].toUpperCase()}</span><span class="ico"></span><span class="rank"></span><div class="cd"></div>`;
         this._enableSwapDrag(d,i,'spell');
+        const sid=p.spellSlots[i]; const r=sid?spellRank(sid):null; const rk=r&&r.rank>1?`<span class="spell-rank">${r.rank}</span>`:''; d.querySelector('.rank').innerHTML=rk;
         this._bindTooltip(d, ()=>{ const sid=this.game.player.spellSlots[i];
           return sid?this._buildSpellTooltip(sid,{hint:'Drag to swap · click to change'}):'<div class="tt-name">Empty slot</div><div class="tt-hint">Click to assign a spell</div>'; });
         d.onclick=()=>this._openSpellPicker(i);
@@ -481,6 +487,34 @@ export class HUD {
         this._bindTooltip(row, ()=>this._buildItemTooltip(item,{hint:val+'g to sell'}));
         sell.appendChild(row);
       });
+    }
+    // spell buy + upgrade section
+    const spDiv=this.el.shopSpells; if(spDiv){
+      const g=this.game, p=g.player, kn=new Set([...knownSpells(p.skills),...Object.keys(g._boughtSpells||{})]);
+      spDiv.innerHTML='';
+      const shown=new Set();
+      for(const id in SPELLS){
+        const sp=SPELLS[id], r=spellRank(id);
+        if(shown.has(r.base)) continue;
+        const known=kn.has(id), canBuy=(sp.learnCost||0)>0&&!known;
+        const upSp=sp.upgrade?SPELLS[sp.upgrade]:null;
+        const canUp=known&&upSp&&(sp.upgradeCost||0)>0;
+        if(!canBuy&&!canUp) continue;
+        shown.add(r.base);
+        const cost=canBuy?(sp.learnCost||0):(sp.upgradeCost||0);
+        const row=document.createElement('div'); row.className='shop-row';
+        row.innerHTML=`<span>${sp.icon} ${sp.name}${known?' \u2713':''}</span><span class="shop-price">${cost}g</span>
+          <button class="menu-btn shop-buy-btn" data-spell="${id}" data-action="${canBuy?'buy':'upgrade'}">${canBuy?'Learn':'Upgrade'}</button>`;
+        spDiv.appendChild(row);
+      }
+      spDiv.querySelectorAll('.shop-buy-btn').forEach(btn=>{
+        btn.onclick=()=>{
+          const sid=btn.dataset.spell, act=btn.dataset.action;
+          if(act==='buy') g.buySpell(sid); else g.upgradeSpell(sid);
+          this.refreshShop(); this.hud&&this.hud._updateSpellLoadout();
+        };
+      });
+      if(!shown.size) spDiv.innerHTML='<p class="text-[9px] text-gray-500">No spells available.</p>';
     }
   }
 

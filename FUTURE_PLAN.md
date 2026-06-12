@@ -16,6 +16,10 @@ Status legend: 🔴 high impact · 🟡 medium · ⚪ polish/nice-to-have
 - ✅ **Enemy update refactor** — extracted `_rangedAI`, `_chaseAI`, `_updatePerception`, `_applyKnockback`.
 - ✅ **Hover tooltips** — rich floating tooltips on items (bag/shop/character/hotbar) and spells (loadout/picker) with full stats, rarity, comparison, and action hints.
 - ✅ **Crafting bench + stash** — Forge at the Blacksmith (reforge rerolls affixes, upgrade raises rarity, gold cost scales); 40-slot shared Stash at the Banker NPC, persisted in save.
+- ✅ **Spell shop + spell upgrades** — Buy new spells (Poison Bolt, Arcane Orb, Holy Bolt, Meteor, Chain Lightning, Frost Nova) and upgrade all spells to rank II/III for gold. Each rank improves damage, reduces cost/cooldown. Spell rank shown on loadout slots.
+- ✅ **Teleport to town** — Press T or click the 🏠 button to instantly return to Aldermere City from any dungeon/biome-boss map. Clears combat state so you're not stuck mid-fight.
+- ✅ **Character window fixes** — Tooltip moved to end of body DOM so it renders above modals (z-index 200). Modal-box overflow set to visible. Quest tracker now updates every frame via refresh(). Skill point counter moved from character button to skills tree button (🌳).
+- ✅ **Shield block arc widened** — Block arc increased from ~69° to ~103° per side (206° total), making blocking much more forgiving.
 - ✅ **Enemy↔player solid collision** — enemies can no longer walk through the player; they yield to the contact surface and are never shoved into walls.
 - ✅ **Spawn-in-wall fix** — `World.nearestOpen()` snaps the player (and bosses) to the closest walkable tile on every map load / checkpoint / portal landing.
 - ✅ **Elite (champion) enemies** — Vicious/Armored/Swift/Arcane modifiers buff hp/dmg/speed, paint a pulsing aura + name tag, and guarantee rolled gear on death. Spawn chance scales with map difficulty.
@@ -27,6 +31,7 @@ Status legend: 🔴 high impact · 🟡 medium · ⚪ polish/nice-to-have
 
 ### Gameplay systems
 - 🟡 **Ammo/quiver for ranged weapons** or a stamina/heat cost so bows aren't strictly better than melee.
+- ✅ **Spell shop + upgrades** — buy new spells and upgrade known ones to higher ranks.
 - 🟡 **Weapon-skill scaling** — let skill nodes boost melee vs ranged separately, giving builds identity.
 - ✅ **Elite/champion enemies** — buffed variants that drop guaranteed rare loot. *(done)*
 - ✅ **More bosses** — one per biome now live (8 total). *(done)*

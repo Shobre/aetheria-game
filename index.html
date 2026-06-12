@@ -104,8 +104,9 @@
 
     <!-- bottom-right buttons -->
     <div class="absolute bottom-3 right-3 flex gap-2 pointer-events-auto">
-      <button id="char-btn" class="hud-btn relative" title="Character (C)">🧍<span id="skill-badge" class="badge">0</span></button>
-      <button id="skills-btn" class="hud-btn" title="Skill Tree (K)">🌳</button>
+      <button id="char-btn" class="hud-btn" title="Character (C)">🧍</button>
+      <button id="skills-btn" class="hud-btn relative" title="Skill Tree (K)">🌳<span id="skill-badge" class="badge">0</span></button>
+<button id="town-btn" class="hud-btn" title="Teleport to Town (T)" style="display:none">🏠</button>
       <button id="quests-btn" class="hud-btn" title="Quests (J)">📜</button>
       <button id="bag-btn" class="hud-btn" title="Bag (B)">🎒</button>
       <button id="settings-btn" class="hud-btn" title="Settings (Esc)">⚙</button>
@@ -229,6 +230,11 @@
         <div><h3 class="char-sub">BUY</h3><div id="shop-buy" class="shop-col"></div></div>
         <div><h3 class="char-sub">SELL</h3><div id="shop-sell" class="shop-col"></div></div>
       </div>
+      <div class="shop-spell-section">
+        <h3 class="char-sub mt-2">SPELLS</h3>
+        <div id="shop-spells" class="shop-col"></div>
+        <p class="text-[8px] text-gray-500 mt-1">Buy new spells or upgrade known ones. Upgrades improve damage, reduce cost/cooldown.</p>
+      </div>
     </div>
   </div>
 
@@ -293,5 +299,7 @@
 </div>
 
 <script type="module" src="js/main.js"></script>
+<!-- hover tooltip (items + spells) -->
+<div id="tooltip" class="hidden"></div>
 </body>
 </html>

@@ -51,6 +51,7 @@ export const SaveSystem = {
       stash:[],
       // chests opened, keyed "map:index" so each map persists independently
       openedChests:{},
+      boughtSpells:{},
     };
     this.save(n, state);
     return state;

@@ -81,6 +81,7 @@ document.getElementById('shop-close').onclick=()=>closeModal(shopModal);
 document.getElementById('save-game-btn').onclick=()=>game.save();
 document.getElementById('quit-btn').onclick=()=>{ if(confirm('Quit to menu? (save first!)')) game.quitToMenu(); };
 document.getElementById('respawn-btn').onclick=()=>game.respawn();
+document.getElementById('town-btn').onclick=()=>{ if(game.canTeleportTown && game.canTeleportTown()) game.teleportToTown(); };
 
 // ---- global keys ----
 window.addEventListener('keydown', e=>{
@@ -95,6 +96,7 @@ window.addEventListener('keydown', e=>{
   if(k==='m'){ const fm=document.getElementById('fullmap-modal');
     if(fm.classList.contains('hidden')){ game.hud.showFullMap(); openModal(fm); } else closeModal(fm); }
   // hotbar 1-9 (only when not in a menu)
+  if(k==='t' && game.canTeleportTown && game.canTeleportTown()) game.teleportToTown();
   if(/^[1-9]$/.test(k) && !game.paused) game.useHotbar(parseInt(k)-1);
 });
 

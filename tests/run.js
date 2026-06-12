@@ -434,5 +434,38 @@ console.log('=== elites + biome bosses ===');
   ok('ELITE_MODS defines 4 mods', (k && (k[1].match(/\w+:\s*\{/g)||[]).length===4));
 }
 
+
+console.log('=== spell shop + teleport + shield + UI fixes ===');
+{
+  const { SPELLS, STARTER_SPELLS, knownSpells, spellRank } = await import('../js/data/spells.js');
+  const { readFileSync } = await import('node:fs');
+  const gs = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
+  const ms = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  const hs = readFileSync(new URL('../js/ui/hud.js', import.meta.url), 'utf8');
+  const ps = readFileSync(new URL('../js/entities/player.js', import.meta.url), 'utf8');
+  const ix = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const cs = readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
+  ok('game has buySpell', gs.includes('buySpell('));
+  ok('game has upgradeSpell', gs.includes('upgradeSpell('));
+  ok('game has hasSpell', gs.includes('hasSpell('));
+  ok('game has canTeleportTown', gs.includes('canTeleportTown'));
+  ok('game has teleportToTown', gs.includes('teleportToTown'));
+  ok('game persists boughtSpells', gs.includes('boughtSpells'));
+  ok('all spells have learnCost', Object.values(SPELLS).every(s=>s.learnCost!==undefined));
+  ok('all spells have upgradeCost', Object.values(SPELLS).every(s=>s.upgradeCost!==undefined));
+  ok('fireball3 no upgrade', !SPELLS.fireball3.upgrade);
+  ok('starter spells free', SPELLS.fireball.learnCost===0 && SPELLS.iceshard.learnCost===0 && SPELLS.spark.learnCost===0);
+  ok('spellRank fireball', spellRank('fireball').rank===1);
+  ok('spellRank fireball2', spellRank('fireball2').base==='fireball' && spellRank('fireball2').rank===2);
+  ok('spellRank meteor3', spellRank('meteor3').rank===3);
+  ok('T key teleport', ms.includes("k==='t'"));
+  ok('town-btn in HTML', ix.includes('town-btn'));
+  ok('tooltip z-index 200', cs.includes('z-index:200'));
+  ok('modal-box overflow visible', cs.includes('overflow:visible'));
+  ok('shield block 1.8 rad', ps.includes('facingDiff<1.8'));
+  ok('refresh() calls refreshQuests', /refresh\(\)[\s\S]*refreshQuests/.test(hs));
+  ok('shop has spell section', ix.includes('shop-spells'));
+}
+
 console.log('\n' + (fail === 0 ? '✅ ALL PASS' : '❌ FAILURES') + ` — ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }
