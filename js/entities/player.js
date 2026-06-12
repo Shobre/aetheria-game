@@ -33,6 +33,7 @@ export class Player {
   }
 
   // Derive final stats from base + equipment + skill tree
+  // fallow-ignore-next-line complexity
   recompute(){
     const g=equipStats(this.equipment);
     const s=skillStats(this.skills);

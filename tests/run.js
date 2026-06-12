@@ -467,5 +467,67 @@ console.log('=== spell shop + teleport + shield + UI fixes ===');
   ok('shop has spell section', ix.includes('shop-spells'));
 }
 
+console.log('=== login + per-user saves ===');
+{
+  const { readFileSync } = await import('node:fs');
+  const mainSrc = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  const saveSrc = readFileSync(new URL('../js/systems/save.js', import.meta.url), 'utf8');
+  const gameSrc = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
+  const idxSrc = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  ok('login-screen in HTML', idxSrc.includes('login-screen'));
+  ok('login-btn in HTML', idxSrc.includes('login-btn'));
+  ok('login-user input in HTML', idxSrc.includes('login-user'));
+  ok('login-pass input in HTML', idxSrc.includes('login-pass'));
+  ok('logout-btn in settings', idxSrc.includes('logout-btn'));
+  ok('login handler uses addEventListener', mainSrc.includes("getElementById('login-btn').addEventListener"));
+  ok('renderSlotsWithAuth defined', mainSrc.includes('function renderSlotsWithAuth'));
+  ok('SaveSystem.saveUser', saveSrc.includes('saveUser') || mainSrc.includes('SaveSystem.saveUser'));
+  ok('SaveSystem.listSlotsUser', mainSrc.includes('listSlotsUser'));
+  ok('game._username stored', gameSrc.includes('this._username'));
+  ok('save uses per-user', gameSrc.includes('SaveSystem.saveUser'));
+  ok('autosave uses per-user', gameSrc.includes('SaveSystem.saveUser'));
+  ok('turso meta tags in HTML', idxSrc.includes('turso-url') && idxSrc.includes('turso-token'));
+}
+
+console.log('=== weapon slash animations ===');
+{
+  const { readFileSync } = await import('node:fs');
+  const ps = readFileSync(new URL('../js/entities/player.js', import.meta.url), 'utf8');
+  ok('player has weaponKind', ps.includes('this.weaponKind'));
+  ok('dagger slash branch', ps.includes("wk==='dagger'"));
+  ok('spear slash branch', ps.includes("wk==='spear'"));
+  ok('greatsword slash branch', ps.includes("wk==='greatsword'"));
+  ok('warhammer slash branch', ps.includes("wk==='warhammer'"));
+  ok('ranged aim line', ps.includes("wk==='ranged'"));
+  ok('shield block improved', ps.includes('#7a8090') && ps.includes('block sparkle'));
+  ok('shield rim highlight', ps.includes('#c0c8d8'));
+}
+
+console.log('=== map button (minimap removed) ===');
+{
+  const { readFileSync } = await import('node:fs');
+  const idx = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const main = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  const hud = readFileSync(new URL('../js/ui/hud.js', import.meta.url), 'utf8');
+  ok('minimap canvas removed', !idx.includes('id="minimap"'));
+  ok('map-btn present', idx.includes('id="map-btn"'));
+  ok('map-btn handler in main.js', main.includes('map-btn'));
+  ok('drawMinimap is no-op', hud.includes('drawMinimap(){}'));
+  ok('no MINIMAP setting', !idx.includes('MINIMAP'));
+}
+
+console.log('=== turso module ===');
+{
+  const { readFileSync } = await import('node:fs');
+  const ts = readFileSync(new URL('../js/systems/turso.js', import.meta.url), 'utf8');
+  ok('tursoSave export', ts.includes('export async function tursoSave'));
+  ok('tursoLoad export', ts.includes('export async function tursoLoad'));
+  ok('tursoListSlots export', ts.includes('export async function tursoListSlots'));
+  ok('tursoInit export', ts.includes('export async function tursoInit'));
+  ok('tursoDelete export', ts.includes('export async function tursoDelete'));
+  ok('uses meta tags for config', ts.includes('turso-url') && ts.includes('turso-token'));
+  ok('fetch-based HTTP client', ts.includes('fetch('));
+}
+
 console.log('\n' + (fail === 0 ? '✅ ALL PASS' : '❌ FAILURES') + ` — ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }

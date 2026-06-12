@@ -76,9 +76,10 @@ function fmtTime(ms){ const s=Math.floor(ms/1000),m=Math.floor(s/60); return m+'
 function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
 
 // ---- save slots ----
-function renderSlots(){
+function renderSlotsWithAuth(username){
   const wrap=document.getElementById('save-slots'); wrap.innerHTML='';
-  for(const {slot,data} of SaveSystem.listSlots()){
+  if(username) wrap.dataset.user=username;
+  for(const {slot,data} of SaveSystem.listSlotsUser(username)){
     const btn=document.createElement('button'); btn.className='save-slot';
     if(data){
       btn.innerHTML=`<div class="sl-title">SLOT ${slot}</div>
@@ -87,15 +88,16 @@ function renderSlots(){
           <span style="color:#667">${fmtDate(data.savedAt)}</span></div>
         <span class="sl-del" title="Delete">🗑</span>`;
       btn.querySelector('.sl-del').onclick=(e)=>{ e.stopPropagation();
-        if(confirm('Delete save in slot '+slot+'?')){ SaveSystem.delete(slot); renderSlots(); } };
-      btn.onclick=()=>launch(SaveSystem.getSlot(slot));
+        if(confirm('Delete?')){ SaveSystem.deleteUser(username,slot); renderSlotsWithAuth(username); } };
+      btn.onclick=()=>launchUser(SaveSystem.getSlotUser(username,slot),username);
     } else {
       btn.innerHTML=`<div class="sl-title">SLOT ${slot}</div><div class="sl-empty">— EMPTY —<br><br>Click to start<br>a new game</div>`;
-      btn.onclick=()=>launch(SaveSystem.newGame(slot));
+      btn.onclick=()=>launchUser(SaveSystem.newGameUser(username,slot),username);
     }
     wrap.appendChild(btn);
   }
 }
+function launchUser(state,username){ show('game-container'); game.resize(); game.start(state); game._username=username; applySettings(); }
 function launch(state){ show('game-container'); game.resize(); game.start(state); applySettings(); }
 
 // ---- settings ----
