@@ -120,6 +120,8 @@
 
     <!-- toast / messages -->
     <div id="toast" class="absolute top-24 left-1/2 -translate-x-1/2 space-y-1 text-center"></div>
+    <!-- autosave indicator -->
+    <div id="autosave" class="absolute top-2 right-3 text-[9px] text-green-400 opacity-0 transition-opacity duration-500 pointer-events-none"></div>
 
     <!-- floating dmg numbers -->
     <div id="floaters" class="absolute inset-0 overflow-hidden"></div>
@@ -224,6 +226,23 @@
       <div class="shop-layout">
         <div><h3 class="char-sub">BUY</h3><div id="shop-buy" class="shop-col"></div></div>
         <div><h3 class="char-sub">SELL</h3><div id="shop-sell" class="shop-col"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULL MAP OVERLAY -->
+  <div id="fullmap-modal" class="modal hidden">
+    <div class="modal-box max-w-2xl">
+      <div class="flex justify-between items-center mb-2">
+        <h2 id="fullmap-title" class="text-lg text-gold">MAP</h2>
+        <button data-close="fullmap-modal" class="text-xl text-gray-400 hover:text-gold">&times;</button>
+      </div>
+      <canvas id="fullmap-canvas" class="w-full border border-gpanel bg-[#0c0e16]"></canvas>
+      <div class="flex gap-4 mt-2 text-[9px] text-gray-400 justify-center">
+        <span><span class="text-white">&#x2588;</span> You</span>
+        <span><span class="text-purple-400">&#x2588;</span> Portal</span>
+        <span><span class="text-green-400">&#x2588;</span> NPC</span>
+        <span><span class="text-yellow-400">&#x2588;</span> Chest</span>
       </div>
     </div>
   </div>

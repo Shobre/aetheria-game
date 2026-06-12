@@ -1,5 +1,5 @@
 import { TILE } from '../systems/world.js';
-import { CATALOG, EQUIP_SLOTS, equipStats, resolveEquip } from '../data/gear.js';
+import { CATALOG, EQUIP_SLOTS, equipStats, resolveEquip, compareItem } from '../data/gear.js';
 import { SKILLS, BRANCHES, canLearn } from '../data/skilltree.js';
 import { SHOP_STOCK } from '../data/maps.js';
 import { rarityColor, rarityName, affixText } from '../data/affixes.js';
@@ -29,6 +29,7 @@ export class HUD {
       bossBar:$('boss-bar'),bossName:$('boss-name'),bossFill:$('boss-fill'),bossPips:$('boss-pips'),
       questTracker:$('quest-tracker'),questLog:$('quest-log'),
       spellLoadout:$('spell-loadout'),spellPicker:$('spell-picker'),
+      autoSave:$('autosave'),
     };
     this.mmCtx=this.el.minimap.getContext('2d');
     this.activeSlot=0;
@@ -188,12 +189,16 @@ export class HUD {
 
   refreshBag(){
     const inv=this.game.inventory; const cells=[...this.el.invGrid.children];
+    const eq=this.game.player.equipment;
     cells.forEach((c,i)=>{
       const item=inv[i];
-      if(item){ c.innerHTML=`${item.icon}<span class="qty">${item.qty>1?item.qty:''}</span>`;
-        if(item.type!=='consumable'){ c.style.borderColor=rarityColor(item);
-          const ax=affixText(item); c.title=rarityName(item)+' '+item.name+(ax?' ('+ax+')':''); }
+      if(item){ let cmpHtml='';
+        if(item.type!=='consumable'){ const cmp=compareItem(item,eq);
+          if(cmp){ cmpHtml=`<span class="cmp cmp-${cmp.dir}">${cmp.text}</span>`; }
+          c.style.borderColor=rarityColor(item);
+          const ax=affixText(item); c.title=rarityName(item)+' '+item.name+(ax?' ('+ax+')':'')+(cmp?'  score '+cmp.text:''); }
         else { c.style.borderColor=''; c.title=CATALOG[item.id]?CATALOG[item.id].name:item.id; }
+        c.innerHTML=`${item.icon}<span class="qty">${item.qty>1?item.qty:''}</span>${cmpHtml}`;
         c.onclick=()=>{ if(item.type==='consumable') this.game.useConsumable(item.id);
           else this.game.equipItem(item); this.refreshBag(); };
       } else { c.innerHTML=''; c.onclick=null; c.title=''; c.style.borderColor=''; }
@@ -209,6 +214,12 @@ export class HUD {
     const d=document.createElement('div'); d.className='toast-msg'; d.textContent=msg;
     const wrap=document.createElement('div'); wrap.appendChild(d); this.el.toast.appendChild(wrap);
     setTimeout(()=>{ wrap.style.transition='opacity .4s'; wrap.style.opacity='0'; setTimeout(()=>wrap.remove(),400); },1800);
+  }
+  autosaveFlash(msg){
+    const el=this.el.autoSave; if(!el) return;
+    el.textContent='\u2714 '+msg; el.style.opacity='1';
+    clearTimeout(this._autoSaveTimer);
+    this._autoSaveTimer=setTimeout(()=>{ el.style.opacity='0'; },2200);
   }
   floater(text,wx,wy,color){
     const cam=this.game.cam;
@@ -237,6 +248,42 @@ export class HUD {
     for(const e of this.game.enemies) if(!e.dead) ctx.fillRect(e.x/TILE*sx-1,e.y/TILE*sy-1,2,2);
     ctx.fillStyle='#fff';
     ctx.fillRect(this.game.player.x/TILE*sx-2,this.game.player.y/TILE*sy-2,4,4);
+  }
+
+  // ===== FULL MAP (M) =====
+  showFullMap(){
+    const w=this.game.world, cv=document.getElementById('fullmap-canvas');
+    const title=document.getElementById('fullmap-title');
+    if(title) title.textContent='MAP — '+w.def.name;
+    if(!cv) return;
+    // size canvas to map aspect, capped
+    const maxW=640, maxH=460;
+    const scale=Math.min(maxW/w.cols, maxH/w.rows);
+    cv.width=Math.round(w.cols*scale); cv.height=Math.round(w.rows*scale);
+    const ctx=cv.getContext('2d');
+    ctx.clearRect(0,0,cv.width,cv.height);
+    // tiles
+    for(let y=0;y<w.rows;y++)for(let x=0;x<w.cols;x++){
+      const t=w.map[y][x]; let c='#2c4a30';
+      if(t===2)c='#2f6fb0';else if(t===1)c='#b89b72';else if(t===7)c='#1d2330';
+      else if(t===9)c='#b03030';else c=w.pal?w.pal.fa:'#2c4a30';
+      ctx.fillStyle=c; ctx.fillRect(x*scale,y*scale,Math.ceil(scale),Math.ceil(scale));
+    }
+    const dot=(wx,wy,col,r)=>{ ctx.fillStyle=col; ctx.beginPath();
+      ctx.arc(wx/TILE*scale, wy/TILE*scale, r, 0, 7); ctx.fill(); };
+    // chests
+    for(const c of w.chests) if(!c.opened) dot(c.wx+16,c.wy+16,'#ffcf4d',3);
+    // npcs (+ labels)
+    ctx.font='8px monospace'; ctx.textAlign='center';
+    for(const n of w.npcs){ dot(n.wx+16,n.wy+16,'#4dd28a',3);
+      ctx.fillStyle='#cfe'; ctx.fillText(n.name, n.wx/TILE*scale, n.wy/TILE*scale-4); }
+    // portals (+ destination labels)
+    for(const p of w.portals){ dot(p.wx,p.wy,'#a45cff',4);
+      ctx.fillStyle='#d9b3ff'; ctx.fillText(p.label||'', p.wx/TILE*scale, p.wy/TILE*scale-5); }
+    // player (pulsing)
+    dot(this.game.player.x,this.game.player.y,'#fff',4);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(this.game.player.x/TILE*scale,this.game.player.y/TILE*scale,7,0,7); ctx.stroke();
   }
 
   // ===== CHARACTER VIEW =====
@@ -270,10 +317,11 @@ export class HUD {
       gearDiv.innerHTML='';
       this.game.inventory.filter(it=>it.type!=='consumable').forEach(item=>{
         const c=document.createElement('div'); c.className='inv-cell gear-cell';
+        const cmp=compareItem(item,p.equipment);
         c.style.borderColor=rarityColor(item);
-        c.innerHTML=`${item.icon}`;
+        c.innerHTML=`${item.icon}${cmp?'<span class="cmp cmp-'+cmp.dir+'">'+cmp.text+'</span>':''}`;
         const ax=affixText(item);
-        c.title=rarityName(item)+' '+item.name+(ax?' ('+ax+')':'')+' — click to equip';
+        c.title=rarityName(item)+' '+item.name+(ax?' ('+ax+')':'')+(cmp?'  score '+cmp.text:'')+' — click to equip';
         c.onclick=()=>{ this.game.equipItem(item); this.refreshChar(); this.refreshBag(); };
         gearDiv.appendChild(c);
       });
@@ -316,9 +364,11 @@ export class HUD {
     const buy=this.el.shopBuy; const sell=this.el.shopSell;
     const stock=this.game.shopStock||SHOP_STOCK;
     if(buy){ buy.innerHTML='';
+      const eq=p.equipment;
       for(const id of stock){
         const c=CATALOG[id], row=document.createElement('div'); row.className='shop-row';
-        row.innerHTML=`<span>${c.icon} ${c.name}</span><span class="shop-price">${c.price}g</span>
+        const cmp=compareItem(c,eq);
+        row.innerHTML=`<span>${c.icon} ${c.name}${cmp?'<span class="cmp cmp-'+cmp.dir+'">'+cmp.text+'</span>':''}</span><span class="shop-price">${c.price}g</span>
           <button class="menu-btn shop-buy-btn" data-id="${id}">Buy</button>`;
         row.querySelector('.shop-buy-btn').onclick=()=>{ this.game.buyItem(id); this.refreshShop(); this.refreshBag(); };
         buy.appendChild(row);

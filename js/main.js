@@ -53,12 +53,12 @@ function applySettings(){
 ['set-shake','set-minimap','set-fps','set-music','set-sfx'].forEach(id=>{
   const el=document.getElementById(id); if(el) el.addEventListener('input',applySettings); });
 
-function anyModalOpen(){ return [settingsModal,bagModal,charModal,skillsModal,questsModal,shopModal]
+function anyModalOpen(){ return [settingsModal,bagModal,charModal,skillsModal,questsModal,shopModal,document.getElementById('fullmap-modal')]
   .some(m=>!m.classList.contains('hidden')); }
 function openModal(m){ game.paused=true; m.classList.remove('hidden'); m.classList.add('flex'); }
 function closeModal(m){ m.classList.add('hidden'); m.classList.remove('flex');
   if(!anyModalOpen() && !document.getElementById('death-screen').classList.contains('flex')) game.paused=false; }
-function closeAll(){ [settingsModal,bagModal,charModal,skillsModal,questsModal,shopModal].forEach(m=>{
+function closeAll(){ [settingsModal,bagModal,charModal,skillsModal,questsModal,shopModal,document.getElementById('fullmap-modal')].forEach(m=>{
   m.classList.add('hidden'); m.classList.remove('flex'); });
   if(!document.getElementById('death-screen').classList.contains('flex')) game.paused=false; }
 
@@ -88,6 +88,8 @@ window.addEventListener('keydown', e=>{
   if(k==='c'){ charModal.classList.contains('hidden')?openChar():closeModal(charModal); }
   if(k==='k'){ skillsModal.classList.contains('hidden')?openSkills():closeModal(skillsModal); }
   if(k==='j'){ questsModal.classList.contains('hidden')?openQuests():closeModal(questsModal); }
+  if(k==='m'){ const fm=document.getElementById('fullmap-modal');
+    if(fm.classList.contains('hidden')){ game.hud.showFullMap(); openModal(fm); } else closeModal(fm); }
   // hotbar 1-9 (only when not in a menu)
   if(/^[1-9]$/.test(k) && !game.paused) game.useHotbar(parseInt(k)-1);
 });
@@ -97,4 +99,5 @@ window.addEventListener('blur', ()=>{ if(game.running && !anyModalOpen()) game.p
 window.addEventListener('focus', ()=>{ if(game.running && !anyModalOpen() &&
   !document.getElementById('death-screen').classList.contains('flex')) game.paused=false; });
 
+window.addEventListener('beforeunload', ()=>{ if(game.running) game.autosave(); });
 window.addEventListener('load', ()=>{ setTimeout(()=>{ renderSlots(); show('start-screen'); },700); });

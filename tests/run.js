@@ -215,5 +215,75 @@ console.log('=== quests (new givers) ===');
     if(o.kind==='boss') ok(id+' boss target valid', !!BOSSES[o.boss]); } }
 }
 
+console.log('=== item comparison ===');
+{
+  const { compareItem, makeItem } = await import('../js/data/gear.js');
+  const eqp = { weapon:'sword_wood', shield:null, armor:null, helm:null, ring:null }; // wooden sword atk:2
+  const better = makeItem('sword_iron',1); // atk:6
+  const c1 = compareItem(better, eqp);
+  ok('better weapon flagged better', c1 && c1.dir==='better');
+  ok('better delta positive', c1.delta > 0);
+  // worse: comparing wooden sword while iron equipped
+  const eqp2 = { weapon:'sword_iron', shield:null, armor:null, helm:null, ring:null };
+  const worse = makeItem('sword_wood',1);
+  const c2 = compareItem(worse, eqp2);
+  ok('worse weapon flagged worse', c2 && c2.dir==='worse');
+  // equal: same item vs same equipped
+  const c3 = compareItem(makeItem('sword_iron',1), eqp2);
+  ok('equal weapon flagged equal', c3 && c3.dir==='equal');
+  // empty slot: any gear is better than nothing
+  const c4 = compareItem(makeItem('shield_wood',1), eqp);
+  ok('gear better than empty slot', c4 && c4.dir==='better');
+  // consumables are not comparable
+  ok('consumable not comparable', compareItem(makeItem('potion',1), eqp) === null);
+}
+
+console.log('=== pathfinding ===');
+{
+  // World needs the canvas-free parts only: build via MAPS + a stub.
+  // We import World and exercise findPath / hasLineOfSight on a generated map.
+  const { World } = await import('../js/systems/world.js');
+  // performance is referenced in draw() only; ensure it exists for any incidental use
+  if(typeof globalThis.performance === 'undefined') globalThis.performance = { now:()=>0 };
+  const w = new World('meadow');
+  // LOS: a point to itself is always visible
+  ok('LOS to self', w.hasLineOfSight(100,100,100,100) === true);
+  // findPath returns array of waypoints between two open floor tiles or null
+  // pick two known floor tiles via randomFloor
+  const a = w.randomFloor(Math.random), b = w.randomFloor(Math.random);
+  const path = w.findPath(a.x,a.y,b.x,b.y);
+  ok('findPath returns array or null', path === null || Array.isArray(path));
+  if(Array.isArray(path)){
+    ok('path waypoints have x/y', path.every(p=>typeof p.x==='number' && typeof p.y==='number'));
+    // every waypoint must be on a non-solid tile
+    ok('path avoids solid tiles', path.every(p=>!w.isSolid(p.x,p.y)));
+  }
+  // findPath from a tile to itself returns null (already there)
+  ok('findPath same tile null', w.findPath(a.x,a.y,a.x,a.y) === null);
+  // LOS blocked by a wall: scan the map for a wall tile and test across it
+  let blockedFound=false;
+  for(let y=1;y<w.rows-1 && !blockedFound;y++) for(let x=1;x<w.cols-1;x++){
+    if(w.isSolid(x*32+16,y*32+16)){
+      // points on opposite sides of this wall tile
+      if(w.hasLineOfSight((x-1)*32+16,y*32+16,(x+1)*32+16,y*32+16)===false){ blockedFound=true; break; }
+    }
+  }
+  ok('LOS blocked by a wall somewhere', blockedFound);
+}
+
+console.log('=== autosave wiring ===');
+{
+  // verify game.js exposes autosave + _buildState and hooks them in
+  const { readFileSync } = await import('node:fs');
+  const gameSrc = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
+  ok('has _buildState', gameSrc.includes('_buildState('));
+  ok('has autosave method', gameSrc.includes('autosave(reason'));
+  ok('timed autosave in update', gameSrc.includes('this._autoT'));
+  ok('autosave on area entry', gameSrc.includes("autosave('Checkpoint saved')"));
+  const mainSrc = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  ok('beforeunload autosave', mainSrc.includes('beforeunload') && mainSrc.includes('game.autosave'));
+  ok('M key opens full map', mainSrc.includes("k==='m'") && mainSrc.includes('showFullMap'));
+}
+
 console.log('\n' + (fail === 0 ? '✅ ALL PASS' : '❌ FAILURES') + ` — ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }

@@ -26,6 +26,7 @@ export class Game {
     this.playtime=0; this._lastT=0; this._fpsT=0; this._fpsCount=0; this._fps=60;
     this.nearInteract=null; this.transition=0;
     this.boss=null; this.bossesDead={}; this.checkpoint=null;
+    this._autoT=0; this.autosaveInterval=60; // seconds between timed autosaves
   }
 
   start(state){
@@ -82,6 +83,8 @@ export class Game {
     this.audio.setMusic(def.music, !!this.boss);
     this.toast('Entering '+def.name);
     if(this.quests) this.quests.onReach(mapId);
+    // autosave when entering a new area (but not on the initial load from start())
+    if(!keepPos && this.running) this.autosave('Checkpoint saved');
   }
 
   _loop(now){
@@ -98,6 +101,8 @@ export class Game {
 
   update(dt){
     if(this.transition>0) this.transition=Math.max(0,this.transition-dt);
+    this._autoT+=dt;
+    if(this._autoT>=this.autosaveInterval) this.autosave('Autosaved');
     this.player.update(dt,this.input,this.world,this.cam,this);
     this.cam.follow(this.player,this.world);
     if(!this.settings.shake) this.cam.shake=0;
@@ -314,6 +319,7 @@ export class Game {
     if(this.quests) this.quests.onKill(null,true,boss.id);
     this.toast(boss.def.name+' defeated!');
     this.sfx('levelup');
+    this.autosave('Progress saved');
   }
 
   spawnParticles(x,y,color,n){ for(let i=0;i<n;i++) this.particles.push(new Particle(x,y,color)); }
@@ -431,13 +437,22 @@ export class Game {
     this.loadMap(cp.map, cp.tx, cp.ty, false);
     const ds=document.getElementById('death-screen'); ds.classList.add('hidden'); ds.classList.remove('flex');
   }
-  save(){
-    const st={ ...this.player.serialize(), slot:this.slot,
+  _buildState(){
+    return { ...this.player.serialize(), slot:this.slot,
       map:this.currentMap, inventory:this.inventory, hotbar:this.hotbar,
       playtime:this.playtime, openedChests:this.openedChests,
       bossesDead:this.bossesDead, checkpoint:this.checkpoint,
       quests:this.quests?this.quests.serialize():undefined };
-    SaveSystem.save(this.slot, st); this.toast('Game Saved!');
+  }
+  save(){
+    SaveSystem.save(this.slot, this._buildState()); this.toast('Game Saved!');
+  }
+  // silent autosave (subtle indicator, no big toast); skips while a menu is paused mid-action
+  autosave(reason){
+    if(!this.running || this.player.dead) return;
+    SaveSystem.save(this.slot, this._buildState());
+    this._autoT=0;
+    this.hud.autosaveFlash(reason||'Autosaved');
   }
   quitToMenu(){ this.running=false; location.reload(); }
   resize(){ this.canvas.width=window.innerWidth; this.canvas.height=window.innerHeight;

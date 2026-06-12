@@ -55,6 +55,8 @@ export class Enemy {
     // lunge state
     this.lungeState='idle'; this.lungeTimer=0; this.lungeDir={x:0,y:0};
     this.wander={x:0,y:0,t:0};
+    // pathfinding: cached A* path + recompute throttle
+    this.path=null; this.pathIdx=0; this.pathT=0;
   }
 
   // can this enemy currently perceive the player? sight cone OR very close (hearing).
@@ -82,54 +84,62 @@ export class Enemy {
     if(this.frozen>0){ this.frozen-=dt; return; }
     // status effects (burn/poison dot, chill slow, stun)
     const st=tickStatuses(this,dt,game,false);
-    if(this.dead) return;
-    if(st.stunned) return;
+    if(this.dead || st.stunned) return;
     this._slowMul=1-st.slow;
-    // knockback
+    this._applyKnockback(world);
+    const dx=player.x-this.x, dy=player.y-this.y, dist=Math.hypot(dx,dy)||1;
+    const nx=dx/dist, ny=dy/dist;
+
+    if(!this._updatePerception(player,dist,nx,ny,dt)){
+      this._idleBehavior(dt,world);   // not hunting: patrol/return home
+      return;
+    }
+    // hunting: dispatch by behavior
+    if(this.behavior==='ranged')      this._rangedAI(dt,player,world,game,dist,nx,ny);
+    else if(this.behavior==='lunge')  this._lungeAI(dt,player,world,game,dist,nx,ny);
+    else                              this._chaseAI(dt,player,world,game,dist,nx,ny);
+  }
+
+  _applyKnockback(world){
     if(Math.abs(this.knockback.x)>0.1||Math.abs(this.knockback.y)>0.1){
       this._move(this.knockback.x,this.knockback.y,world);
       this.knockback.x*=0.8; this.knockback.y*=0.8;
     }
-    const dx=player.x-this.x, dy=player.y-this.y, dist=Math.hypot(dx,dy)||1;
-    const nx=dx/dist, ny=dy/dist;
+  }
 
-    // ---- perception: update alert state from vision cone ----
+  // update alert from vision cone + leash; returns true if the enemy is hunting
+  _updatePerception(player,dist,nx,ny,dt){
     this.alert=Math.max(0,this.alert-dt);
-    const LEASH=360;                 // how far from home an enemy will chase before giving up
-    if(this._canSee(player,dist,nx,ny) && this._homeDist()<LEASH+dist*0.0){
-      this.alert=3.0;                // remember the player for 3s after losing sight
-    }
-    const hunting = this.alert>0 && this._homeDist()<LEASH+260;
+    const LEASH=360;
+    if(this._canSee(player,dist,nx,ny) && this._homeDist()<LEASH) this.alert=3.0;
+    return this.alert>0 && this._homeDist()<LEASH+260;
+  }
 
-    if(!hunting){
-      // ---- idle: drift slowly back toward home, then wander a little ----
-      this._idleBehavior(dt,world);
-      return;
-    }
+  // ranged: hold range, shoot on cd; otherwise close the gap (pathfinding)
+  _rangedAI(dt,player,world,game,dist,nx,ny){
+    if(dist>=this.shootRange){ this._navigate(player.x,player.y,this.speed,world,dt); return; }
+    if(dist<160) this._move(-nx*this.speed,-ny*this.speed,world);        // back away
+    else if(dist>240) this._move(nx*this.speed*0.6,ny*this.speed*0.6,world);
+    if(this.shootTimer<=0){ this.shootTimer=this.shootCd;
+      const a=Math.atan2(player.y-this.y,player.x-this.x);
+      if(this.onHit) game.enemyShootStatus(this.x,this.y,a,this.dmg,this.onHit);
+      else game.enemyShoot(this.x,this.y,a,this.dmg); }
+  }
 
-    if(this.behavior==='ranged'){
-      // keep distance, shoot
-      if(dist<this.shootRange){
-        if(dist<160){ this._move(-nx*this.speed,-ny*this.speed,world); } // back away
-        else if(dist>240){ this._move(nx*this.speed*0.6,ny*this.speed*0.6,world); }
-        if(this.shootTimer<=0){ this.shootTimer=this.shootCd;
-          if(this.onHit) game.enemyShootStatus(this.x,this.y,Math.atan2(dy,dx),this.dmg,this.onHit);
-          else game.enemyShoot(this.x,this.y,Math.atan2(dy,dx),this.dmg); }
-      } else { this._move(nx*this.speed,ny*this.speed,world); this.face={x:nx,y:ny}; }
-    }
-    else if(this.behavior==='lunge'){
-      this._lungeAI(dt,player,world,game,dist,nx,ny);
-    }
-    else { // chase
-      if(this.erratic){ this.wander.t-=dt; if(this.wander.t<=0){ this.wander.t=0.4+Math.random()*0.4;
-        this.wander.x=(Math.random()-0.5)*1.4; this.wander.y=(Math.random()-0.5)*1.4; } }
+  // chase: route around walls (erratic fliers jitter straight), melee on contact
+  _chaseAI(dt,player,world,game,dist,nx,ny){
+    if(this.erratic){
+      this.wander.t-=dt; if(this.wander.t<=0){ this.wander.t=0.4+Math.random()*0.4;
+        this.wander.x=(Math.random()-0.5)*1.4; this.wander.y=(Math.random()-0.5)*1.4; }
       this._move((nx+this.wander.x)*this.speed,(ny+this.wander.y)*this.speed,world);
       this.face={x:nx,y:ny};
-      if(dist<this.r+player.r+2 && this.attackCd<=0){
-        this.attackCd=0.8; player.takeDamage(this.dmg,Math.atan2(dy,dx)+Math.PI,game);
-        if(this.onHit) applyStatus(player,this.onHit);
-        this.knockback.x=-nx*2; this.knockback.y=-ny*2;
-      }
+    } else {
+      this._navigate(player.x,player.y,this.speed,world,dt);
+    }
+    if(dist<this.r+player.r+2 && this.attackCd<=0){
+      this.attackCd=0.8; player.takeDamage(this.dmg,Math.atan2(player.y-this.y,player.x-this.x)+Math.PI,game);
+      if(this.onHit) applyStatus(player,this.onHit);
+      this.knockback.x=-nx*2; this.knockback.y=-ny*2;
     }
   }
 
@@ -153,8 +163,10 @@ export class Enemy {
 
   _lungeAI(dt,player,world,game,dist,nx,ny){
     if(this.lungeState==='idle'){
-      if(dist>this.r+player.r){ this._move(nx*this.speed,ny*this.speed,world); this.face={x:nx,y:ny}; }
-      if(dist<150){ this.lungeState='telegraph'; this.lungeTimer=0.5; this.lungeDir={x:nx,y:ny}; }
+      if(dist>this.r+player.r){ this._navigate(player.x,player.y,this.speed,world,dt); }
+      // only wind up a lunge when there's a clear line to the player (no wall between)
+      if(dist<150 && world.hasLineOfSight(this.x,this.y,player.x,player.y)){
+        this.lungeState='telegraph'; this.lungeTimer=0.5; this.lungeDir={x:nx,y:ny}; }
     } else if(this.lungeState==='telegraph'){
       this.lungeTimer-=dt;
       if(this.lungeTimer<=0){ this.lungeState='lunge'; this.lungeTimer=0.32; }
@@ -175,6 +187,44 @@ export class Enemy {
     const m=this._slowMul==null?1:this._slowMul; dx*=m; dy*=m;
     if(!world.isSolid(this.x+dx+Math.sign(dx)*this.r,this.y)) this.x+=dx;
     if(!world.isSolid(this.x,this.y+dy+Math.sign(dy)*this.r)) this.y+=dy;
+  }
+
+  // Navigate toward (tx,ty) at the given speed, routing around walls.
+  // If line-of-sight is clear -> steer straight (cheap, smooth).
+  // Otherwise follow a cached A* path, recomputed a few times per second.
+  // Sets this.face. Returns true if it produced movement toward the target.
+  _navigate(tx,ty,speed,world,dt){
+    this.pathT-=dt;
+    if(world.hasLineOfSight(this.x,this.y,tx,ty)){
+      // direct approach
+      const dx=tx-this.x, dy=ty-this.y, d=Math.hypot(dx,dy)||1;
+      const nx=dx/d, ny=dy/d;
+      this._move(nx*speed,ny*speed,world); this.face={x:nx,y:ny};
+      this.path=null; // drop stale path
+      return true;
+    }
+    // need a path; (re)compute on throttle or when exhausted
+    if(this.pathT<=0 || !this.path || this.pathIdx>=this.path.length){
+      this.path=world.findPath(this.x,this.y,tx,ty);
+      this.pathIdx=0; this.pathT=0.4+Math.random()*0.2;
+    }
+    if(this.path && this.pathIdx<this.path.length){
+      // advance through waypoints we've basically reached
+      let wp=this.path[this.pathIdx];
+      while(wp && Math.hypot(wp.x-this.x,wp.y-this.y)<TILE*0.5){
+        this.pathIdx++; wp=this.path[this.pathIdx];
+      }
+      if(wp){
+        const dx=wp.x-this.x, dy=wp.y-this.y, d=Math.hypot(dx,dy)||1;
+        const nx=dx/d, ny=dy/d;
+        this._move(nx*speed,ny*speed,world); this.face={x:nx,y:ny};
+        return true;
+      }
+    }
+    // no path found: fall back to nudging directly (best effort)
+    const dx=tx-this.x, dy=ty-this.y, d=Math.hypot(dx,dy)||1;
+    this._move(dx/d*speed,dy/d*speed,world); this.face={x:dx/d,y:dy/d};
+    return false;
   }
 
   hit(dmg, angle, game, knock=4){

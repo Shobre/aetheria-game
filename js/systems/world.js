@@ -183,6 +183,62 @@ export class World {
     return {x:this.w/2,y:this.h/2};
   }
 
+  // ---- pathfinding helpers (used by enemy AI to navigate around walls) ----
+  _blockedTile(x,y){
+    if(x<0||y<0||x>=this.cols||y>=this.rows) return true;
+    return SOLID.has(this.map[y][x]);
+  }
+  // straight-line tile raycast: true if nothing solid sits between the two world points
+  hasLineOfSight(x0,y0,x1,y1){
+    const dist=Math.hypot(x1-x0,y1-y0);
+    const steps=Math.ceil(dist/(TILE*0.5));
+    if(steps<=0) return true;
+    for(let i=1;i<steps;i++){
+      const t=i/steps, px=x0+(x1-x0)*t, py=y0+(y1-y0)*t;
+      if(this.isSolid(px,py)) return false;
+    }
+    return true;
+  }
+  // A* on the tile grid (4-dir). Returns array of world-coord waypoints (tile centers)
+  // from start toward goal, or null. Node expansion is capped to stay cheap.
+  findPath(sx,sy,tx,ty,maxNodes=700){
+    const sX=Math.floor(sx/TILE), sY=Math.floor(sy/TILE);
+    let gX=Math.floor(tx/TILE), gY=Math.floor(ty/TILE);
+    if(this._blockedTile(sX,sY)) return null;
+    // if goal tile is solid, snap to nearest free 4-neighbour
+    if(this._blockedTile(gX,gY)){
+      const adj=[[1,0],[-1,0],[0,1],[0,-1]].find(([dx,dy])=>!this._blockedTile(gX+dx,gY+dy));
+      if(!adj) return null; gX+=adj[0]; gY+=adj[1];
+    }
+    if(sX===gX && sY===gY) return null;
+    const key=(x,y)=>y*this.cols+x;
+    const open=[{x:sX,y:sY,g:0,f:Math.abs(sX-gX)+Math.abs(sY-gY)}];
+    const came=new Map(), gScore=new Map(); gScore.set(key(sX,sY),0);
+    let nodes=0;
+    while(open.length){
+      // pop lowest f (linear scan — grids are small)
+      let bi=0; for(let i=1;i<open.length;i++) if(open[i].f<open[bi].f) bi=i;
+      const cur=open.splice(bi,1)[0];
+      if(cur.x===gX && cur.y===gY){
+        // reconstruct
+        const path=[]; let ck=key(cur.x,cur.y), cx=cur.x, cy=cur.y;
+        while(came.has(ck)){ path.push({x:cx*TILE+TILE/2,y:cy*TILE+TILE/2});
+          const pv=came.get(ck); cx=pv.x; cy=pv.y; ck=key(cx,cy); }
+        path.reverse(); return path.length?path:null;
+      }
+      if(++nodes>maxNodes) return null;
+      for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const nx=cur.x+dx, ny=cur.y+dy;
+        if(this._blockedTile(nx,ny)) continue;
+        const nk=key(nx,ny), ng=cur.g+1;
+        if(gScore.has(nk) && ng>=gScore.get(nk)) continue;
+        gScore.set(nk,ng); came.set(nk,{x:cur.x,y:cur.y});
+        open.push({x:nx,y:ny,g:ng,f:ng+Math.abs(nx-gX)+Math.abs(ny-gY)});
+      }
+    }
+    return null;
+  }
+
   draw(ctx, cam){
     const P=this.pal;
     const x0=Math.max(0,Math.floor(cam.x/TILE)), y0=Math.max(0,Math.floor(cam.y/TILE));

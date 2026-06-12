@@ -84,3 +84,25 @@ export function equipStats(equipment){
   }
   return total;
 }
+
+// Numeric score for a single item (sum of its stat values, weighted).
+function _scoreStats(stats){
+  if(!stats) return 0;
+  return (stats.atk||0)*3 + (stats.def||0)*3 + (stats.hp||0)*0.5 + (stats.mp||0)*0.4
+       + (stats.crit||0)*2 + (stats.cdr||0)*1.5 + (stats.spelldmg||0)*2;
+}
+
+// Compare candidate item vs what is currently equipped in its slot.
+// Returns { delta:number, dir:'better'|'worse'|'equal', text:string }
+// delta > 0 means candidate is better.
+export function compareItem(item, equipment){
+  if(!item || item.type==='consumable') return null;
+  const slot = item.type; // weapon|shield|armor|helm|ring
+  const equipped = resolveEquip(equipment[slot]);
+  const a = _scoreStats(item.stats);
+  const b = _scoreStats(equipped ? equipped.stats : null);
+  const delta = a - b;
+  if(delta > 0)  return { delta, dir:'better',  text:'▲ '+Math.round(delta) };
+  if(delta < 0)  return { delta, dir:'worse',   text:'▼ '+Math.round(Math.abs(delta)) };
+  return { delta:0, dir:'equal', text:'=' };
+}

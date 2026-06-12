@@ -189,3 +189,12 @@ body{image-rendering:pixelated}
 .spell-picker-item .sp-cost{ font-size:8px; color:var(--mp) }
 .spell-picker-item .sp-desc{ grid-column:1/4; font-size:7px; color:#9aa; margin-top:3px; line-height:1.5 }
 .picker-close{ margin-top:6px }
+
+/* ===== item comparison indicators ===== */
+.cmp{ position:absolute; top:1px; right:2px; font-size:8px; font-weight:700; line-height:1;
+  padding:1px 2px; border-radius:3px; pointer-events:none; text-shadow:0 1px 2px #000; }
+.inv-cell, .gear-cell{ position:relative; }
+.cmp-better{ color:#5fe06a; }
+.cmp-worse{ color:#ff6b6b; }
+.cmp-equal{ color:#c8cdd6; }
+.shop-row .cmp{ position:static; margin-left:5px; display:inline-block; }
