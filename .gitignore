@@ -1,0 +1,19 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Node (in case tooling added later)
+node_modules/
+npm-debug.log*
+
+# Vercel
+.vercel/
+
+# Local server artifacts / logs
+*.log
+
+# helper scripts (never commit - may contain tokens)
+_*.bat

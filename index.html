@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aetheria - A Top-Down Adventure</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      'gbg':'#11131c','gpanel':'#1b2030','gpanel2':'#262c40','gline':'#3a4259',
+      'gold':'#ffcf4d','accent':'#e8623d','hp':'#e8413c','mp':'#3b8be8','xp':'#a45cff','stam':'#4dd28a'
+    },
+    fontFamily: { pixel:['"Press Start 2P"','monospace'] }
+  }}
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gbg text-white font-pixel overflow-hidden select-none">
+
+<!-- ===== LOADING ===== -->
+<div id="loading-screen" class="screen flex items-center justify-center">
+  <div class="text-center">
+    <div class="loader mx-auto mb-6"></div>
+    <p class="text-gold text-sm tracking-widest">LOADING...</p>
+  </div>
+</div>
+
+<!-- ===== START SCREEN ===== -->
+<div id="start-screen" class="screen hidden">
+  <div class="absolute inset-0 starfield"></div>
+  <div class="relative z-10 h-full flex flex-col items-center justify-center px-4">
+    <h1 class="title text-3xl md:text-6xl text-gold mb-2">AETHERIA</h1>
+    <p class="text-[10px] md:text-xs text-gray-400 mb-10 tracking-[0.3em]">A TOP-DOWN ADVENTURE</p>
+
+    <div class="w-full max-w-2xl">
+      <h2 class="text-xs text-gray-300 mb-4 text-center tracking-widest">SELECT SAVE SLOT</h2>
+      <div id="save-slots" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+    </div>
+
+    <div class="mt-10 text-[8px] md:text-[10px] text-gray-500 leading-relaxed text-center max-w-lg">
+      <p>WASD MOVE &nbsp;·&nbsp; SPACE DODGE &nbsp;·&nbsp; MOUSE AIM</p>
+      <p>L-CLICK ATTACK &nbsp;·&nbsp; R-CLICK BLOCK &nbsp;·&nbsp; F INTERACT</p>
+      <p>Q / E SPELLS &nbsp;·&nbsp; 1-9 ITEMS &nbsp;·&nbsp; B BAG &nbsp;·&nbsp; ESC MENU</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== GAME ===== -->
+<div id="game-container" class="screen hidden">
+  <canvas id="game-canvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="fixed inset-0 pointer-events-none z-10">
+    <!-- top-left: vitals -->
+    <div class="absolute top-3 left-3 space-y-1.5">
+      <div class="vital">
+        <span class="vlabel text-hp">HP</span>
+        <div class="vbar"><div id="hp-fill" class="vfill bg-hp" style="width:100%"></div>
+          <span id="hp-text" class="vtext">100/100</span></div>
+      </div>
+      <div class="vital">
+        <span class="vlabel text-mp">MP</span>
+        <div class="vbar"><div id="mp-fill" class="vfill bg-mp" style="width:100%"></div>
+          <span id="mp-text" class="vtext">50/50</span></div>
+      </div>
+      <div class="vital">
+        <span class="vlabel text-stam">SP</span>
+        <div class="vbar h-2"><div id="stam-fill" class="vfill bg-stam" style="width:100%"></div></div>
+      </div>
+    </div>
+
+    <!-- top-center: exp + level -->
+    <div class="absolute top-3 left-1/2 -translate-x-1/2 text-center">
+      <div class="text-[10px] text-gold mb-1">LV <span id="level-text">1</span></div>
+      <div class="w-56 h-3 bg-gpanel border border-black relative overflow-hidden">
+        <div id="xp-fill" class="h-full bg-xp transition-all duration-500" style="width:0%"></div>
+      </div>
+      <div id="xp-text" class="text-[8px] text-gray-400 mt-0.5">0 / 100 XP</div>
+    </div>
+
+    <!-- top-right: minimap -->
+    <div class="absolute top-3 right-3">
+      <div class="relative border-2 border-gpanel2 bg-black/60 p-1">
+        <canvas id="minimap" width="160" height="160" class="block"></canvas>
+        <span class="absolute bottom-1 right-2 text-[7px] text-gray-400">MAP</span>
+      </div>
+    </div>
+
+    <!-- spells (left of items) -->
+    <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-end gap-3">
+      <div class="flex gap-1">
+        <div id="spell-q" class="spell-slot"><span class="key">Q</span><span class="ico">🔥</span><div class="cd"></div></div>
+        <div id="spell-e" class="spell-slot"><span class="key">E</span><span class="ico">❄</span><div class="cd"></div></div>
+      </div>
+      <!-- item slots 1-9 -->
+      <div id="item-slots" class="flex gap-1"></div>
+    </div>
+
+    <!-- bottom-right buttons -->
+    <div class="absolute bottom-3 right-3 flex gap-2 pointer-events-auto">
+      <button id="bag-btn" class="hud-btn" title="Bag (B)">🎒</button>
+      <button id="settings-btn" class="hud-btn" title="Settings (Esc)">⚙</button>
+    </div>
+
+    <!-- interact prompt -->
+    <div id="interact-prompt" class="absolute bottom-24 left-1/2 -translate-x-1/2 hidden">
+      <div class="bg-gpanel border-2 border-gold px-3 py-1.5 text-[10px] animate-pulse">
+        <span class="text-gold">F</span> <span id="interact-label">Interact</span>
+      </div>
+    </div>
+
+    <!-- toast / messages -->
+    <div id="toast" class="absolute top-24 left-1/2 -translate-x-1/2 space-y-1 text-center"></div>
+
+    <!-- floating dmg numbers -->
+    <div id="floaters" class="absolute inset-0 overflow-hidden"></div>
+  </div>
+
+  <!-- BAG MODAL -->
+  <div id="bag-modal" class="modal hidden">
+    <div class="modal-box max-w-xl">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg text-gold">INVENTORY</h2>
+        <button data-close="bag-modal" class="text-xl text-gray-400 hover:text-gold">×</button>
+      </div>
+      <div id="inv-grid" class="grid grid-cols-6 gap-2 mb-4"></div>
+      <div class="border-t border-gpanel2 pt-3 flex justify-between text-[10px] text-gray-300">
+        <span>GOLD <span id="gold-text" class="text-gold">0</span></span>
+        <span>SLOTS <span id="slots-text">0/30</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-box max-w-md">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg text-gold">SETTINGS</h2>
+        <button data-close="settings-modal" class="text-xl text-gray-400 hover:text-gold">×</button>
+      </div>
+      <div class="space-y-4 text-[10px]">
+        <label class="setting"><span>MUSIC</span><input type="range" id="set-music" min="0" max="100" value="40"></label>
+        <label class="setting"><span>SFX</span><input type="range" id="set-sfx" min="0" max="100" value="70"></label>
+        <label class="setting"><span>SHOW FPS</span><input type="checkbox" id="set-fps"></label>
+        <label class="setting"><span>SCREEN SHAKE</span><input type="checkbox" id="set-shake" checked></label>
+        <label class="setting"><span>MINIMAP</span><input type="checkbox" id="set-minimap" checked></label>
+      </div>
+      <div class="grid grid-cols-2 gap-2 mt-6">
+        <button id="save-game-btn" class="menu-btn">SAVE</button>
+        <button id="quit-btn" class="menu-btn">QUIT TO MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEATH SCREEN -->
+  <div id="death-screen" class="modal hidden">
+    <div class="text-center">
+      <h2 class="text-4xl text-hp mb-6 title">YOU DIED</h2>
+      <button id="respawn-btn" class="menu-btn">RESPAWN</button>
+    </div>
+  </div>
+
+  <div id="fps" class="fixed top-2 left-2 text-[8px] text-stam z-30 hidden">FPS 60</div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
