@@ -14,6 +14,8 @@ Status legend: 🔴 high impact · 🟡 medium · ⚪ polish/nice-to-have
 - ✅ **Full-map screen (M key)** — canvas-rendered map with tiles, portals, NPCs, chests, player dot.
 - ✅ **Enemy pathfinding** — A* on tile grid with line-of-sight fast path. Enemies route around walls.
 - ✅ **Enemy update refactor** — extracted `_rangedAI`, `_chaseAI`, `_updatePerception`, `_applyKnockback`.
+- ✅ **Hover tooltips** — rich floating tooltips on items (bag/shop/character/hotbar) and spells (loadout/picker) with full stats, rarity, comparison, and action hints.
+- ✅ **Crafting bench + stash** — Forge at the Blacksmith (reforge rerolls affixes, upgrade raises rarity, gold cost scales); 40-slot shared Stash at the Banker NPC, persisted in save.
 
 ---
 
@@ -29,12 +31,9 @@ Status legend: 🔴 high impact · 🟡 medium · ⚪ polish/nice-to-have
 
 ### Content & economy
 - 🔴 **Quest variety** — escort, timed-clear, and "bring N items" turn-ins. Current quests are kill/reach/boss only.
-- 🟡 **Crafting / upgrade bench** at the Blacksmith: combine duplicate gear + gold to reroll or raise rarity.
-- 🟡 **Bank/stash** in the city so the 30-slot bag isn't a hard wall.
 - 🟡 **Reputation / unlockable shop tiers** — clearing biomes unlocks better stock.
 
 ### UX
-- 🟡 **Item tooltips on hover** with full stat/affix breakdown (currently title attributes + the new score badge).
 - 🟡 **Rebindable keys** + gamepad support.
 - ⚪ **Damage-number batching** and a combat log panel.
 
@@ -71,7 +70,7 @@ Status legend: 🔴 high impact · 🟡 medium · ⚪ polish/nice-to-have
 
 ## Suggested next milestone
 
-1. **Crafting bench + stash** — gives the farming loop a payoff and a gold sink.
-2. **One new boss per biome** — uses systems already in place.
-3. **Quest variety** — escort, fetch, timed-clear objectives.
-4. **`Projectile.update` refactor** — biggest remaining complexity hotspot.
+1. **One new boss per biome** (desert/cave/snow) — uses systems already in place; gates a unique reward.
+2. **Quest variety** — escort, fetch, timed-clear objectives beyond kill/reach/boss.
+3. **Elite/champion enemies** — buffed variants that drop guaranteed rare loot; pairs perfectly with the new Forge (gold sink for upgrading those drops).
+4. **`Projectile.update` refactor** — biggest remaining complexity hotspot (cognitive 66).
