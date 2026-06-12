@@ -1,1 +1,1 @@
-window.__TURSO_CONFIG = {};
+window.__TURSO_CONFIG={"url":"","token":""};
