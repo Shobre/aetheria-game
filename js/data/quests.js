@@ -37,6 +37,46 @@ export const QUESTS = {
     objectives:[{ kind:'kill', enemy:'scorpion', count:5, text:'Exterminate scorpions' }],
     reward:{ xp:160, gold:120, items:[{id:'ring_vigor',qty:1}] },
   },
+
+  // ---- Aldermere City quest-givers ----
+  q_captain1: {
+    name:'City Watch', giver:'Captain',
+    desc:'Bats infest the outskirts. Cull a swarm to prove your worth.',
+    objectives:[{ kind:'kill', enemy:'bat', count:6, text:'Slay bats' }],
+    reward:{ xp:90, gold:70, items:[{id:'potion',qty:3}] },
+    next:'q_captain2',
+  },
+  q_captain2: {
+    name:'Crypt Cleansing', giver:'Captain',
+    desc:'Skeletons rise in the catacombs. Put them to rest.',
+    objectives:[{ kind:'kill', enemy:'skeleton', count:6, text:'Destroy skeletons' }],
+    reward:{ xp:220, gold:160, items:[{id:'helm_iron',qty:1}] },
+  },
+  q_scholar: {
+    name:'Field Research', giver:'Scholar',
+    desc:'The Scholar needs golem cores. Smash some golems.',
+    objectives:[{ kind:'kill', enemy:'golem', count:4, text:'Shatter golems' }],
+    reward:{ xp:260, gold:140, items:[{id:'staff_arcane',qty:1}] },
+  },
+  q_bard1: {
+    name:'A Witch\'s Tale', giver:'Bard',
+    desc:'The Bard swears a witch lurks in the Bog Depths. Investigate.',
+    objectives:[{ kind:'reach', map:'swamp_depths', text:'Reach the Bog Depths' }],
+    reward:{ xp:150, gold:100, items:[{id:'ether',qty:3}] },
+    next:'q_bard2',
+  },
+  q_bard2: {
+    name:'Silence the Witch', giver:'Bard',
+    desc:'Slay the Bog Witch lurking in the Sunken Catacomb.',
+    objectives:[{ kind:'boss', boss:'bog_witch', text:'Defeat the Bog Witch' }],
+    reward:{ xp:600, gold:450, items:[{id:'dagger_venom',qty:1}] },
+  },
+  q_mayor: {
+    name:'Boar Trouble', giver:'Mayor',
+    desc:'Wild boars trample the glade. Thin the herd.',
+    objectives:[{ kind:'kill', enemy:'boar', count:5, text:'Hunt boars' }],
+    reward:{ xp:140, gold:110, items:[{id:'bow_short',qty:1}] },
+  },
 };
 
 // Quests a given NPC can offer, in order.

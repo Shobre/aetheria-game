@@ -81,3 +81,24 @@ A general status-effect system applied to player and enemies.
 - **Portable-first:** no hardcoded absolute paths; everything resolves relative to `index.html`.
 - **Data-driven:** maps, gear, skills, quests, and bosses live in `js/data/` so content can be added without touching engine code.
 - **Persistence:** localStorage, schema-versioned in `save.js`.
+
+
+---
+
+## Update — Combat feel, world expansion & QoL (this round)
+
+**Enemy AI overhaul** — Enemies are slower than the player (all speeds < player's 1.9) and now use a **forward vision cone** (per-type `view` radius + `fov` angle). They only give chase when they actually see you (or are struck / you're adjacent), stay alerted ~3s after losing sight, and **leash** back to their spawn instead of chasing across the whole map. A `!` indicator shows when one is hunting.
+
+**Player tuning** — Base move speed reduced to 1.9 (slower, more deliberate) but still faster than every enemy, so you can always disengage. Shield block now follows the **mouse aim** (like the attack) rather than the WASD facing.
+
+**Checkpoints & farming** — Entering any area sets a checkpoint; dying respawns you there (not the hub). Regular enemies **respawn on every area entry** so you can farm XP/gold; bosses stay dead once beaten.
+
+**World expansion** — Added **Aldermere City** (town hub) with four enterable shops (Blacksmith, Alchemist, Arcanum, General Store), each a distinct merchant with its own themed stock, plus quest-giver NPCs (Mayor, Captain, Scholar, Bard). Added **five biome sub-areas** (Sunlit Glade, Deepwood Thicket, Buried Ruins, Glacier Hollow, Bog Depths) for more to explore and farm.
+
+**Weapons** — New melee variety (dagger, venom dagger, spear, halberd, greatsword, warhammer — each with distinct reach/attack-speed) and **ranged weapons** (short bow, long bow, crossbow, arcane staff) that fire bolts toward the cursor on left-click.
+
+**Spells** — Spell system is now data-driven with a **rearrangeable q/e/r loadout**. New spells: Spark, Venom Bolt, Arcane Orb, Holy Bolt, Chain Lightning, Frost Nova (several skill-gated). Click a loadout slot to pick from known spells; drag slots to reorder.
+
+**Inventory QoL** — Drag-and-drop to **rearrange** hotbar items, backpack items, and the spell loadout.
+
+**Tests:** 112 assertions pass (added coverage for vision cones, enemy-vs-player speed, ranged weapons, spell unlocks, city/sub-area maps, portal-link integrity, new quest givers). fallow health 88 (A), 0 dead code.

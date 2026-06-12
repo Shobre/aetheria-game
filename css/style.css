@@ -167,3 +167,25 @@ body{image-rendering:pixelated}
 
 /* ===== rarity affix lines ===== */
 .affix-line{font-size:7px;color:#8fd;opacity:.9}
+
+/* ===== drag & drop (hotbar / bag / spells) ===== */
+.item-slot[draggable=true], .spell-slot[draggable=true], .inv-cell[draggable=true]{ cursor:grab }
+.dragging{ opacity:.4 }
+.drop-hover{ outline:2px dashed var(--gold); outline-offset:-2px }
+
+/* ===== spell loadout row ===== */
+#spell-loadout .spell-slot{ position:relative }
+
+/* ===== spell picker overlay ===== */
+#spell-picker{ flex-direction:column; gap:6px; align-items:center; }
+#spell-picker .picker-title{ color:var(--gold); font-size:11px; margin-bottom:6px; text-align:center }
+.spell-picker-item{ width:min(92vw,420px); background:var(--gpanel2); border:2px solid #000;
+  padding:8px 10px; cursor:pointer; display:grid; grid-template-columns:24px 1fr auto; gap:6px;
+  align-items:center; transition:.12s }
+.spell-picker-item:hover{ border-color:var(--gold) }
+.spell-picker-item.active{ border-color:var(--stam) }
+.spell-picker-item .ico{ font-size:16px }
+.spell-picker-item .sp-name{ font-size:9px; color:#dde }
+.spell-picker-item .sp-cost{ font-size:8px; color:var(--mp) }
+.spell-picker-item .sp-desc{ grid-column:1/4; font-size:7px; color:#9aa; margin-top:3px; line-height:1.5 }
+.picker-close{ margin-top:6px }

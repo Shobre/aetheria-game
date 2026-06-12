@@ -15,6 +15,7 @@ const BIOMES = {
   house:  { fa:'#6b4a2f', fb:'#75512f', pa:'#8a6a3f', pb:'#967440', wd:'#3a2a1a', wl:'#5a4226', liquid:'#3a82c8', liquid2:'#52a0d8', deco:['barrel','crate'] },
   snow:   { fa:'#dfe9f2', fb:'#eaf2fa', pa:'#b8c6d6', pb:'#c6d2e0', wd:'#6a7c92', wl:'#8a9cb2', liquid:'#7fc8e8', liquid2:'#a0dcf2', deco:['pine','snowrock','pine'] },
   swamp:  { fa:'#3a4a2a', fb:'#445232', pa:'#4a4030', pb:'#564a38', wd:'#1a2410', wl:'#26341a', liquid:'#4a5a2a', liquid2:'#5e7236', deco:['deadtree','reed','rock'] },
+  city:   { fa:'#4a6a48', fb:'#547652', pa:'#9a9088', pb:'#a8a096', wd:'#3a3038', wl:'#5a4e58', liquid:'#3a82c8', liquid2:'#52a0d8', deco:['lamp','fountain','crate'] },
 };
 const SOLID = new Set([T.WATER, T.WALL, T.LAVA]);
 
@@ -63,6 +64,8 @@ export class World {
         const y=2+Math.floor(this._rand()*(this.rows-4));
         if(this.map[y][x]===T.FLOOR) this.decor.push({type:this.pal.deco[i%this.pal.deco.length],x,y});
       }
+    } else if(this.def.town){
+      this._genCity();
     } else if(this.biome==='dungeon' || this.biome==='cave'){
       this._genRooms();
     } else {
@@ -99,6 +102,23 @@ export class World {
         this.map[y][x]=T.WALL; this.decor.push({type:kind,x,y,solid:true});
       } else if(r<0.75){ this.decor.push({type:kind,x,y}); } // walkable deco
     }
+  }
+
+  // town: cobbled plaza with cross avenues + building blocks at each door portal.
+  _genCity(){
+    for(let y=1;y<this.rows-1;y++)for(let x=1;x<this.cols-1;x++) this.map[y][x]=T.FLOOR; // grass yards
+    const cx=Math.floor(this.cols/2), cy=Math.floor(this.rows/2);
+    // main avenues (cobblestone paths)
+    for(let x=1;x<this.cols-1;x++){ this.map[cy][x]=T.PATH; this.map[cy-1][x]=T.PATH; }
+    for(let y=1;y<this.rows-1;y++){ this.map[y][cx]=T.PATH; this.map[y][cx-1]=T.PATH; }
+    // central plaza
+    for(let y=cy-4;y<=cy+4;y++)for(let x=cx-4;x<=cx+4;x++)
+      if(this.map[y]&&this.map[y][x]!==undefined) this.map[y][x]=T.PATH;
+    // building blocks (solid) around door portals get placed in _placeFeatures via decor.
+    // lamps + a fountain for ambience
+    this.decor.push({type:'fountain', x:cx-1, y:cy-1});
+    const lamps=[[6,6],[this.cols-7,6],[6,this.rows-7],[this.cols-7,this.rows-7]];
+    for(const [lx,ly] of lamps) this.decor.push({type:'lamp', x:lx, y:ly});
   }
 
   // dungeon/cave: carve rooms connected by corridors
@@ -185,10 +205,21 @@ export class World {
     for(const p of this.portals){
       const sx=p.x*TILE-cam.x, sy=p.y*TILE-cam.y;
       const pulse=0.5+0.5*Math.sin(performance.now()/300);
-      ctx.fillStyle=p.door?'#5a3a1a':`rgba(164,92,255,${0.4+pulse*0.4})`;
-      if(p.door){ ctx.fillRect(sx+4,sy+2,TILE-8,TILE-2);
-        ctx.fillStyle='#2a1a0a'; ctx.fillRect(sx+9,sy+6,TILE-18,TILE-6); }
-      else { ctx.beginPath(); ctx.arc(sx+16,sy+16,11,0,7); ctx.fill();
+      if(p.door){
+        if(this.def.town){
+          // building facade above the door
+          ctx.fillStyle='#6a5240'; ctx.fillRect(sx-12,sy-34,TILE+24,38);
+          ctx.fillStyle='#8a3030'; ctx.beginPath(); ctx.moveTo(sx-16,sy-34);
+          ctx.lineTo(sx+16,sy-50); ctx.lineTo(sx+TILE+12,sy-34); ctx.closePath(); ctx.fill();
+          ctx.fillStyle='#caa'; ctx.fillRect(sx-6,sy-26,8,8); ctx.fillRect(sx+TILE-2,sy-26,8,8); // windows
+        }
+        ctx.fillStyle='#5a3a1a'; ctx.fillRect(sx+4,sy+2,TILE-8,TILE-2);
+        ctx.fillStyle='#2a1a0a'; ctx.fillRect(sx+9,sy+6,TILE-18,TILE-6);
+        if(this.def.town && p.label){ ctx.fillStyle='#ffe6a0'; ctx.font='8px monospace'; ctx.textAlign='center';
+          ctx.fillText(p.label, sx+16, sy-40); }
+      }
+      else { ctx.fillStyle=`rgba(164,92,255,${0.4+pulse*0.4})`;
+        ctx.beginPath(); ctx.arc(sx+16,sy+16,11,0,7); ctx.fill();
         ctx.fillStyle=`rgba(255,255,255,${pulse*0.6})`; ctx.beginPath(); ctx.arc(sx+16,sy+16,5,0,7); ctx.fill(); }
     }
     // decor
@@ -245,6 +276,13 @@ export class World {
         ctx.moveTo(sx+16,sy+16); ctx.lineTo(sx+9,sy+9); ctx.moveTo(sx+16,sy+14); ctx.lineTo(sx+23,sy+8); ctx.stroke(); break;
       case 'reed': ctx.strokeStyle='#6a7a3a'; ctx.lineWidth=2;
         for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(sx+16+k*4,sy+26); ctx.lineTo(sx+16+k*4,sy+12); ctx.stroke(); } break;
+      case 'lamp': ctx.fillStyle='#3a3038'; ctx.fillRect(sx+14,sy+10,4,18);
+        ctx.fillStyle='#ffd86a'; ctx.beginPath(); ctx.arc(sx+16,sy+8,5,0,7); ctx.fill();
+        ctx.fillStyle='rgba(255,216,106,.25)'; ctx.beginPath(); ctx.arc(sx+16,sy+8,10,0,7); ctx.fill(); break;
+      case 'fountain': ctx.fillStyle='#8a93a0'; ctx.beginPath(); ctx.arc(sx+16,sy+18,14,0,7); ctx.fill();
+        ctx.fillStyle='#3a82c8'; ctx.beginPath(); ctx.arc(sx+16,sy+18,10,0,7); ctx.fill();
+        ctx.fillStyle='#9ec6e8'; ctx.fillRect(sx+14,sy+4,4,12);
+        ctx.fillStyle='rgba(255,255,255,.5)'; ctx.beginPath(); ctx.arc(sx+16,sy+16,3,0,7); ctx.fill(); break;
     }
   }
 }

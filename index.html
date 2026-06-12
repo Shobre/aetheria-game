@@ -96,10 +96,8 @@
 
     <!-- spells (left of items) -->
     <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-end gap-3">
-      <div class="flex gap-1">
-        <div id="spell-q" class="spell-slot"><span class="key">Q</span><span class="ico">🔥</span><div class="cd"></div></div>
-        <div id="spell-e" class="spell-slot"><span class="key">E</span><span class="ico">❄</span><div class="cd"></div></div>
-      </div>
+      <!-- spell loadout (q/e/r) — built dynamically by HUD -->
+      <div id="spell-loadout" class="flex gap-1"></div>
       <!-- item slots 1-9 -->
       <div id="item-slots" class="flex gap-1"></div>
     </div>
@@ -209,6 +207,9 @@
       <div id="quest-log" class="quest-log"></div>
     </div>
   </div>
+
+  <!-- SPELL PICKER OVERLAY -->
+  <div id="spell-picker" class="modal hidden"></div>
 
   <!-- SHOP MODAL -->
   <div id="shop-modal" class="modal hidden">

@@ -37,6 +37,8 @@ export const SaveSystem = {
       equipment:{ weapon:'sword_wood', shield:null, armor:null, helm:null, ring:null },
       // skill ranks {id:rank}
       skills:{},
+      // q/e/r spell loadout (rearrangeable)
+      spellSlots:['fireball','iceshard','spark'],
       // inventory (consumables stack; gear individual)
       inventory:[
         makeItem('potion',5),

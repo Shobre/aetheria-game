@@ -10,6 +10,7 @@ import { SKILLS, canLearn } from '../data/skilltree.js';
 import { Boss, BOSSES } from '../entities/boss.js';
 import { QuestLog } from './quests.js';
 import { rollRarity, applyRarity, rarityName } from '../data/affixes.js';
+import { SPELLS } from '../data/spells.js';
 
 // difficulty scale per map (deeper = tougher enemies)
 const MAP_SCALE = { meadow:1, forest:1.25, desert:1.45, cave:1.6, dungeon1:1.9, house1:1,
@@ -24,7 +25,7 @@ export class Game {
     this.enemies=[]; this.projectiles=[]; this.particles=[]; this.golds=[]; this.drops=[];
     this.playtime=0; this._lastT=0; this._fpsT=0; this._fpsCount=0; this._fps=60;
     this.nearInteract=null; this.transition=0;
-    this.boss=null; this.killedEnemies={}; this.bossesDead={};
+    this.boss=null; this.bossesDead={}; this.checkpoint=null;
   }
 
   start(state){
@@ -34,8 +35,8 @@ export class Game {
     this.inventory=state.inventory.map(i=>({...i}));
     this.hotbar=[...state.hotbar];
     this.openedChests=state.openedChests||{};
-    this.killedEnemies=state.killedEnemies||{};
     this.bossesDead=state.bossesDead||{};
+    this.checkpoint=state.checkpoint||null;
     this.quests=new QuestLog(this, state);
     this.hud=new HUD(this);
     this.loadMap(state.map, state.pos.x/TILE, state.pos.y/TILE, true);
@@ -52,22 +53,23 @@ export class Game {
     if(!keepPos){ this.player.x=tx*TILE+TILE/2; this.player.y=ty*TILE+TILE/2; }
     // restore opened-chest state for this map
     this.world.chests.forEach(c=>{ if(this.openedChests[mapId+':'+c.idx]) c.opened=true; });
-    // spawn enemies on load (ONCE; persisted-dead ones don't respawn)
+    // Spawn enemies fresh on EVERY area entry so the player can farm xp/gold.
+    // Bosses still persist (handled below). Seed varies per visit so layouts feel alive.
     this.enemies=[]; this.projectiles=[]; this.golds=[]; this.drops=[]; this.boss=null;
     const def=MAPS[mapId];
     const scale=MAP_SCALE[mapId]||1;
-    let seed=def.seed*7+13;
+    let seed=(def.seed*7+13) + ((this._visitTick=(this._visitTick||0)+1)*131);
     const rand=()=>{ seed=(seed*9301+49297)%233280; return seed/233280; };
-    const deadSet=this.killedEnemies[mapId]||{};
     for(let i=0;i<(def.enemies.count||0);i++){
       const pos=this.world.randomFloor(rand);
       // don't spawn on top of player
-      if(Math.hypot(pos.x-this.player.x,pos.y-this.player.y)<200){ i--; continue; }
+      if(Math.hypot(pos.x-this.player.x,pos.y-this.player.y)<220){ i--; continue; }
       const types=def.enemies.types;
       const t=types[Math.floor(rand()*types.length)];
-      if(deadSet[i]) continue; // already cleared this slot
       const e=new Enemy(pos.x,pos.y,t,scale); e.spawnIdx=i; this.enemies.push(e);
     }
+    // checkpoint: dying returns you to this area at this entry point
+    this.checkpoint={ map:mapId, tx, ty };
     // boss for this map (if not already defeated)
     for(const bid in BOSSES){
       if(BOSSES[bid].map===mapId && !this.bossesDead[bid]){
@@ -164,7 +166,7 @@ export class Game {
   _doInteract(near){
     if(near.type==='npc'){
       const n=near.ref;
-      if(n.shop){ this.openShop(); return; }
+      if(n.shop){ this.openShop(n.stock, n.name); return; }
       // quest handling: turn in completed, else offer next available
       if(this.quests){
         const gs=this.quests.giverState(n.name);
@@ -226,7 +228,16 @@ export class Game {
 
   // ---- combat hooks ----
   doMeleeAttack(p){
-    const reach=44, arc=1.15;
+    // ranged weapon: fire a physical bolt toward the aim instead of a melee swing
+    if(p.ranged){
+      let dmg=Math.round(p.atk*p.dmgMul*0.85);  // slightly less per-hit, but safe range
+      const crit=Math.random()*100<p.crit; if(crit) dmg*=2;
+      this.projectiles.push(new Projectile(p.x,p.y,p._aim,
+        {speed:p.shotSpeed,dmg,r:5,color:'#ffe6a0',kind:'phys',life:1.3,
+         crit, lifesteal:p.lifesteal||0}));
+      return;
+    }
+    const reach=p.reach||44, arc=1.15;
     for(const e of this.enemies){ if(e.dead) continue;
       const dx=e.x-p.x, dy=e.y-p.y, d=Math.hypot(dx,dy);
       if(d<reach+e.r){
@@ -244,13 +255,30 @@ export class Game {
         }
       }
     }
+    // also hit the boss with melee
+    if(this.boss && !this.boss.dead){
+      const e=this.boss, dx=e.x-p.x, dy=e.y-p.y, d=Math.hypot(dx,dy);
+      if(d<reach+e.r){ const ang=Math.atan2(dy,dx);
+        let diff=Math.abs(((ang-p._aim+Math.PI)%(2*Math.PI))-Math.PI);
+        if(diff<arc){ let dmg=Math.round(p.atk*p.dmgMul*(Math.random()*100<p.crit?2:1));
+          e.hit(dmg,ang,this,4); if(p.lifesteal>0) p.heal(dmg*p.lifesteal,this); } }
+    }
   }
-  castSpell(p, kind){
-    let opts;
-    if(kind==='fire') opts={speed:6,dmg:Math.round((18+p.level*2)*p.spellMul),r:6,color:'#e8623d',kind:'fire',life:1.0};
-    else if(kind==='ice') opts={speed:5,dmg:Math.round((10+p.level)*p.spellMul),r:7,color:'#7fd8ff',kind:'ice',life:1.2};
-    else if(kind==='meteor') opts={speed:4,dmg:Math.round((60+p.level*4)*p.spellMul),r:12,color:'#ff7a2a',kind:'fire',life:1.4,aoe:90};
-    this.projectiles.push(new Projectile(p.x,p.y,p._aim,opts));
+  castSpell(p, id){
+    const sp=SPELLS[id]; if(!sp) return;
+    const pr=sp.proj;
+    const dmg=Math.round((pr.base + p.level*(pr.perLvl||0))*p.spellMul);
+    const opts={ speed:pr.speed, dmg, r:pr.r, color:pr.color, kind:pr.kind,
+      life:pr.life, aoe:pr.aoe||0, status:pr.status||null, chain:pr.chain||0 };
+    if(sp.healOnCast) p.heal(sp.healOnCast,this);
+    if(sp.nova){
+      // ring of projectiles outward
+      const n=sp.nova;
+      for(let i=0;i<n;i++){ const a=(i/n)*Math.PI*2;
+        this.projectiles.push(new Projectile(p.x,p.y,a,{...opts})); }
+    } else {
+      this.projectiles.push(new Projectile(p.x,p.y,p._aim,opts));
+    }
   }
   throwBomb(){ const p=this.player;
     this.projectiles.push(new Projectile(p.x,p.y,p._aim,{speed:4,dmg:40,r:8,color:'#444',kind:'fire',life:0.8,aoe:70})); }
@@ -304,12 +332,10 @@ export class Game {
     applyRarity(item, rollRarity(Math.random, luck||0));
     this.drops.push({x,y,id,item,dead:false});
   }
-  // enemy death bookkeeping: quest progress + per-map persistence + gear drop chance
+  // enemy death bookkeeping: quest progress + gear drop chance
+  // (regular enemies respawn on re-entry so the player can farm — no kill persistence)
   onEnemyKilled(e){
     if(this.quests) this.quests.onKill(e.type,false,null);
-    if(e.spawnIdx!=null && e.spawnIdx>=0){
-      (this.killedEnemies[this.currentMap]=this.killedEnemies[this.currentMap]||{})[e.spawnIdx]=true;
-    }
     // tougher foes can drop rolled gear
     const tough=['brute','golem','yeti','croaker','skeleton'];
     if(tough.includes(e.type) && Math.random()<0.25) this.dropGear(e.x,e.y,0.3);
@@ -367,7 +393,7 @@ export class Game {
   }
 
   // ---- shop ----
-  openShop(){ this.paused=true; this.hud.openShop(); }
+  openShop(stock, name){ this.paused=true; this.shopStock=stock||null; this.shopName=name||'Merchant'; this.hud.openShop(); }
   buyItem(id){
     const c=CATALOG[id]; if(!c) return;
     if(this.player.gold < c.price){ this.toast('Not enough gold!'); this.sfx('hurt'); return; }
@@ -399,16 +425,17 @@ export class Game {
     const ds=document.getElementById('death-screen'); ds.classList.remove('hidden'); ds.classList.add('flex'); }
   respawn(){
     this.player.dead=false; this.player.hp=this.player.hpMax; this.player.mp=this.player.mpMax;
-    this.player.invuln=2.5; this.paused=false;
-    // respawn back in meadow hub
-    this.loadMap('meadow', 30, 24, false);
+    this.player.statuses={}; this.player.invuln=2.5; this.paused=false;
+    // respawn at the last checkpoint (the area you entered), not always the hub
+    const cp=this.checkpoint || { map:'meadow', tx:30, ty:24 };
+    this.loadMap(cp.map, cp.tx, cp.ty, false);
     const ds=document.getElementById('death-screen'); ds.classList.add('hidden'); ds.classList.remove('flex');
   }
   save(){
     const st={ ...this.player.serialize(), slot:this.slot,
       map:this.currentMap, inventory:this.inventory, hotbar:this.hotbar,
       playtime:this.playtime, openedChests:this.openedChests,
-      killedEnemies:this.killedEnemies, bossesDead:this.bossesDead,
+      bossesDead:this.bossesDead, checkpoint:this.checkpoint,
       quests:this.quests?this.quests.serialize():undefined };
     SaveSystem.save(this.slot, st); this.toast('Game Saved!');
   }

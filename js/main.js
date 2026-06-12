@@ -78,9 +78,6 @@ document.getElementById('save-game-btn').onclick=()=>game.save();
 document.getElementById('quit-btn').onclick=()=>{ if(confirm('Quit to menu? (save first!)')) game.quitToMenu(); };
 document.getElementById('respawn-btn').onclick=()=>game.respawn();
 
-document.getElementById('spell-q').onclick=()=>game.toast('Press Q — Fireball (10 MP)');
-document.getElementById('spell-e').onclick=()=>game.toast('Press E — Ice Shard (15 MP)');
-
 // ---- global keys ----
 window.addEventListener('keydown', e=>{
   if(game.running===false) return;

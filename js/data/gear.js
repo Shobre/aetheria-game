@@ -18,6 +18,18 @@ export const CATALOG = {
   sword_iron:  { name:'Iron Sword',   icon:'⚔️', type:'weapon', price:120, sell:50,  stats:{atk:6} },
   sword_flame: { name:'Flameblade',   icon:'🔥', type:'weapon', price:380, sell:160, stats:{atk:12,mp:10} },
   sword_frost: { name:'Frostfang',    icon:'❄️', type:'weapon', price:420, sell:175, stats:{atk:11,crit:8} },
+  // melee variety: daggers (fast, short), spears (slow, long reach), greatswords (slow, heavy)
+  dagger:      { name:'Dagger',       icon:'🔪', type:'weapon', price:90,  sell:38,  stats:{atk:4,crit:10}, atkSpeed:0.20, reach:34 },
+  dagger_venom:{ name:'Venom Dagger', icon:'🗡️', type:'weapon', price:300, sell:125, stats:{atk:7,crit:12}, atkSpeed:0.20, reach:34 },
+  spear_iron:  { name:'Iron Spear',   icon:'🔱', type:'weapon', price:180, sell:75,  stats:{atk:8}, atkSpeed:0.42, reach:68 },
+  halberd:     { name:'Halberd',      icon:'⚜️', type:'weapon', price:360, sell:150, stats:{atk:13,def:2}, atkSpeed:0.46, reach:72 },
+  greatsword:  { name:'Greatsword',   icon:'🗡', type:'weapon', price:340, sell:140, stats:{atk:16}, atkSpeed:0.55, reach:54 },
+  warhammer:   { name:'Warhammer',    icon:'🔨', type:'weapon', price:400, sell:165, stats:{atk:18,def:3}, atkSpeed:0.62, reach:50 },
+  // ranged weapons: left-click fires a physical bolt toward the mouse
+  bow_short:   { name:'Short Bow',    icon:'🏹', type:'weapon', price:150, sell:62,  stats:{atk:6}, ranged:true, atkSpeed:0.40, shotSpeed:7.5 },
+  bow_long:    { name:'Long Bow',     icon:'🏹', type:'weapon', price:340, sell:140, stats:{atk:10,crit:6}, ranged:true, atkSpeed:0.46, shotSpeed:8.5 },
+  crossbow:    { name:'Crossbow',     icon:'🎯', type:'weapon', price:300, sell:125, stats:{atk:12}, ranged:true, atkSpeed:0.70, shotSpeed:9.5 },
+  staff_arcane:{ name:'Arcane Staff', icon:'🪄', type:'weapon', price:380, sell:160, stats:{atk:7,mp:30,spelldmg:0}, ranged:true, atkSpeed:0.50, shotSpeed:6.5 },
 
   // ---- shields (def + block) ----
   shield_wood: { name:'Wooden Shield', icon:'🛡️', type:'shield', price:60,  sell:25,  stats:{def:3} },
@@ -46,6 +58,8 @@ export function makeItem(id, qty){
   const it = { id, name:c.name, icon:c.icon, type:c.type };
   if(c.type==='consumable') it.qty = qty||1;
   if(c.stats) it.stats = {...c.stats};
+  // carry weapon behaviour fields so equipped gear keeps melee/ranged characteristics
+  for(const k of ['ranged','atkSpeed','reach','shotSpeed']) if(c[k]!=null) it[k]=c[k];
   return it;
 }
 
@@ -53,7 +67,9 @@ export function makeItem(id, qty){
 export function resolveEquip(val){
   if(!val) return null;
   if(typeof val === 'string'){ const c = CATALOG[val]; if(!c) return null;
-    return { id:val, name:c.name, icon:c.icon, type:c.type, stats:c.stats||{} }; }
+    const it={ id:val, name:c.name, icon:c.icon, type:c.type, stats:c.stats||{} };
+    for(const k of ['ranged','atkSpeed','reach','shotSpeed']) if(c[k]!=null) it[k]=c[k];
+    return it; }
   return val; // already an item object (rolled gear keeps its own stats/affixes)
 }
 

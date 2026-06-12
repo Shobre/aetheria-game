@@ -4,26 +4,29 @@ import { makeItem } from '../data/gear.js';
 import { rollRarity, applyRarity } from '../data/affixes.js';
 
 // Enemy configs per type. Behaviors: chase (touch), ranged (shoots), lunge (telegraph+dash).
+// speeds are deliberately below the player's baseSpeed (1.9) so the player can
+// always outrun foes; `view` = sight radius, `fov` = half-angle (rad) of the
+// forward vision cone the enemy must see the player within to start chasing.
 const CFG = {
   // meadow / generic
-  slime:   { hp:34, speed:0.9, dmg:8,  xp:18, gold:[3,8],  color:'#7a3fb0', r:11, behavior:'chase' },
-  bat:     { hp:20, speed:1.8, dmg:6,  xp:14, gold:[2,6],  color:'#4a4a6a', r:9,  behavior:'chase', erratic:true },
-  brute:   { hp:80, speed:0.7, dmg:18, xp:42, gold:[10,22],color:'#9a3030', r:15, behavior:'lunge' },
+  slime:   { hp:34, speed:0.62, dmg:8,  xp:18, gold:[3,8],  color:'#7a3fb0', r:11, behavior:'chase', view:200, fov:1.0 },
+  bat:     { hp:20, speed:1.15, dmg:6,  xp:14, gold:[2,6],  color:'#4a4a6a', r:9,  behavior:'chase', erratic:true, view:240, fov:1.6 },
+  brute:   { hp:80, speed:0.5,  dmg:18, xp:42, gold:[10,22],color:'#9a3030', r:15, behavior:'lunge', view:220, fov:0.9 },
   // forest
-  boar:    { hp:55, speed:1.0, dmg:14, xp:30, gold:[6,14], color:'#7a5a3a', r:13, behavior:'lunge' },
-  archer:  { hp:28, speed:0.8, dmg:10, xp:28, gold:[8,16], color:'#3a6a4a', r:10, behavior:'ranged', shootRange:300, shootCd:1.6 },
+  boar:    { hp:55, speed:0.78, dmg:14, xp:30, gold:[6,14], color:'#7a5a3a', r:13, behavior:'lunge', view:230, fov:0.8 },
+  archer:  { hp:28, speed:0.55, dmg:10, xp:28, gold:[8,16], color:'#3a6a4a', r:10, behavior:'ranged', shootRange:300, shootCd:1.6, view:320, fov:1.1 },
   // desert
-  scorpion:{ hp:40, speed:1.2, dmg:13, xp:32, gold:[7,15], color:'#c08030', r:12, behavior:'lunge' },
+  scorpion:{ hp:40, speed:0.92, dmg:13, xp:32, gold:[7,15], color:'#c08030', r:12, behavior:'lunge', view:220, fov:0.9 },
   // cave
-  golem:   { hp:120,speed:0.5, dmg:24, xp:60, gold:[15,30],color:'#5a6472', r:17, behavior:'chase' },
+  golem:   { hp:120,speed:0.38, dmg:24, xp:60, gold:[15,30],color:'#5a6472', r:17, behavior:'chase', view:180, fov:0.8 },
   // dungeon
-  skeleton:{ hp:46, speed:1.1, dmg:15, xp:34, gold:[9,18], color:'#d8d0c0', r:11, behavior:'lunge' },
+  skeleton:{ hp:46, speed:0.82, dmg:15, xp:34, gold:[9,18], color:'#d8d0c0', r:11, behavior:'lunge', view:240, fov:1.0 },
   // snow (Frostpeak)
-  frostling:{ hp:36, speed:1.5, dmg:11, xp:30, gold:[6,14], color:'#bfe8ff', r:10, behavior:'chase', onHit:'chill' },
-  yeti:    { hp:140,speed:0.6, dmg:26, xp:70, gold:[16,32],color:'#e8f4ff', r:18, behavior:'lunge', onHit:'chill' },
+  frostling:{ hp:36, speed:1.05, dmg:11, xp:30, gold:[6,14], color:'#bfe8ff', r:10, behavior:'chase', onHit:'chill', view:240, fov:1.2 },
+  yeti:    { hp:140,speed:0.48, dmg:26, xp:70, gold:[16,32],color:'#e8f4ff', r:18, behavior:'lunge', onHit:'chill', view:220, fov:0.9 },
   // swamp (Murkbog)
-  spitter: { hp:34, speed:0.7, dmg:9,  xp:30, gold:[7,15], color:'#5a8a3a', r:11, behavior:'ranged', shootRange:320, shootCd:1.8, onHit:'poison' },
-  croaker: { hp:60, speed:1.0, dmg:14, xp:36, gold:[8,18], color:'#3a6a2a', r:13, behavior:'lunge', onHit:'poison' },
+  spitter: { hp:34, speed:0.5,  dmg:9,  xp:30, gold:[7,15], color:'#5a8a3a', r:11, behavior:'ranged', shootRange:320, shootCd:1.8, onHit:'poison', view:320, fov:1.1 },
+  croaker: { hp:60, speed:0.78, dmg:14, xp:36, gold:[8,18], color:'#3a6a2a', r:13, behavior:'lunge', onHit:'poison', view:230, fov:0.9 },
 };
 
 export class Enemy {
@@ -42,12 +45,33 @@ export class Enemy {
     this.erratic=c.erratic||false;
     this.onHit=c.onHit||null;
     this.statuses={};
+    // perception: vision cone + memory + home anchor (leash)
+    this.view=c.view||220; this.fov=c.fov!=null?c.fov:1.0;
+    this.homeX=x; this.homeY=y;
+    this.alert=0;                  // >0 = actively hunting (sees/heard player)
+    this.face={x:0,y:1};           // facing direction (drives the vision cone)
     this.hitFlash=0; this.knockback={x:0,y:0}; this.frozen=0;
     this.bob=Math.random()*7; this.dead=false; this.attackCd=0;
     // lunge state
     this.lungeState='idle'; this.lungeTimer=0; this.lungeDir={x:0,y:0};
     this.wander={x:0,y:0,t:0};
   }
+
+  // can this enemy currently perceive the player? sight cone OR very close (hearing).
+  // Once alerted it keeps chasing (alert timer) until the player breaks line/leash.
+  _canSee(player, dist, nx, ny){
+    if(dist < this.r+player.r+24) return true;            // adjacent: always notice
+    if(dist > this.view) return false;                    // out of sight range
+    // within a forgiving radius treat as heard
+    if(dist < 70) return true;
+    // forward vision cone: angle between facing and player direction
+    const fa=Math.atan2(this.face.y,this.face.x);
+    const pa=Math.atan2(ny,nx);
+    let diff=Math.abs(((pa-fa+Math.PI)%(2*Math.PI))-Math.PI);
+    return diff < this.fov;
+  }
+  // distance from home spawn (used to leash enemies so they don't roam the map)
+  _homeDist(){ return Math.hypot(this.x-this.homeX, this.y-this.homeY); }
 
   update(dt, player, world, game){
     if(this.dead) return;
@@ -68,7 +92,20 @@ export class Enemy {
     }
     const dx=player.x-this.x, dy=player.y-this.y, dist=Math.hypot(dx,dy)||1;
     const nx=dx/dist, ny=dy/dist;
-    const aggro=420;
+
+    // ---- perception: update alert state from vision cone ----
+    this.alert=Math.max(0,this.alert-dt);
+    const LEASH=360;                 // how far from home an enemy will chase before giving up
+    if(this._canSee(player,dist,nx,ny) && this._homeDist()<LEASH+dist*0.0){
+      this.alert=3.0;                // remember the player for 3s after losing sight
+    }
+    const hunting = this.alert>0 && this._homeDist()<LEASH+260;
+
+    if(!hunting){
+      // ---- idle: drift slowly back toward home, then wander a little ----
+      this._idleBehavior(dt,world);
+      return;
+    }
 
     if(this.behavior==='ranged'){
       // keep distance, shoot
@@ -78,17 +115,16 @@ export class Enemy {
         if(this.shootTimer<=0){ this.shootTimer=this.shootCd;
           if(this.onHit) game.enemyShootStatus(this.x,this.y,Math.atan2(dy,dx),this.dmg,this.onHit);
           else game.enemyShoot(this.x,this.y,Math.atan2(dy,dx),this.dmg); }
-      } else if(dist<aggro){ this._move(nx*this.speed,ny*this.speed,world); }
+      } else { this._move(nx*this.speed,ny*this.speed,world); this.face={x:nx,y:ny}; }
     }
     else if(this.behavior==='lunge'){
       this._lungeAI(dt,player,world,game,dist,nx,ny);
     }
     else { // chase
-      if(dist<aggro){
-        if(this.erratic){ this.wander.t-=dt; if(this.wander.t<=0){ this.wander.t=0.4+Math.random()*0.4;
-          this.wander.x=(Math.random()-0.5)*1.4; this.wander.y=(Math.random()-0.5)*1.4; } }
-        this._move((nx+this.wander.x)*this.speed,(ny+this.wander.y)*this.speed,world);
-      }
+      if(this.erratic){ this.wander.t-=dt; if(this.wander.t<=0){ this.wander.t=0.4+Math.random()*0.4;
+        this.wander.x=(Math.random()-0.5)*1.4; this.wander.y=(Math.random()-0.5)*1.4; } }
+      this._move((nx+this.wander.x)*this.speed,(ny+this.wander.y)*this.speed,world);
+      this.face={x:nx,y:ny};
       if(dist<this.r+player.r+2 && this.attackCd<=0){
         this.attackCd=0.8; player.takeDamage(this.dmg,Math.atan2(dy,dx)+Math.PI,game);
         if(this.onHit) applyStatus(player,this.onHit);
@@ -97,10 +133,27 @@ export class Enemy {
     }
   }
 
+  // unalerted: slow patrol/wander near home; return if it drifted too far
+  _idleBehavior(dt,world){
+    const hd=this._homeDist();
+    if(hd>40){
+      // walk back toward home at half speed, facing that way
+      const hx=this.homeX-this.x, hy=this.homeY-this.y, hl=Math.hypot(hx,hy)||1;
+      this._move(hx/hl*this.speed*0.5, hy/hl*this.speed*0.5, world);
+      this.face={x:hx/hl,y:hy/hl};
+    } else {
+      // gentle wander so idle enemies feel alive, glancing around (rotates vision cone)
+      this.wander.t-=dt;
+      if(this.wander.t<=0){ this.wander.t=1.0+Math.random()*1.5;
+        const a=Math.random()*Math.PI*2; this.face={x:Math.cos(a),y:Math.sin(a)}; }
+      if(this.behavior!=='ranged' && Math.random()<0.4)
+        this._move(this.face.x*this.speed*0.25, this.face.y*this.speed*0.25, world);
+    }
+  }
+
   _lungeAI(dt,player,world,game,dist,nx,ny){
-    const aggro=440;
     if(this.lungeState==='idle'){
-      if(dist<aggro && dist>this.r+player.r){ this._move(nx*this.speed,ny*this.speed,world); }
+      if(dist>this.r+player.r){ this._move(nx*this.speed,ny*this.speed,world); this.face={x:nx,y:ny}; }
       if(dist<150){ this.lungeState='telegraph'; this.lungeTimer=0.5; this.lungeDir={x:nx,y:ny}; }
     } else if(this.lungeState==='telegraph'){
       this.lungeTimer-=dt;
@@ -126,6 +179,7 @@ export class Enemy {
 
   hit(dmg, angle, game, knock=4){
     if(this.dead) return;
+    this.alert=4.0;  // taking a hit always alerts the enemy
     this.hp-=dmg; this.hitFlash=0.18;
     this.knockback.x+=Math.cos(angle)*knock; this.knockback.y+=Math.sin(angle)*knock;
     game.floater('-'+dmg, this.x, this.y-14, '#fff');
@@ -210,6 +264,9 @@ export class Enemy {
       ctx.fillStyle='#000'; ctx.fillRect(sx-this.r,sy-this.r-7,this.r*2,3);
       ctx.fillStyle='#e8413c'; ctx.fillRect(sx-this.r,sy-this.r-7,this.r*2*(this.hp/this.hpMax),3);
     }
+    // alert indicator when actively hunting the player
+    if(this.alert>2.5){ ctx.fillStyle='#ffe24d'; ctx.font='bold 12px monospace'; ctx.textAlign='center';
+      ctx.fillText('!', sx, sy-this.r-10); }
     drawStatusPips(this,ctx,sx,sy);
   }
 }
@@ -220,7 +277,10 @@ export class Projectile {
     this.speed=opts.speed||5; this.dmg=opts.dmg||10; this.r=opts.r||5;
     this.color=opts.color||'#ffcf4d'; this.life=opts.life||1.2;
     this.kind=opts.kind||'fire'; this.hostile=opts.hostile||false;
-    this.aoe=opts.aoe||0; this.status=opts.status||null; this.dead=false; this.trail=[];
+    this.aoe=opts.aoe||0; this.status=opts.status||null;
+    this.chain=opts.chain||0; this.crit=opts.crit||false; this.lifesteal=opts.lifesteal||0;
+    this.hitSet=null;  // enemies already struck (for chaining)
+    this.dead=false; this.trail=[];
   }
   update(dt, world, enemies, game){
     this.x+=Math.cos(this.angle)*this.speed; this.y+=Math.sin(this.angle)*this.speed;
@@ -238,12 +298,35 @@ export class Projectile {
         game.spawnParticles(this.x,this.y,this.color,6);
       }
     } else {
+      // boss takes friendly projectile damage too
+      const boss=game.boss;
+      if(boss && !boss.dead && Math.hypot(boss.x-this.x,boss.y-this.y)<boss.r+this.r){
+        if(this.aoe) this._burst(game,enemies);
+        else { boss.hit(this.dmg,this.angle,game,3); if(this.kind==='ice') boss.freeze(1.0);
+          else if(this.status) applyStatus(boss,this.status); }
+        if(this.lifesteal>0) game.player.heal(this.dmg*this.lifesteal,game);
+        this.dead=true; game.spawnParticles(this.x,this.y,this.color,8); return;
+      }
       for(const e of enemies){ if(e.dead) continue;
+        if(this.hitSet && this.hitSet.has(e)) continue;
         if(Math.hypot(e.x-this.x,e.y-this.y)<e.r+this.r){
-          if(this.aoe){ this._burst(game,enemies); }
-          else { e.hit(this.dmg,this.angle,game,5); if(this.kind==='ice') e.freeze(1.5);
-            else if(this.status) applyStatus(e,this.status); }
-          this.dead=true; game.spawnParticles(this.x,this.y,this.color,8); break;
+          if(this.aoe){ this._burst(game,enemies); this.dead=true;
+            game.spawnParticles(this.x,this.y,this.color,8); return; }
+          e.hit(this.dmg,this.angle,game,5);
+          if(this.crit) game.floater('CRIT',e.x,e.y-24,'#ffcf4d');
+          if(this.kind==='ice') e.freeze(1.5);
+          else if(this.status) applyStatus(e,this.status);
+          if(this.lifesteal>0) game.player.heal(this.dmg*this.lifesteal,game);
+          game.spawnParticles(this.x,this.y,this.color,8);
+          // chain lightning: jump to a nearby unstruck enemy instead of dying
+          if(this.chain>0){
+            (this.hitSet=this.hitSet||new Set()).add(e);
+            const next=enemies.find(o=>!o.dead && !this.hitSet.has(o) &&
+              Math.hypot(o.x-this.x,o.y-this.y)<160);
+            if(next){ this.chain--; this.dmg=Math.round(this.dmg*0.8);
+              this.angle=Math.atan2(next.y-this.y,next.x-this.x); break; }
+          }
+          this.dead=true; break;
         }
       }
     }

@@ -1,12 +1,13 @@
 import { TILE } from '../systems/world.js';
-import { equipStats } from '../data/gear.js';
+import { equipStats, resolveEquip } from '../data/gear.js';
 import { skillStats } from '../data/skilltree.js';
 import { tickStatuses, drawStatusPips } from '../systems/status.js';
+import { SPELLS, STARTER_SPELLS } from '../data/spells.js';
 
 export class Player {
   constructor(x,y,state){
     this.x=x; this.y=y; this.r=12;
-    this.baseSpeed=2.4; this.dir={x:0,y:1}; this.facing='down';
+    this.baseSpeed=1.9; this.dir={x:0,y:1}; this.facing='down';
     // persistent stats
     this.level=state.level; this.xp=state.xp; this.xpNext=state.xpNext;
     this.gold=state.gold;
@@ -24,6 +25,9 @@ export class Player {
     this.attacking=0; this.attackCd=0; this.blocking=false;
     this.dodging=0; this.dodgeCd=0; this.invuln=0; this.dodgeDir={x:0,y:0};
     this.spellCd={q:0,e:0,r:0};
+    // 3 castable spell slots (q/e/r) holding spell ids; rearrangeable in the UI
+    this.spellSlots = (state.spellSlots && state.spellSlots.length===3)
+      ? [...state.spellSlots] : [...STARTER_SPELLS];
     this.statuses={};
     this.flash=0; this.dead=false;
   }
@@ -47,6 +51,12 @@ export class Player {
     this.hasBerserk = (s.berserk||0)>0;
     this.hasMeteor  = (s.meteor||0)>0;
     this.lifesteal  = (s.lifesteal||0);
+    // weapon kind: melee vs ranged, attack cadence + reach from the equipped weapon
+    const w=resolveEquip(this.equipment.weapon);
+    this.ranged   = !!(w && w.ranged);
+    this.attackSpeed = (w && w.atkSpeed) ? w.atkSpeed : 0.32;     // seconds between swings/shots
+    this.reach    = (w && w.reach) ? w.reach : 44;                 // melee arc reach
+    this.shotSpeed= (w && w.shotSpeed) ? w.shotSpeed : 7;          // ranged projectile speed
   }
 
   // damage multiplier (berserk when low hp + crit roll handled in game)
@@ -103,16 +113,19 @@ export class Player {
 
   _handleCombat(input, game){
     const cdMul=1-this.cdr/100;
-    // melee
+    // melee (ranged weapons fire a bolt instead — handled in game.doMeleeAttack)
     if(input.mousePressed.left && this.attackCd<=0 && !this.blocking && !this.dodging){
-      this.attacking=0.18; this.attackCd=0.32*cdMul; game.sfx('swing'); game.doMeleeAttack(this);
+      this.attacking=0.18; this.attackCd=this.attackSpeed*cdMul;
+      game.sfx(this.ranged?'fire':'swing'); game.doMeleeAttack(this);
     }
-    // spells: [key, mpCost, baseCd, kind, sfx]
-    const spells=[['q',10,1.2,'fire','fire'],['e',15,2.0,'ice','ice']];
-    if(this.hasMeteor) spells.push(['r',40,6,'meteor','fire']);
-    for(const [key,cost,cd,kind,sound] of spells){
-      if(input.wasPressed(key) && this.spellCd[key]<=0 && this.mp>=cost){
-        this.mp-=cost; this.spellCd[key]=cd*cdMul; game.castSpell(this,kind); game.sfx(sound);
+    // spells from the q/e/r loadout (data-driven)
+    const keys=['q','e','r'];
+    for(let i=0;i<3;i++){
+      const key=keys[i], id=this.spellSlots[i], spell=id?SPELLS[id]:null;
+      if(!spell) continue;
+      if(input.wasPressed(key) && this.spellCd[key]<=0 && this.mp>=spell.cost){
+        this.mp-=spell.cost; this.spellCd[key]=spell.cd*cdMul;
+        game.castSpell(this, id); game.sfx(spell.sfx||'fire');
       }
     }
   }
@@ -133,9 +146,11 @@ export class Player {
     // defense mitigation
     amt = amt * (100/(100+this.def));
     if(this.blocking){
-      const fa={right:0,left:Math.PI,down:Math.PI/2,up:-Math.PI/2}[this.facing];
-      let diff=Math.abs(((fromAngle-fa+Math.PI)%(2*Math.PI))-Math.PI);
-      if(diff<1.2){ amt*=0.15; game.sfx('block'); game.floater('BLOCK',this.x,this.y-20,'#4dd28a'); game.cam.shake=4; }
+      // shield faces the mouse aim; an incoming hit travels toward the player,
+      // so it's blocked when its travel direction is ~opposite our guard direction
+      const fa=this._aim!=null?this._aim:0;
+      const facingDiff=Math.abs(((fromAngle-(fa+Math.PI)+Math.PI)%(2*Math.PI))-Math.PI);
+      if(facingDiff<1.2){ amt*=0.15; game.sfx('block'); game.floater('BLOCK',this.x,this.y-20,'#4dd28a'); game.cam.shake=4; }
     }
     amt=Math.max(1,Math.round(amt));
     this.hp=Math.max(0,this.hp-amt);
@@ -186,7 +201,7 @@ export class Player {
       ctx.fillStyle='#ddd'; ctx.fillRect(24,-2,16,4); ctx.restore();
     }
     if(this.blocking){
-      const a={right:0,left:Math.PI,down:Math.PI/2,up:-Math.PI/2}[this.facing];
+      const a=this._aim!=null?this._aim:0;
       ctx.save(); ctx.translate(sx,sy); ctx.rotate(a);
       ctx.fillStyle='#8a8fa0'; ctx.fillRect(14,-9,5,18);
       ctx.fillStyle='#cfd4e0'; ctx.fillRect(15,-7,3,14); ctx.restore();
@@ -199,6 +214,7 @@ export class Player {
       hp:this.hp, hpMax:this.baseHpMax, mp:this.mp, mpMax:this.baseMpMax,
       gold:this.gold, skillPoints:this.skillPoints,
       equipment:{...this.equipment}, skills:{...this.skills},
+      spellSlots:[...this.spellSlots],
       pos:{x:this.x,y:this.y} };
   }
 }

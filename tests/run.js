@@ -140,5 +140,80 @@ console.log('=== combat math ===');
   ok('xp curve grows', xpNext > first);
 }
 
+console.log('=== spells ===');
+{
+  const { SPELLS, STARTER_SPELLS, knownSpells } = await import('../js/data/spells.js');
+  ok('has fireball', !!SPELLS.fireball);
+  ok('3 starter spells', STARTER_SPELLS.length === 3);
+  // starters known with no skills
+  const k0 = knownSpells({});
+  ok('starters known by default', STARTER_SPELLS.every(s => k0.includes(s)));
+  ok('meteor locked without skill', !k0.includes('meteor'));
+  // meteor unlocked by skill
+  ok('meteor known with skill', knownSpells({ meteor:1 }).includes('meteor'));
+  // spellpower grants the book spells
+  ok('spellpower unlocks arcaneorb', knownSpells({ spellpower:1 }).includes('arcaneorb'));
+  // every spell has a projectile profile + cost/cd
+  for(const id in SPELLS){ const s=SPELLS[id];
+    ok(id+' has proj', !!s.proj && typeof s.proj.base==='number');
+    ok(id+' has cost/cd', typeof s.cost==='number' && typeof s.cd==='number'); }
+}
+
+console.log('=== weapons (ranged + melee variety) ===');
+{
+  const { CATALOG } = await import('../js/data/gear.js');
+  ok('bow is ranged', CATALOG.bow_short && CATALOG.bow_short.ranged === true);
+  ok('crossbow is ranged', CATALOG.crossbow && CATALOG.crossbow.ranged === true);
+  ok('staff is ranged', CATALOG.staff_arcane && CATALOG.staff_arcane.ranged === true);
+  ok('dagger fast atkSpeed', CATALOG.dagger && CATALOG.dagger.atkSpeed < 0.32);
+  ok('spear long reach', CATALOG.spear_iron && CATALOG.spear_iron.reach > 44);
+  ok('greatsword slow', CATALOG.greatsword && CATALOG.greatsword.atkSpeed > 0.32);
+  ok('sword_iron stays melee', !CATALOG.sword_iron.ranged);
+}
+
+console.log('=== enemy speeds vs player ===');
+{
+  // mirror player baseSpeed (1.9) and assert every enemy is slower than it
+  const { readFileSync } = await import('node:fs');
+  const enemySrc = readFileSync(new URL('../js/entities/enemy.js', import.meta.url), 'utf8');
+  const playerSrc = readFileSync(new URL('../js/entities/player.js', import.meta.url), 'utf8');
+  const pm = playerSrc.match(/baseSpeed\s*=\s*([0-9.]+)/);
+  const playerSpeed = pm ? parseFloat(pm[1]) : 0;
+  ok('player baseSpeed parsed', playerSpeed > 0);
+  const speeds = [...enemySrc.matchAll(/speed:\s*([0-9.]+)/g)].map(m => parseFloat(m[1]));
+  ok('found enemy speeds', speeds.length >= 10);
+  const maxEnemy = Math.max(...speeds);
+  ok('every enemy slower than player ('+maxEnemy+' < '+playerSpeed+')', maxEnemy < playerSpeed);
+  // enemies must have view/fov perception fields
+  ok('enemies have vision cones', enemySrc.includes('view:') && enemySrc.includes('fov:'));
+}
+
+console.log('=== maps (city + sub-areas) ===');
+{
+  const { MAPS, STARTING_MAP } = await import('../js/data/maps.js');
+  ok('city exists', !!MAPS.city);
+  ok('city is town', MAPS.city.town === true);
+  ok('4 shop interiors', ['shop_black','shop_alch','shop_arcane','shop_general'].every(m=>!!MAPS[m]));
+  ok('shop NPCs carry stock', MAPS.shop_black.npcs[0].stock.length > 0);
+  ok('sub-areas exist', ['meadow_glade','forest_deep','desert_ruins','snow_glacier','swamp_depths'].every(m=>!!MAPS[m]));
+  // every portal target must resolve to a real map (no dead links)
+  let badLinks=[];
+  for(const id in MAPS){ for(const p of (MAPS[id].portals||[])){ if(!MAPS[p.to]) badLinks.push(id+'->'+p.to); } }
+  ok('no broken portal links'+(badLinks.length?' ['+badLinks.join(',')+']':''), badLinks.length===0);
+  ok('starting map valid', !!MAPS[STARTING_MAP]);
+}
+
+console.log('=== quests (new givers) ===');
+{
+  const { QUESTS, questsForGiver } = await import('../js/data/quests.js');
+  ok('Captain gives quests', questsForGiver('Captain').length >= 1);
+  ok('Bard gives quests', questsForGiver('Bard').length >= 1);
+  ok('Scholar gives quests', questsForGiver('Scholar').length >= 1);
+  // boss quest references a real boss
+  const { BOSSES } = await import('../js/entities/boss.js');
+  for(const id in QUESTS){ for(const o of QUESTS[id].objectives){
+    if(o.kind==='boss') ok(id+' boss target valid', !!BOSSES[o.boss]); } }
+}
+
 console.log('\n' + (fail === 0 ? '✅ ALL PASS' : '❌ FAILURES') + ` — ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }

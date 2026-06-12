@@ -14,9 +14,11 @@ export const MAPS = {
       { x:30, y:2,  to:'cave',    tx:8,  ty:38, label:'Crystal Cave' },
       { x:30, y:22, to:'house1',  tx:8,  ty:13, label:"Merchant's Hut", door:true },
       { x:2,  y:5,  to:'snow',    tx:50, ty:30, label:'Frostpeak Tundra' },
+      { x:30, y:43, to:'city',    tx:24, ty:3,  label:'Aldermere City' },
+      { x:58, y:38, to:'meadow_glade', tx:3, ty:20, label:'Sunlit Glade' },
     ],
     npcs:[
-      { x:26, y:18, name:'Elder', icon:'🧙', lines:['Welcome, traveler.','Beasts roam each land. Gear up before you delve.','Visit the merchant in the hut to the south.'] },
+      { x:26, y:18, name:'Elder', icon:'🧙', lines:['Welcome, traveler.','Beasts roam each land. Gear up before you delve.','Aldermere City lies to the south — shops, quests and folk await.'] },
     ],
     chests:[
       { x:50, y:38, loot:{type:'item',id:'potion',qty:3} },
@@ -32,6 +34,7 @@ export const MAPS = {
     portals:[
       { x:1, y:22, to:'meadow', tx:53, ty:6, label:'Greenwood Meadow' },
       { x:50, y:45, to:'dungeon1', tx:9, ty:2, label:'Forgotten Crypt', door:true },
+      { x:52, y:3, to:'forest_deep', tx:3, ty:25, label:'Deepwood Thicket' },
     ],
     npcs:[
       { x:28, y:25, name:'Ranger', icon:'🏹', lines:['The crypt below crawls with undead.','Mind the archers — they strike from afar.'] },
@@ -50,6 +53,7 @@ export const MAPS = {
     portals:[
       { x:56, y:23, to:'meadow', tx:7, ty:38, label:'Greenwood Meadow' },
       { x:3,  y:3,  to:'swamp',  tx:50, ty:40, label:'Murkbog Swamp' },
+      { x:30, y:40, to:'desert_ruins', tx:24, ty:3, label:'Buried Ruins' },
     ],
     npcs:[
       { x:30, y:20, name:'Nomad', icon:'🧕', lines:['Water is life out here.','Scorpions burrow and lunge — stay nimble.'] },
@@ -99,6 +103,7 @@ export const MAPS = {
     portals:[
       { x:52, y:30, to:'meadow', tx:4, ty:7, label:'Greenwood Meadow' },
       { x:5,  y:5,  to:'dungeon2', tx:23, ty:50, label:'Sunken Catacomb', door:true },
+      { x:52, y:5, to:'snow_glacier', tx:3, ty:23, label:'Glacier Hollow' },
     ],
     npcs:[
       { x:30, y:24, name:'Wayfarer', icon:'🧗', lines:['The cold bites deep here.','Frostlings chill your blood — keep moving.','The catacomb lies past the northern pass.'] },
@@ -116,6 +121,7 @@ export const MAPS = {
     enemies:{ count:12, types:['spitter','croaker','bat'] },
     portals:[
       { x:52, y:42, to:'desert', tx:5, ty:5, label:'Sunscar Desert' },
+      { x:5, y:5, to:'swamp_depths', tx:50, ty:40, label:'Bog Depths' },
     ],
     npcs:[
       { x:30, y:24, name:'Hermit', icon:'🧓', lines:['Few return from the mire.','Spitters spew poison — strike fast.'] },
@@ -139,6 +145,101 @@ export const MAPS = {
       { x:40, y:50, loot:{type:'item',id:'ring_focus',qty:1} },
       { x:8,  y:50, loot:{type:'gold',amount:300} },
     ],
+  },
+
+  // ===================== ALDERMERE CITY (town hub: shops, quest NPCs) =====================
+  city: {
+    name:'Aldermere City', biome:'city', cols:48, rows:40, seed:111, music:'calm', town:true,
+    enemies:{ count:0, types:[] },
+    portals:[
+      { x:24, y:2,  to:'meadow', tx:30, ty:41, label:'Greenwood Meadow' },
+      { x:6,  y:10, to:'shop_black', tx:6, ty:12, label:'Blacksmith', door:true },
+      { x:42, y:10, to:'shop_alch',  tx:6, ty:12, label:'Alchemist', door:true },
+      { x:6,  y:30, to:'shop_arcane',tx:6, ty:12, label:'Arcanum', door:true },
+      { x:42, y:30, to:'shop_general',tx:6,ty:12, label:'General Store', door:true },
+    ],
+    npcs:[
+      { x:24, y:20, name:'Mayor', icon:'🤵', lines:['Welcome to Aldermere!','Our shops ring the plaza. Adventurers are always needed.'] },
+      { x:16, y:14, name:'Captain', icon:'💂', lines:['Monsters press in from every road.','Clear the crypts and you will be rewarded.'] },
+      { x:32, y:26, name:'Scholar', icon:'👩‍🏫', lines:['Knowledge is the sharpest blade.','Seek the arcane staff in the Arcanum.'] },
+      { x:24, y:32, name:'Bard', icon:'🎻', lines:['A song for a coin?','They say a witch haunts the bog depths...'] },
+    ],
+    chests:[ { x:3, y:3, loot:{type:'gold',amount:60} } ],
+  },
+
+  // ---- City shop interiors (each merchant sells a themed stock) ----
+  shop_black: {
+    name:'Blacksmith', biome:'house', cols:14, rows:14, seed:121, music:'calm', interior:true,
+    enemies:{ count:0, types:[] },
+    portals:[ { x:6, y:12, to:'city', tx:6, ty:11, label:'Plaza', door:true } ],
+    npcs:[ { x:7, y:5, name:'Smith Garon', icon:'🧔', shop:true,
+      stock:['sword_iron','greatsword','warhammer','spear_iron','halberd','dagger','shield_wood','shield_iron','helm_iron','armor_chain'],
+      lines:['Steel for steel coin.','Press F to browse my forge.'] } ],
+    chests:[],
+  },
+  shop_alch: {
+    name:'Alchemist', biome:'house', cols:14, rows:14, seed:122, music:'calm', interior:true,
+    enemies:{ count:0, types:[] },
+    portals:[ { x:6, y:12, to:'city', tx:42, ty:11, label:'Plaza', door:true } ],
+    npcs:[ { x:7, y:5, name:'Mira the Alchemist', icon:'🧑‍🔬', shop:true,
+      stock:['potion','potion_l','ether','elixir','bomb'],
+      lines:['Potions, tonics, cures!','Press F to trade.'] } ],
+    chests:[],
+  },
+  shop_arcane: {
+    name:'Arcanum', biome:'house', cols:14, rows:14, seed:123, music:'calm', interior:true,
+    enemies:{ count:0, types:[] },
+    portals:[ { x:6, y:12, to:'city', tx:6, ty:31, label:'Plaza', door:true } ],
+    npcs:[ { x:7, y:5, name:'Archmage Vael', icon:'🧙‍♂️', shop:true,
+      stock:['staff_arcane','sword_flame','sword_frost','armor_mage','ring_focus','ether'],
+      lines:['The weave bends to the worthy.','Press F to peruse arcane goods.'] } ],
+    chests:[],
+  },
+  shop_general: {
+    name:'General Store', biome:'house', cols:14, rows:14, seed:124, music:'calm', interior:true,
+    enemies:{ count:0, types:[] },
+    portals:[ { x:6, y:12, to:'city', tx:42, ty:31, label:'Plaza', door:true } ],
+    npcs:[ { x:7, y:5, name:'Trader Pol', icon:'🧑‍🌾', shop:true,
+      stock:['bow_short','bow_long','crossbow','dagger','dagger_venom','armor_leather','shield_wood','ring_vigor','ring_power','potion','bomb'],
+      lines:['A bit of everything!','Press F to shop.'] } ],
+    chests:[],
+  },
+
+  // ---- Biome sub-areas (extra zones to explore + farm) ----
+  meadow_glade: {
+    name:'Sunlit Glade', biome:'grass', cols:48, rows:40, seed:131, music:'calm',
+    enemies:{ count:8, types:['slime','bat','boar'] },
+    portals:[ { x:2, y:20, to:'meadow', tx:55, ty:38, label:'Greenwood Meadow' } ],
+    npcs:[ { x:24, y:20, name:'Forager', icon:'🧺', lines:['The glade is peaceful... mostly.','Boars charge when startled.'] } ],
+    chests:[ { x:42, y:6, loot:{type:'item',id:'dagger',qty:1} }, { x:6, y:34, loot:{type:'gold',amount:90} } ],
+  },
+  forest_deep: {
+    name:'Deepwood Thicket', biome:'forest', cols:52, rows:50, seed:132, music:'tense',
+    enemies:{ count:12, types:['boar','archer','bat'] },
+    portals:[ { x:2, y:25, to:'forest', tx:50, ty:5, label:'Whispering Forest' } ],
+    npcs:[],
+    chests:[ { x:46, y:8, loot:{type:'item',id:'bow_short',qty:1} }, { x:10, y:44, loot:{type:'gold',amount:140} } ],
+  },
+  desert_ruins: {
+    name:'Buried Ruins', biome:'desert', cols:50, rows:46, seed:133, music:'tense',
+    enemies:{ count:12, types:['scorpion','archer','brute'] },
+    portals:[ { x:24, y:2, to:'desert', tx:30, ty:38, label:'Sunscar Desert' } ],
+    npcs:[],
+    chests:[ { x:44, y:40, loot:{type:'item',id:'spear_iron',qty:1} }, { x:6, y:6, loot:{type:'gold',amount:170} } ],
+  },
+  snow_glacier: {
+    name:'Glacier Hollow', biome:'snow', cols:50, rows:46, seed:134, music:'tense',
+    enemies:{ count:12, types:['frostling','yeti','bat'] },
+    portals:[ { x:2, y:23, to:'snow', tx:50, ty:7, label:'Frostpeak Tundra' } ],
+    npcs:[],
+    chests:[ { x:44, y:8, loot:{type:'item',id:'crossbow',qty:1} }, { x:8, y:40, loot:{type:'gold',amount:200} } ],
+  },
+  swamp_depths: {
+    name:'Bog Depths', biome:'swamp', cols:52, rows:48, seed:135, music:'tense',
+    enemies:{ count:13, types:['spitter','croaker','bat'] },
+    portals:[ { x:50, y:40, to:'swamp', tx:7, ty:7, label:'Murkbog Swamp' } ],
+    npcs:[],
+    chests:[ { x:8, y:8, loot:{type:'item',id:'dagger_venom',qty:1} }, { x:44, y:42, loot:{type:'gold',amount:220} } ],
   },
 
   // ===================== HOUSE (merchant interior, no enemies) =====================

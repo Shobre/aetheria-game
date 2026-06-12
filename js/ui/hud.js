@@ -4,6 +4,7 @@ import { SKILLS, BRANCHES, canLearn } from '../data/skilltree.js';
 import { SHOP_STOCK } from '../data/maps.js';
 import { rarityColor, rarityName, affixText } from '../data/affixes.js';
 import { QUESTS } from '../data/quests.js';
+import { SPELLS, knownSpells } from '../data/spells.js';
 
 export class HUD {
   constructor(game){
@@ -12,7 +13,7 @@ export class HUD {
     this.el={
       hpFill:$('hp-fill'),hpText:$('hp-text'),mpFill:$('mp-fill'),mpText:$('mp-text'),
       stamFill:$('stam-fill'),xpFill:$('xp-fill'),xpText:$('xp-text'),levelText:$('level-text'),
-      itemSlots:$('item-slots'),spellQ:$('spell-q'),spellE:$('spell-e'),
+      itemSlots:$('item-slots'),
       minimap:$('minimap'),invGrid:$('inv-grid'),
       goldText:$('gold-text'),slotsText:$('slots-text'),
       toast:$('toast'),floaters:$('floaters'),
@@ -27,6 +28,7 @@ export class HUD {
       // boss bar + quests
       bossBar:$('boss-bar'),bossName:$('boss-name'),bossFill:$('boss-fill'),bossPips:$('boss-pips'),
       questTracker:$('quest-tracker'),questLog:$('quest-log'),
+      spellLoadout:$('spell-loadout'),spellPicker:$('spell-picker'),
     };
     this.mmCtx=this.el.minimap.getContext('2d');
     this.activeSlot=0;
@@ -40,11 +42,46 @@ export class HUD {
       d.className='item-slot'+(i===0?' active':''); d.dataset.idx=i;
       d.innerHTML=`<span class="key">${i+1}</span><span class="ico"></span><span class="qty"></span>`;
       d.onclick=()=>this.game.useHotbar(i);
+      this._enableSwapDrag(d, i, 'hotbar');
       this.el.itemSlots.appendChild(d);
     }
   }
+
+  // generic drag-to-swap between slots of the same kind ('hotbar' | 'spell')
+  _enableSwapDrag(el, idx, kind){
+    el.draggable=true;
+    el.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', kind+':'+idx);
+      e.dataTransfer.effectAllowed='move'; el.classList.add('dragging'); });
+    el.addEventListener('dragend', ()=> el.classList.remove('dragging'));
+    el.addEventListener('dragover', e=>{ e.preventDefault(); el.classList.add('drop-hover'); });
+    el.addEventListener('dragleave', ()=> el.classList.remove('drop-hover'));
+    el.addEventListener('drop', e=>{ e.preventDefault(); el.classList.remove('drop-hover');
+      const data=e.dataTransfer.getData('text/plain'); const [k,from]=data.split(':');
+      if(k!==kind) return; const fi=+from;
+      if(kind==='hotbar'){ const h=this.game.hotbar; [h[fi],h[idx]]=[h[idx],h[fi]]; this.refresh(); }
+      else if(kind==='spell'){ const sp=this.game.player.spellSlots; [sp[fi],sp[idx]]=[sp[idx],sp[fi]];
+        this.refresh(); if(this.refreshSpells) this.refreshSpells(); }
+    });
+  }
   _buildInventory(){ this.el.invGrid.innerHTML='';
-    for(let i=0;i<30;i++){ const c=document.createElement('div'); c.className='inv-cell'; this.el.invGrid.appendChild(c); } }
+    for(let i=0;i<30;i++){ const c=document.createElement('div'); c.className='inv-cell'; c.dataset.idx=i;
+      this._enableBagDrag(c,i); this.el.invGrid.appendChild(c); } }
+
+  // drag an item from bag cell `from` and drop on cell `to` to reorder the inventory
+  _enableBagDrag(el, idx){
+    el.draggable=true;
+    el.addEventListener('dragstart', e=>{ if(!this.game.inventory[idx]){ e.preventDefault(); return; }
+      e.dataTransfer.setData('text/plain','bag:'+idx); el.classList.add('dragging'); });
+    el.addEventListener('dragend', ()=> el.classList.remove('dragging'));
+    el.addEventListener('dragover', e=>{ e.preventDefault(); el.classList.add('drop-hover'); });
+    el.addEventListener('dragleave', ()=> el.classList.remove('drop-hover'));
+    el.addEventListener('drop', e=>{ e.preventDefault(); el.classList.remove('drop-hover');
+      const d=e.dataTransfer.getData('text/plain'); const [k,from]=d.split(':'); if(k!=='bag') return;
+      const inv=this.game.inventory, fi=+from; if(fi===idx||fi>=inv.length) return;
+      const [moved]=inv.splice(fi,1);
+      inv.splice(Math.min(idx,inv.length),0,moved);
+      this.refreshBag(); });
+  }
 
   setActiveSlot(i){ this.activeSlot=i;
     [...this.el.itemSlots.children].forEach((s,idx)=>s.classList.toggle('active',idx===i)); }
@@ -65,12 +102,11 @@ export class HUD {
       s.querySelector('.ico').textContent=item?item.icon:'';
       s.querySelector('.qty').textContent=item&&item.qty>1?item.qty:'';
     });
-    this.el.spellQ.querySelector('.cd').style.height=(p.spellCd.q/(1.2)*100)+'%';
-    this.el.spellE.querySelector('.cd').style.height=(p.spellCd.e/(2.0)*100)+'%';
     // skill point badge on char/skill buttons
     const badge=document.getElementById('skill-badge');
     if(badge){ badge.textContent=p.skillPoints; badge.style.display=p.skillPoints>0?'flex':'none'; }
     this._updateBossBar();
+    this._updateSpellLoadout();
   }
 
   _updateBossBar(){
@@ -85,6 +121,44 @@ export class HUD {
           `<span class="boss-pip${i<=ph-1-cur?' on':''}"></span>`).join('');
       }
     } else { bar.classList.add('hidden'); }
+  }
+
+  // spell loadout row (q/e/r): drag to swap, click to open the picker
+  _updateSpellLoadout(){
+    const p=this.game.player, el=this.el.spellLoadout; if(!el) return;
+    const keys=['q','e','r'];
+    if(el.children.length!==3){
+      el.innerHTML='';
+      for(let i=0;i<3;i++){ const d=document.createElement('div'); d.className='spell-slot'; d.dataset.idx=i;
+        d.innerHTML=`<span class="key">${keys[i].toUpperCase()}</span><span class="ico"></span><div class="cd"></div>`;
+        this._enableSwapDrag(d,i,'spell');
+        d.onclick=()=>this._openSpellPicker(i);
+        el.appendChild(d); }
+    }
+    [...el.children].forEach((d,i)=>{
+      const id=p.spellSlots[i], sp=id?SPELLS[id]:null;
+      d.querySelector('.ico').textContent=sp?sp.icon:'·';
+      const maxCd=sp?sp.cd:1;
+      d.querySelector('.cd').style.height=(p.spellCd[keys[i]]/maxCd*100)+'%';
+      d.title=sp?(sp.name+' — '+sp.cost+' MP. Drag to swap, click to change.'):'Empty';
+    });
+  }
+
+  // picker overlay: pick any known spell for slot QER[i]
+  _openSpellPicker(slotIdx){
+    const p=this.game.player, picker=this.el.spellPicker; if(!picker) return;
+    const known=knownSpells(p.skills);
+    picker.innerHTML=`<div class="picker-title">Assign spell to slot ${'QER'[slotIdx]}</div>`;
+    known.forEach(id=>{ const sp=SPELLS[id]; if(!sp) return;
+      const d=document.createElement('div'); d.className='spell-picker-item'+(p.spellSlots[slotIdx]===id?' active':'');
+      d.innerHTML=`<span class="ico">${sp.icon}</span><span class="sp-name">${sp.name}</span><span class="sp-cost">${sp.cost} MP</span><div class="sp-desc">${sp.desc}</div>`;
+      d.onclick=()=>{ p.spellSlots[slotIdx]=id; this.refresh();
+        picker.classList.add('hidden'); picker.classList.remove('flex'); };
+      picker.appendChild(d); });
+    const close=document.createElement('button'); close.className='menu-btn picker-close'; close.textContent='CLOSE';
+    close.onclick=()=>{ picker.classList.add('hidden'); picker.classList.remove('flex'); };
+    picker.appendChild(close);
+    picker.classList.remove('hidden'); picker.classList.add('flex');
   }
 
   // quest tracker (always-on HUD) + full log
@@ -240,8 +314,9 @@ export class HUD {
   refreshShop(){
     const p=this.game.player; const g=this.el.shopGold; if(g) g.textContent=p.gold;
     const buy=this.el.shopBuy; const sell=this.el.shopSell;
+    const stock=this.game.shopStock||SHOP_STOCK;
     if(buy){ buy.innerHTML='';
-      for(const id of SHOP_STOCK){
+      for(const id of stock){
         const c=CATALOG[id], row=document.createElement('div'); row.className='shop-row';
         row.innerHTML=`<span>${c.icon} ${c.name}</span><span class="shop-price">${c.price}g</span>
           <button class="menu-btn shop-buy-btn" data-id="${id}">Buy</button>`;
