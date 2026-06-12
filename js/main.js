@@ -42,6 +42,8 @@ const charModal=document.getElementById('char-modal');
 const skillsModal=document.getElementById('skills-modal');
 const questsModal=document.getElementById('quests-modal');
 const shopModal=document.getElementById('shop-modal');
+const stashModal=document.getElementById('stash-modal');
+const craftModal=document.getElementById('craft-modal');
 function applySettings(){
   game.settings.shake=document.getElementById('set-shake').checked;
   game.settings.minimap=document.getElementById('set-minimap').checked;
@@ -53,13 +55,15 @@ function applySettings(){
 ['set-shake','set-minimap','set-fps','set-music','set-sfx'].forEach(id=>{
   const el=document.getElementById(id); if(el) el.addEventListener('input',applySettings); });
 
-function anyModalOpen(){ return [settingsModal,bagModal,charModal,skillsModal,questsModal,shopModal,document.getElementById('fullmap-modal')]
+function anyModalOpen(){ return [settingsModal,bagModal,charModal,skillsModal,questsModal,shopModal,stashModal,craftModal,document.getElementById('fullmap-modal')]
   .some(m=>!m.classList.contains('hidden')); }
 function openModal(m){ game.paused=true; m.classList.remove('hidden'); m.classList.add('flex'); }
 function closeModal(m){ m.classList.add('hidden'); m.classList.remove('flex');
+  if(game.hud) game.hud._hideTooltip();
   if(!anyModalOpen() && !document.getElementById('death-screen').classList.contains('flex')) game.paused=false; }
-function closeAll(){ [settingsModal,bagModal,charModal,skillsModal,questsModal,shopModal,document.getElementById('fullmap-modal')].forEach(m=>{
+function closeAll(){ [settingsModal,bagModal,charModal,skillsModal,questsModal,shopModal,stashModal,craftModal,document.getElementById('fullmap-modal')].forEach(m=>{
   m.classList.add('hidden'); m.classList.remove('flex'); });
+  if(game.hud) game.hud._hideTooltip();
   if(!document.getElementById('death-screen').classList.contains('flex')) game.paused=false; }
 
 function openChar(){ game.hud.refreshChar(); game.hud.refreshBag(); openModal(charModal); }
@@ -82,7 +86,7 @@ document.getElementById('respawn-btn').onclick=()=>game.respawn();
 window.addEventListener('keydown', e=>{
   if(game.running===false) return;
   const k=e.key.toLowerCase();
-  if(k==='escape'){ if(anyModalOpen()) closeAll(); else openModal(settingsModal); return; }
+  if(k==='escape'){ if(anyModalOpen()) closeAll(); else openModal(settingsModal); if(game.hud) game.hud._hideTooltip(); return; }
   // toggle modals
   if(k==='b'){ bagModal.classList.contains('hidden')?openBag():closeModal(bagModal); }
   if(k==='c'){ charModal.classList.contains('hidden')?openChar():closeModal(charModal); }

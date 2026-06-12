@@ -198,3 +198,37 @@ body{image-rendering:pixelated}
 .cmp-worse{ color:#ff6b6b; }
 .cmp-equal{ color:#c8cdd6; }
 .shop-row .cmp{ position:static; margin-left:5px; display:inline-block; }
+
+/* ===== hover tooltip (items + spells) ===== */
+#tooltip{ position:fixed; z-index:120; pointer-events:none; max-width:230px;
+  background:#0d1018; border:2px solid #3a4258; border-radius:5px;
+  padding:7px 9px; font-size:10px; line-height:1.5; color:#cdd3df;
+  box-shadow:0 4px 16px rgba(0,0,0,.6); }
+#tooltip.hidden{ display:none; }
+#tooltip .tt-name{ font-size:11px; font-weight:700; margin-bottom:2px; }
+#tooltip .tt-type{ color:#8a92a6; font-size:8px; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+#tooltip .tt-stat{ display:flex; justify-content:space-between; gap:12px; }
+#tooltip .tt-stat .v{ color:#fff; }
+#tooltip .tt-affix{ color:#5fe06a; }
+#tooltip .tt-desc{ color:#9aa2b6; font-style:italic; margin-top:4px; }
+#tooltip .tt-cmp{ margin-top:4px; padding-top:4px; border-top:1px solid #2a3145; }
+#tooltip .tt-cmp .better{ color:#5fe06a; }
+#tooltip .tt-cmp .worse{ color:#ff6b6b; }
+#tooltip .tt-cmp .equal{ color:#c8cdd6; }
+#tooltip .tt-hint{ color:#69708a; font-size:8px; margin-top:4px; }
+
+/* ===== stash layout ===== */
+.stash-layout{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.inv-grid-sm{ display:grid; grid-template-columns:repeat(8,1fr); gap:3px; }
+.inv-grid-sm .inv-cell{ width:38px; height:38px; font-size:14px; }
+.inv-grid-sm .inv-cell .qty{ bottom:0; right:1px; font-size:7px; }
+
+/* ===== craft layout ===== */
+.craft-layout{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.craft-detail{ min-height:160px; }
+.craft-sel-name{ font-size:11px; font-weight:700; margin-bottom:4px; }
+.craft-affix{ font-size:9px; color:#5fe06a; margin-bottom:8px; }
+.craft-btn{ margin:4px 0 2px; width:100%; padding:5px 0; font-size:10px; }
+.craft-btn:disabled{ opacity:.35; }
+.craft-hint{ font-size:8px; color:#69708a; margin:0 0 8px; }
+.inv-cell.sel{ border-color:#ffe24d !important; box-shadow:0 0 6px rgba(255,226,77,.4); }

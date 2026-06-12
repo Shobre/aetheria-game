@@ -125,6 +125,8 @@
 
     <!-- floating dmg numbers -->
     <div id="floaters" class="absolute inset-0 overflow-hidden"></div>
+    <!-- hover tooltip (items + spells) -->
+    <div id="tooltip" class="hidden"></div>
   </div>
 
   <!-- BAG MODAL -->
@@ -226,6 +228,38 @@
       <div class="shop-layout">
         <div><h3 class="char-sub">BUY</h3><div id="shop-buy" class="shop-col"></div></div>
         <div><h3 class="char-sub">SELL</h3><div id="shop-sell" class="shop-col"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STASH MODAL (city bank) -->
+  <div id="stash-modal" class="modal hidden">
+    <div class="modal-box max-w-2xl">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg text-gold">STASH</h2>
+        <button data-close="stash-modal" class="text-xl text-gray-400 hover:text-gold">&times;</button>
+      </div>
+      <div class="stash-layout">
+        <div><h3 class="char-sub">BAG <span id="stash-bag-count" class="text-gray-500"></span></h3><div id="stash-bag" class="inv-grid-sm"></div></div>
+        <div><h3 class="char-sub">STASH <span id="stash-store-count" class="text-gray-500"></span></h3><div id="stash-store" class="inv-grid-sm"></div></div>
+      </div>
+      <p class="text-[9px] text-gray-500 mt-2">Click an item to move it between your bag and the stash. Stash holds 40 items and is shared across your save.</p>
+    </div>
+  </div>
+
+  <!-- CRAFT MODAL (Blacksmith forge) -->
+  <div id="craft-modal" class="modal hidden">
+    <div class="modal-box max-w-2xl">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg text-gold">FORGE</h2>
+        <div class="flex items-center gap-3">
+          <span class="text-[10px]">GOLD <span id="craft-gold" class="text-gold">0</span></span>
+          <button data-close="craft-modal" class="text-xl text-gray-400 hover:text-gold">&times;</button>
+        </div>
+      </div>
+      <div class="craft-layout">
+        <div><h3 class="char-sub">YOUR GEAR</h3><div id="craft-gear" class="inv-grid-sm"></div></div>
+        <div id="craft-detail" class="craft-detail"><p class="text-[10px] text-gray-500">Select a piece of gear to reforge (reroll its bonuses) or upgrade (raise its rarity).</p></div>
       </div>
     </div>
   </div>

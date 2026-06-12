@@ -11,6 +11,7 @@ import { Boss, BOSSES } from '../entities/boss.js';
 import { QuestLog } from './quests.js';
 import { rollRarity, applyRarity, rarityName } from '../data/affixes.js';
 import { SPELLS } from '../data/spells.js';
+import { reforge, upgrade, reforgeCost, upgradeCost, canUpgrade } from './craft.js';
 
 // difficulty scale per map (deeper = tougher enemies)
 const MAP_SCALE = { meadow:1, forest:1.25, desert:1.45, cave:1.6, dungeon1:1.9, house1:1,
@@ -36,6 +37,7 @@ export class Game {
     this.inventory=state.inventory.map(i=>({...i}));
     this.hotbar=[...state.hotbar];
     this.openedChests=state.openedChests||{};
+    this.stash=(state.stash||[]).map(i=>({...i}));
     this.bossesDead=state.bossesDead||{};
     this.checkpoint=state.checkpoint||null;
     this.quests=new QuestLog(this, state);
@@ -150,8 +152,8 @@ export class Game {
     }
     for(const n of this.world.npcs){
       const d=Math.hypot(n.wx+16-this.player.x,n.wy+16-this.player.y);
-      if(d<nd){ let label=n.shop?'Shop ('+n.name+')':'Talk to '+n.name;
-        if(this.quests && !n.shop){ const gs=this.quests.giverState(n.name);
+      if(d<nd){ let label=n.shop?'Shop ('+n.name+')':n.bank?'Open Stash':n.craft?'Use Forge':'Talk to '+n.name;
+        if(this.quests && !n.shop && !n.bank && !n.craft){ const gs=this.quests.giverState(n.name);
           if(gs.turnIn.length) label='Turn in quest ('+n.name+')';
           else if(gs.available.length) label='Accept quest ('+n.name+')'; }
         near={type:'npc',ref:n,label}; nd=d; } }
@@ -171,6 +173,8 @@ export class Game {
   _doInteract(near){
     if(near.type==='npc'){
       const n=near.ref;
+      if(n.bank){ this.openStash(n.name); return; }
+      if(n.craft){ this.openCraft(n.name); return; }
       if(n.shop){ this.openShop(n.stock, n.name); return; }
       // quest handling: turn in completed, else offer next available
       if(this.quests){
@@ -219,7 +223,7 @@ export class Game {
     const bob=Math.sin(performance.now()/250)*3;
     ctx.textAlign='center';
     for(const n of this.world.npcs){
-      if(n.shop) continue;
+      if(n.shop||n.bank||n.craft) continue;
       const gs=this.quests.giverState(n.name);
       let m=null,col='#ffcf4d';
       if(gs.turnIn.length){ m='★'; col='#ffcf4d'; }
@@ -415,6 +419,52 @@ export class Game {
     this.hud.refreshShop();
   }
 
+  // ---- stash (city bank): shared storage, move items bag<->stash ----
+  openStash(name){ this.paused=true; this.stashName=name||'Stash'; this.hud.openStash(); }
+  STASH_MAX=40;
+  toStash(item){
+    if(!item) return;
+    const i=this.inventory.indexOf(item); if(i<0) return;
+    if(item.type==='consumable'){
+      const ex=this.stash.find(s=>s.id===item.id && s.type==='consumable');
+      if(ex) ex.qty=(ex.qty||1)+(item.qty||1); else { if(this.stash.length>=this.STASH_MAX){ this.toast('Stash full!'); return; } this.stash.push({...item}); }
+    } else { if(this.stash.length>=this.STASH_MAX){ this.toast('Stash full!'); return; } this.stash.push({...item}); }
+    this.inventory.splice(i,1);
+    const hi=this.hotbar.indexOf(item.id); if(hi>=0 && !this.inventory.find(x=>x.id===item.id)) this.hotbar[hi]=null;
+    this.sfx('open'); this.hud.refreshStash();
+  }
+  fromStash(item){
+    if(!item) return;
+    const i=this.stash.indexOf(item); if(i<0) return;
+    this.stash.splice(i,1); this.addItem(item);
+    this.sfx('open'); this.hud.refreshStash();
+  }
+
+  // ---- crafting (Blacksmith forge): reforge + upgrade gear for gold ----
+  openCraft(name){ this.paused=true; this.craftName=name||'Forge'; this.hud.openCraft(); }
+  reforgeItem(item){
+    if(!item || item.type==='consumable') return;
+    const cost=reforgeCost(item);
+    if(this.player.gold<cost){ this.toast('Not enough gold ('+cost+'g)'); this.sfx('hurt'); return; }
+    const i=this.inventory.indexOf(item); if(i<0) return;
+    this.player.gold-=cost;
+    this.inventory[i]=reforge(item);
+    this.sfx('levelup'); this.toast('Reforged '+this.inventory[i].name+'!');
+    this.hud.refresh();
+    return this.inventory[i];
+  }
+  upgradeItem(item){
+    if(!item || !canUpgrade(item)) { this.toast('Cannot upgrade further.'); return; }
+    const cost=upgradeCost(item);
+    if(this.player.gold<cost){ this.toast('Not enough gold ('+cost+'g)'); this.sfx('hurt'); return; }
+    const i=this.inventory.indexOf(item); if(i<0) return;
+    this.player.gold-=cost;
+    this.inventory[i]=upgrade(item);
+    this.sfx('levelup'); this.toast('Upgraded to '+this.inventory[i].name+'!');
+    this.hud.refresh();
+    return this.inventory[i];
+  }
+
   // ---- skills ----
   learnSkill(id){
     const reason=canLearn(id, this.player.skills, this.player.skillPoints);
@@ -440,7 +490,7 @@ export class Game {
   _buildState(){
     return { ...this.player.serialize(), slot:this.slot,
       map:this.currentMap, inventory:this.inventory, hotbar:this.hotbar,
-      playtime:this.playtime, openedChests:this.openedChests,
+      playtime:this.playtime, openedChests:this.openedChests, stash:this.stash,
       bossesDead:this.bossesDead, checkpoint:this.checkpoint,
       quests:this.quests?this.quests.serialize():undefined };
   }

@@ -285,5 +285,79 @@ console.log('=== autosave wiring ===');
   ok('M key opens full map', mainSrc.includes("k==='m'") && mainSrc.includes('showFullMap'));
 }
 
+console.log('=== tooltip wiring ===');
+{
+  // hud.js is DOM-bound, so verify the tooltip plumbing via source + data sanity.
+  const { readFileSync } = await import('node:fs');
+  const hudSrc = readFileSync(new URL('../js/ui/hud.js', import.meta.url), 'utf8');
+  ok('has _buildItemTooltip', hudSrc.includes('_buildItemTooltip('));
+  ok('has _buildSpellTooltip', hudSrc.includes('_buildSpellTooltip('));
+  ok('has _bindTooltip', hudSrc.includes('_bindTooltip('));
+  ok('tooltip element grabbed', hudSrc.includes("tooltip:$('tooltip')"));
+  ok('bag binds tooltip', hudSrc.includes('this._bindTooltip(c, ()=>this._buildItemTooltip(item'));
+  ok('spell loadout binds tooltip', hudSrc.includes('_buildSpellTooltip(sid'));
+  ok('shop buy binds tooltip', hudSrc.includes('this._buildItemTooltip(id'));
+  const idxSrc = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  ok('tooltip element in DOM', idxSrc.includes('id="tooltip"'));
+  // spell damage formula sanity: base + level*perLvl scaled by spellMul
+  const { SPELLS } = await import('../js/data/spells.js');
+  const fb = SPELLS.fireball;
+  const dmgAtL5 = Math.round((fb.proj.base + 5*fb.proj.perLvl)*1);
+  ok('fireball scales with level', dmgAtL5 > fb.proj.base);
+}
+
+console.log('=== crafting (reforge + upgrade) ===');
+{
+  const { reforge, upgrade, reforgeCost, upgradeCost, canUpgrade } = await import('../js/systems/craft.js');
+  const { makeItem } = await import('../js/data/gear.js');
+  const { RARITY_ORDER } = await import('../js/data/affixes.js');
+  function mulberry32(seed){ return function(){ let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  // reforge promotes a plain item to uncommon+ and rolls affixes
+  const base = makeItem('sword_iron',1);
+  const rf = reforge(base, mulberry32(3));
+  ok('reforge produces a rarity', RARITY_ORDER.includes(rf.rarity));
+  ok('reforge rolls affixes', Array.isArray(rf.affixes) && rf.affixes.length >= 1);
+  ok('reforge keeps item id', rf.id === 'sword_iron');
+  // upgrade raises rarity exactly one tier
+  const common = makeItem('sword_iron',1); common.rarity='common'; common.affixes=[];
+  const up = upgrade(common, mulberry32(5));
+  eq('upgrade common -> uncommon', up.rarity, 'uncommon');
+  const rare = makeItem('shield_iron',1); rare.rarity='rare'; rare.affixes=[];
+  eq('upgrade rare -> epic', upgrade(rare, mulberry32(9)).rarity, 'epic');
+  // legendary cannot upgrade
+  const leg = makeItem('sword_iron',1); leg.rarity='legendary';
+  ok('legendary canUpgrade false', canUpgrade(leg) === false);
+  ok('upgrade legendary is a no-op tier', upgrade(leg).rarity === 'legendary');
+  // consumables are not craftable
+  ok('consumable not upgradable', canUpgrade(makeItem('potion',1)) === false);
+  eq('consumable reforgeCost 0', reforgeCost(makeItem('potion',1)), 0);
+  // costs are positive and scale with rarity
+  ok('reforge cost positive', reforgeCost(makeItem('sword_iron',1)) > 0);
+  const cLow = upgradeCost(common);
+  const cHigh = upgradeCost(rare);
+  ok('upgrade cost rises with rarity', cHigh > cLow);
+  // accepts id-string equipment values too (equipment slots may store strings)
+  ok('reforge accepts id string', reforge('sword_iron', mulberry32(1)).id === 'sword_iron');
+}
+
+console.log('=== stash + craft wiring ===');
+{
+  const { readFileSync } = await import('node:fs');
+  const gameSrc = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
+  ok('game has openStash', gameSrc.includes('openStash('));
+  ok('game has toStash/fromStash', gameSrc.includes('toStash(') && gameSrc.includes('fromStash('));
+  ok('game has reforgeItem/upgradeItem', gameSrc.includes('reforgeItem(') && gameSrc.includes('upgradeItem('));
+  ok('game loads stash', gameSrc.includes('this.stash='));
+  ok('game persists stash', gameSrc.includes('stash:this.stash'));
+  const saveSrc = readFileSync(new URL('../js/systems/save.js', import.meta.url), 'utf8');
+  ok('newGame seeds stash', saveSrc.includes('stash:[]'));
+  const { MAPS } = await import('../js/data/maps.js');
+  const cityNpcs = MAPS.city.npcs.map(n=>n.name);
+  ok('city has a Banker', MAPS.city.npcs.some(n=>n.bank));
+  ok('blacksmith has a Forge', MAPS.shop_black.npcs.some(n=>n.craft));
+}
+
 console.log('\n' + (fail === 0 ? '✅ ALL PASS' : '❌ FAILURES') + ` — ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }

@@ -163,6 +163,7 @@ export const MAPS = {
       { x:16, y:14, name:'Captain', icon:'💂', lines:['Monsters press in from every road.','Clear the crypts and you will be rewarded.'] },
       { x:32, y:26, name:'Scholar', icon:'👩‍🏫', lines:['Knowledge is the sharpest blade.','Seek the arcane staff in the Arcanum.'] },
       { x:24, y:32, name:'Bard', icon:'🎻', lines:['A song for a coin?','They say a witch haunts the bog depths...'] },
+      { x:33, y:14, name:'Banker', icon:'🏦', bank:true, lines:['Store your treasures safely.','Press F to open your stash.'] },
     ],
     chests:[ { x:3, y:3, loot:{type:'gold',amount:60} } ],
   },
@@ -174,7 +175,8 @@ export const MAPS = {
     portals:[ { x:6, y:12, to:'city', tx:6, ty:11, label:'Plaza', door:true } ],
     npcs:[ { x:7, y:5, name:'Smith Garon', icon:'🧔', shop:true,
       stock:['sword_iron','greatsword','warhammer','spear_iron','halberd','dagger','shield_wood','shield_iron','helm_iron','armor_chain'],
-      lines:['Steel for steel coin.','Press F to browse my forge.'] } ],
+      lines:['Steel for steel coin.','Press F to browse my forge.'] },
+      { x:10, y:7, name:'Forge', icon:'⚒️', craft:true, lines:['Reforge and upgrade your gear here.','Press F to use the anvil.'] } ],
     chests:[],
   },
   shop_alch: {

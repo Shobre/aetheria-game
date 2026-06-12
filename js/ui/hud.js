@@ -5,6 +5,7 @@ import { SHOP_STOCK } from '../data/maps.js';
 import { rarityColor, rarityName, affixText } from '../data/affixes.js';
 import { QUESTS } from '../data/quests.js';
 import { SPELLS, knownSpells } from '../data/spells.js';
+import { reforgeCost, upgradeCost, canUpgrade } from '../systems/craft.js';
 
 export class HUD {
   constructor(game){
@@ -30,6 +31,9 @@ export class HUD {
       questTracker:$('quest-tracker'),questLog:$('quest-log'),
       spellLoadout:$('spell-loadout'),spellPicker:$('spell-picker'),
       autoSave:$('autosave'),
+      tooltip:$('tooltip'),
+      stashBag:$('stash-bag'),stashStore:$('stash-store'),stashBagCount:$('stash-bag-count'),stashStoreCount:$('stash-store-count'),
+      craftGear:$('craft-gear'),craftDetail:$('craft-detail'),craftGold:$('craft-gold'),
     };
     this.mmCtx=this.el.minimap.getContext('2d');
     this.activeSlot=0;
@@ -44,6 +48,9 @@ export class HUD {
       d.innerHTML=`<span class="key">${i+1}</span><span class="ico"></span><span class="qty"></span>`;
       d.onclick=()=>this.game.useHotbar(i);
       this._enableSwapDrag(d, i, 'hotbar');
+      this._bindTooltip(d, ()=>{ const id=this.game.hotbar[i];
+        const item=id?this.game.inventory.find(x=>x.id===id):null;
+        return item?this._buildItemTooltip(item,{hint:'Press '+(i+1)+' to use'}):''; });
       this.el.itemSlots.appendChild(d);
     }
   }
@@ -133,6 +140,8 @@ export class HUD {
       for(let i=0;i<3;i++){ const d=document.createElement('div'); d.className='spell-slot'; d.dataset.idx=i;
         d.innerHTML=`<span class="key">${keys[i].toUpperCase()}</span><span class="ico"></span><div class="cd"></div>`;
         this._enableSwapDrag(d,i,'spell');
+        this._bindTooltip(d, ()=>{ const sid=this.game.player.spellSlots[i];
+          return sid?this._buildSpellTooltip(sid,{hint:'Drag to swap · click to change'}):'<div class="tt-name">Empty slot</div><div class="tt-hint">Click to assign a spell</div>'; });
         d.onclick=()=>this._openSpellPicker(i);
         el.appendChild(d); }
     }
@@ -141,7 +150,7 @@ export class HUD {
       d.querySelector('.ico').textContent=sp?sp.icon:'·';
       const maxCd=sp?sp.cd:1;
       d.querySelector('.cd').style.height=(p.spellCd[keys[i]]/maxCd*100)+'%';
-      d.title=sp?(sp.name+' — '+sp.cost+' MP. Drag to swap, click to change.'):'Empty';
+      d.title='';
     });
   }
 
@@ -155,6 +164,7 @@ export class HUD {
       d.innerHTML=`<span class="ico">${sp.icon}</span><span class="sp-name">${sp.name}</span><span class="sp-cost">${sp.cost} MP</span><div class="sp-desc">${sp.desc}</div>`;
       d.onclick=()=>{ p.spellSlots[slotIdx]=id; this.refresh();
         picker.classList.add('hidden'); picker.classList.remove('flex'); };
+      this._bindTooltip(d, ()=>this._buildSpellTooltip(id,{hint:'Click to assign'}));
       picker.appendChild(d); });
     const close=document.createElement('button'); close.className='menu-btn picker-close'; close.textContent='CLOSE';
     close.onclick=()=>{ picker.classList.add('hidden'); picker.classList.remove('flex'); };
@@ -199,9 +209,11 @@ export class HUD {
           const ax=affixText(item); c.title=rarityName(item)+' '+item.name+(ax?' ('+ax+')':'')+(cmp?'  score '+cmp.text:''); }
         else { c.style.borderColor=''; c.title=CATALOG[item.id]?CATALOG[item.id].name:item.id; }
         c.innerHTML=`${item.icon}<span class="qty">${item.qty>1?item.qty:''}</span>${cmpHtml}`;
+        const hint=item.type==='consumable'?'Click to use':'Click to equip';
+        this._bindTooltip(c, ()=>this._buildItemTooltip(item,{hint}));
         c.onclick=()=>{ if(item.type==='consumable') this.game.useConsumable(item.id);
           else this.game.equipItem(item); this.refreshBag(); };
-      } else { c.innerHTML=''; c.onclick=null; c.title=''; c.style.borderColor=''; }
+      } else { c.innerHTML=''; c.onclick=null; c.title=''; c.style.borderColor=''; this._hideTooltip(); }
     });
     this.el.goldText.textContent=this.game.player.gold;
     this.el.slotsText.textContent=`${inv.length}/30`;
@@ -220,6 +232,90 @@ export class HUD {
     el.textContent='\u2714 '+msg; el.style.opacity='1';
     clearTimeout(this._autoSaveTimer);
     this._autoSaveTimer=setTimeout(()=>{ el.style.opacity='0'; },2200);
+  }
+
+  // ===== HOVER TOOLTIPS (items + spells) =====
+  // friendly stat labels and whether higher is a % value
+  _statLabel(k){ return ({atk:'Attack',def:'Defense',hp:'Health',mp:'Mana',
+    crit:'Crit Chance',cdr:'Cooldown',spelldmg:'Spell Power',greed:'Gold Find'})[k]||k.toUpperCase(); }
+  _statVal(k,v){ return (k==='crit'||k==='cdr')?('+'+v+'%'):('+'+v); }
+
+  // Build rich HTML for an item (catalog id, or full item object with rolled affixes).
+  _buildItemTooltip(item, opts){
+    opts=opts||{};
+    const isObj = typeof item==='object';
+    const cat = isObj ? (CATALOG[item.id]||{}) : (CATALOG[item]||{});
+    const it = isObj ? item : resolveEquip(item);
+    if(!it) return '';
+    const consumable = (it.type==='consumable')||(cat.type==='consumable');
+    const col = consumable ? '#cdd3df' : rarityColor(it);
+    const rname = consumable ? '' : rarityName(it);
+    let html = `<div class="tt-name" style="color:${col}">${it.icon||cat.icon||''} ${it.name||cat.name||''}</div>`;
+    html += `<div class="tt-type">${rname?rname+' ':''}${(it.type||cat.type||'').toUpperCase()}`;
+    if(it.ranged) html+=' \u00b7 RANGED';
+    html += `</div>`;
+    // stats
+    const stats = it.stats || cat.stats;
+    if(stats){ for(const k in stats){ if(!stats[k]) continue;
+      html += `<div class="tt-stat"><span>${this._statLabel(k)}</span><span class="v">${this._statVal(k,stats[k])}</span></div>`; } }
+    // weapon behaviour
+    if((it.atkSpeed||cat.atkSpeed)){ const a=it.atkSpeed||cat.atkSpeed;
+      html += `<div class="tt-stat"><span>Atk Speed</span><span class="v">${a.toFixed(2)}s</span></div>`; }
+    if((it.reach||cat.reach)){ html += `<div class="tt-stat"><span>Reach</span><span class="v">${it.reach||cat.reach}</span></div>`; }
+    // affixes (rolled bonuses)
+    const ax = affixText(it);
+    if(ax) html += `<div class="tt-affix">${ax}</div>`;
+    // consumable price/effect hint
+    if(consumable && cat.price!=null) html += `<div class="tt-stat"><span>Value</span><span class="v">${cat.sell||Math.floor(cat.price/2)}g</span></div>`;
+    // comparison vs equipped
+    if(!consumable){ const cmp=compareItem(it, this.game.player.equipment);
+      if(cmp){ const word=cmp.dir==='better'?'Upgrade':cmp.dir==='worse'?'Downgrade':'Sidegrade';
+        html += `<div class="tt-cmp"><span class="${cmp.dir}">${cmp.text} vs equipped — ${word}</span></div>`; } }
+    if(opts.hint) html += `<div class="tt-hint">${opts.hint}</div>`;
+    return html;
+  }
+
+  // Build rich HTML for a spell, scaled to the player's current level/spell power.
+  _buildSpellTooltip(id, opts){
+    opts=opts||{}; const sp=SPELLS[id]; if(!sp) return '';
+    const p=this.game.player;
+    const pr=sp.proj||{};
+    const dmg=Math.round((pr.base + p.level*(pr.perLvl||0))*(p.spellMul||1));
+    let html = `<div class="tt-name" style="color:#b9a7ff">${sp.icon} ${sp.name}</div>`;
+    html += `<div class="tt-type">SPELL</div>`;
+    html += `<div class="tt-stat"><span>Damage</span><span class="v">${dmg}</span></div>`;
+    html += `<div class="tt-stat"><span>Mana Cost</span><span class="v">${sp.cost}</span></div>`;
+    html += `<div class="tt-stat"><span>Cooldown</span><span class="v">${sp.cd}s</span></div>`;
+    if(pr.aoe) html += `<div class="tt-stat"><span>Blast Radius</span><span class="v">${pr.aoe}</span></div>`;
+    if(pr.chain) html += `<div class="tt-stat"><span>Chains</span><span class="v">${pr.chain} foes</span></div>`;
+    if(sp.nova) html += `<div class="tt-stat"><span>Nova Bolts</span><span class="v">${sp.nova}</span></div>`;
+    if(pr.status) html += `<div class="tt-stat"><span>Effect</span><span class="v">${pr.status}</span></div>`;
+    if(pr.kind==='ice') html += `<div class="tt-stat"><span>Effect</span><span class="v">freeze</span></div>`;
+    if(sp.healOnCast) html += `<div class="tt-stat"><span>Heals</span><span class="v">+${sp.healOnCast} HP</span></div>`;
+    if(sp.desc) html += `<div class="tt-desc">${sp.desc}</div>`;
+    if(opts.hint) html += `<div class="tt-hint">${opts.hint}</div>`;
+    return html;
+  }
+
+  _showTooltip(html, ev){
+    const tt=this.el.tooltip; if(!tt||!html) return;
+    tt.innerHTML=html; tt.classList.remove('hidden');
+    this._moveTooltip(ev);
+  }
+  _moveTooltip(ev){
+    const tt=this.el.tooltip; if(!tt||tt.classList.contains('hidden')) return;
+    const pad=14; let x=ev.clientX+pad, y=ev.clientY+pad;
+    const r=tt.getBoundingClientRect();
+    if(x+r.width>window.innerWidth-6) x=ev.clientX-r.width-pad;
+    if(y+r.height>window.innerHeight-6) y=ev.clientY-r.height-pad;
+    tt.style.left=Math.max(4,x)+'px'; tt.style.top=Math.max(4,y)+'px';
+  }
+  _hideTooltip(){ const tt=this.el.tooltip; if(tt) tt.classList.add('hidden'); }
+  // attach hover handlers to an element; htmlFn() returns the tooltip body (called lazily)
+  _bindTooltip(el, htmlFn){
+    el.addEventListener('mouseenter', e=>this._showTooltip(htmlFn(), e));
+    el.addEventListener('mousemove', e=>this._moveTooltip(e));
+    el.addEventListener('mouseleave', ()=>this._hideTooltip());
   }
   floater(text,wx,wy,color){
     const cam=this.game.cam;
@@ -301,7 +397,7 @@ export class HUD {
         <span class="slot-icon">${it?it.icon:'—'}</span>
         <span class="slot-name" style="color:${col}">${it?it.name:''}${ax?'<br><span class=\'affix-line\'>'+ax+'</span>':''}</span>`;
       d.onclick=()=>{ if(it) this.game.unequip(slot); this.refreshChar(); };
-      d.title=it?(rarityName(it)+(ax?' · '+ax:'')+' — click to unequip'):'Empty';
+      if(it) this._bindTooltip(d, ()=>this._buildItemTooltip(it,{hint:'Click to unequip'}));
       slotsDiv.appendChild(d);
     }
     // stat lines
@@ -320,8 +416,7 @@ export class HUD {
         const cmp=compareItem(item,p.equipment);
         c.style.borderColor=rarityColor(item);
         c.innerHTML=`${item.icon}${cmp?'<span class="cmp cmp-'+cmp.dir+'">'+cmp.text+'</span>':''}`;
-        const ax=affixText(item);
-        c.title=rarityName(item)+' '+item.name+(ax?' ('+ax+')':'')+(cmp?'  score '+cmp.text:'')+' — click to equip';
+        this._bindTooltip(c, ()=>this._buildItemTooltip(item,{hint:'Click to equip'}));
         c.onclick=()=>{ this.game.equipItem(item); this.refreshChar(); this.refreshBag(); };
         gearDiv.appendChild(c);
       });
@@ -371,6 +466,7 @@ export class HUD {
         row.innerHTML=`<span>${c.icon} ${c.name}${cmp?'<span class="cmp cmp-'+cmp.dir+'">'+cmp.text+'</span>':''}</span><span class="shop-price">${c.price}g</span>
           <button class="menu-btn shop-buy-btn" data-id="${id}">Buy</button>`;
         row.querySelector('.shop-buy-btn').onclick=()=>{ this.game.buyItem(id); this.refreshShop(); this.refreshBag(); };
+        this._bindTooltip(row, ()=>this._buildItemTooltip(id,{hint:c.price+'g to buy'}));
         buy.appendChild(row);
       }
     }
@@ -382,9 +478,63 @@ export class HUD {
         row.innerHTML=`<span>${item.icon} ${item.name}${item.type==='consumable'&&item.qty>1?' x'+item.qty:''}</span>
           <span class="shop-price">${val}g</span><button class="menu-btn shop-sell-btn">Sell</button>`;
         row.querySelector('.shop-sell-btn').onclick=()=>{ this.game.sellItem(item); this.refreshShop(); this.refreshBag(); };
+        this._bindTooltip(row, ()=>this._buildItemTooltip(item,{hint:val+'g to sell'}));
         sell.appendChild(row);
       });
     }
+  }
+
+  // ===== STASH (city bank) =====
+  openStash(){ const m=document.getElementById('stash-modal'); m.classList.remove('hidden'); m.classList.add('flex'); this.refreshStash(); }
+  _fillItemGrid(host, items, onClick, hintFn){
+    if(!host) return; host.innerHTML='';
+    items.forEach(item=>{
+      const c=document.createElement('div'); c.className='inv-cell';
+      if(item.type!=='consumable') c.style.borderColor=rarityColor(item);
+      c.innerHTML=`${item.icon}<span class="qty">${item.qty>1?item.qty:''}</span>`;
+      this._bindTooltip(c, ()=>this._buildItemTooltip(item,{hint:hintFn?hintFn(item):''}));
+      c.onclick=()=>onClick(item);
+      host.appendChild(c);
+    });
+  }
+  refreshStash(){
+    const g=this.game;
+    this._fillItemGrid(this.el.stashBag, g.inventory, it=>{ g.toStash(it); }, ()=>'Click to store');
+    this._fillItemGrid(this.el.stashStore, g.stash, it=>{ g.fromStash(it); }, ()=>'Click to withdraw');
+    if(this.el.stashBagCount) this.el.stashBagCount.textContent=`${g.inventory.length}/30`;
+    if(this.el.stashStoreCount) this.el.stashStoreCount.textContent=`${g.stash.length}/${g.STASH_MAX}`;
+  }
+
+  // ===== CRAFT (Blacksmith forge) =====
+  openCraft(){ const m=document.getElementById('craft-modal'); m.classList.remove('hidden'); m.classList.add('flex');
+    this._craftSel=null; this.refreshCraft(); }
+  refreshCraft(){
+    const g=this.game; if(this.el.craftGold) this.el.craftGold.textContent=g.player.gold;
+    const gear=g.inventory.filter(it=>it.type!=='consumable');
+    // keep selection valid
+    if(this._craftSel && !gear.includes(this._craftSel)) this._craftSel=null;
+    this._fillItemGrid(this.el.craftGear, gear, it=>{ this._craftSel=it; this.refreshCraft(); }, ()=>'Click to select');
+    // highlight selected
+    if(this._craftSel){ const idx=gear.indexOf(this._craftSel);
+      const cell=this.el.craftGear.children[idx]; if(cell) cell.classList.add('sel'); }
+    this._renderCraftDetail();
+  }
+  _renderCraftDetail(){
+    const d=this.el.craftDetail; if(!d) return;
+    const it=this._craftSel;
+    if(!it){ d.innerHTML='<p class="text-[10px] text-gray-500">Select a piece of gear to reforge (reroll its bonuses) or upgrade (raise its rarity).</p>'; return; }
+    const rc=reforgeCost(it), uc=upgradeCost(it), canUp=canUpgrade(it);
+    const gold=this.game.player.gold;
+    d.innerHTML=`<div class="craft-sel-name" style="color:${rarityColor(it)}">${it.icon} ${rarityName(it)} ${it.name}</div>
+      <div class="craft-affix">${affixText(it)||'<span class="text-gray-500">no bonus stats</span>'}</div>
+      <button class="menu-btn craft-btn" id="craft-reforge" ${gold<rc?'disabled':''}>Reforge \u2014 ${rc}g</button>
+      <div class="craft-hint">Re-rolls the bonus stats at the current rarity.</div>
+      <button class="menu-btn craft-btn" id="craft-upgrade" ${(!canUp||gold<uc)?'disabled':''}>${canUp?('Upgrade \u2014 '+uc+'g'):'Max rarity'}</button>
+      <div class="craft-hint">${canUp?'Raises rarity one tier and re-rolls for the higher tier.':'Already legendary.'}</div>`;
+    const rb=d.querySelector('#craft-reforge'); if(rb) rb.onclick=()=>{ const ni=this.game.reforgeItem(it);
+      if(ni) this._craftSel=ni; this.refreshCraft(); };
+    const ub=d.querySelector('#craft-upgrade'); if(ub) ub.onclick=()=>{ const ni=this.game.upgradeItem(it);
+      if(ni) this._craftSel=ni; this.refreshCraft(); };
   }
 
   setFps(v,show){ this.el.fps.classList.toggle('hidden',!show); this.el.fps.textContent='FPS '+v; }

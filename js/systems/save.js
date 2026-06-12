@@ -47,6 +47,8 @@ export const SaveSystem = {
         makeItem('shield_wood',1),
       ],
       hotbar:['potion','ether','bomb',null,null,null,null,null,null],
+      // shared stash (city bank) — persists across the run
+      stash:[],
       // chests opened, keyed "map:index" so each map persists independently
       openedChests:{},
     };
