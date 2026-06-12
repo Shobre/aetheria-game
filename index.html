@@ -24,21 +24,50 @@
 <div id="login-screen" class="screen hidden">
   <div class="absolute inset-0 starfield"></div>
   <div class="relative z-10 h-full flex flex-col items-center justify-center px-4">
-    <h1 class="title text-2xl md:text-4xl text-gold mb-2">AETHERIA</h1>
-    <p class="text-[9px] text-gray-500 mb-8 tracking-widest">SIGN IN TO CONTINUE</p>
-    <div class="w-full max-w-xs space-y-3">
-      <div>
-        <label class="text-[9px] text-gray-400 block mb-1">USERNAME</label>
-        <input id="login-user" type="text" class="w-full bg-gpanel border border-gpanel2 px-3 py-2 text-[10px] text-white focus:border-gold outline-none" placeholder="Enter username">
+    <h1 class="title text-3xl md:text-5xl text-gold mb-1">&#9876; AETHERIA &#9876;</h1>
+    <p class="text-[9px] md:text-[10px] text-gray-500 mb-6 tracking-[0.4em]">AN ACTION-RPG ADVENTURE</p>
+    <div class="login-card">
+      <div class="login-tabs">
+        <button id="tab-signin" class="login-tab active" data-tab="form-signin">SIGN IN</button>
+        <button id="tab-signup" class="login-tab" data-tab="form-signup">SIGN UP</button>
       </div>
-      <div>
-        <label class="text-[9px] text-gray-400 block mb-1">PASSWORD</label>
-        <input id="login-pass" type="password" class="w-full bg-gpanel border border-gpanel2 px-3 py-2 text-[10px] text-white focus:border-gold outline-none" placeholder="Enter password">
+      <div id="form-signin" class="login-form">
+        <p class="login-desc">Welcome back, adventurer. Enter your credentials to continue your journey.</p>
+        <div class="login-field">
+          <label class="login-label">USERNAME</label>
+          <input id="login-user" type="text" class="login-input" placeholder="Enter your username" autocomplete="username">
+        </div>
+        <div class="login-field">
+          <label class="login-label">PASSWORD</label>
+          <input id="login-pass" type="password" class="login-input" placeholder="Enter your password" autocomplete="current-password">
+        </div>
+        <button id="login-btn" class="login-btn-primary">&#9876;&nbsp;&nbsp;SIGN IN</button>
+        <div id="login-error" class="login-error hidden"></div>
+        <p class="login-hint">Your saves are synced to the cloud with your account.</p>
       </div>
-      <button id="login-btn" class="menu-btn w-full mt-2" >SIGN IN</button>
-      <p class="text-[8px] text-gray-600 text-center mt-2">Local auth - data stored on this device.</p>
+      <div id="form-signup" class="login-form hidden">
+        <p class="login-desc">Create a new account to begin your adventure. Your progress will be saved to the cloud.</p>
+        <div class="login-field">
+          <label class="login-label">USERNAME</label>
+          <input id="signup-user" type="text" class="login-input" placeholder="Choose a username" autocomplete="username">
+        </div>
+        <div class="login-field">
+          <label class="login-label">PASSWORD</label>
+          <input id="signup-pass" type="password" class="login-input" placeholder="Choose a password (3+ chars)" autocomplete="new-password">
+        </div>
+        <div class="login-field">
+          <label class="login-label">CONFIRM PASSWORD</label>
+          <input id="signup-pass2" type="password" class="login-input" placeholder="Re-enter your password" autocomplete="new-password">
+        </div>
+        <button id="signup-btn" class="login-btn-primary">&#128737;&nbsp;&nbsp;CREATE ACCOUNT</button>
+        <div id="signup-error" class="login-error hidden"></div>
+        <p class="login-hint">By signing up you agree that your data is stored securely.</p>
+      </div>
     </div>
-    <div id="login-error" class="text-[9px] text-hp mt-2 hidden"></div>
+    <div class="mt-6 text-[8px] text-gray-600 text-center leading-relaxed">
+      <p>WASD MOVE &middot; SPACE DODGE &middot; MOUSE AIM &middot; L-CLICK ATTACK</p>
+      <p class="mt-0.5">R-CLICK BLOCK &middot; F INTERACT &middot; Q/E/R SPELLS</p>
+    </div>
   </div>
 </div>
 

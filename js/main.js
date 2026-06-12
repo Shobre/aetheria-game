@@ -43,6 +43,47 @@ document.getElementById('login-btn').addEventListener('click', async ()=>{
   showStart();
 });
 
+// ---- Tab switching ----
+document.querySelectorAll('.login-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    // Update tab active state
+    document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    // Show the right form
+    const target = tab.dataset.tab;
+    document.querySelectorAll('.login-form').forEach(f => f.classList.add('hidden'));
+    document.getElementById(target).classList.remove('hidden');
+    // Clear errors
+    document.getElementById('login-error').classList.add('hidden');
+    document.getElementById('signup-error').classList.add('hidden');
+  });
+});
+
+// ---- Sign up handler ----
+document.getElementById('signup-btn').addEventListener('click', async () => {
+  const u = document.getElementById('signup-user').value.trim().toLowerCase();
+  const p = document.getElementById('signup-pass').value.trim();
+  const p2 = document.getElementById('signup-pass2').value.trim();
+  const err = document.getElementById('signup-error');
+  if (!u) { err.textContent = 'Enter a username'; err.classList.remove('hidden'); return; }
+  if (u.length < 2) { err.textContent = 'Username must be 2+ chars'; err.classList.remove('hidden'); return; }
+  if (p.length < 3) { err.textContent = 'Password must be 3+ chars'; err.classList.remove('hidden'); return; }
+  if (p !== p2) { err.textContent = 'Passwords do not match'; err.classList.remove('hidden'); return; }
+  err.textContent = 'Creating account...'; err.classList.remove('hidden');
+  const hash = btoa(u + ':' + p);
+  // Try to register
+  const reg = await tursoRegister(u, hash);
+  if (reg && reg.error) {
+    // If user already exists, try login
+    const ok = await tursoLogin(u, hash);
+    if (!ok) { err.textContent = 'Account already exists with different password'; return; }
+  }
+  setAuth({username: u, hash});
+  err.classList.add('hidden');
+  renderSlotsWithAuth(u);
+  showStart();
+});
+
 // ---- per-user save slots ----
 function usernameKey(username){ return 'aetheria_saves_v2_user_'+username; }
 
