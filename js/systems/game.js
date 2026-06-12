@@ -4,6 +4,7 @@ import { Enemy, Projectile, Particle, rollEliteMod } from '../entities/enemy.js'
 import { HUD } from '../ui/hud.js';
 import { Audio } from './audio.js';
 import { SaveSystem } from './save.js';
+import { tursoSave } from './turso.js';
 import { MAPS } from '../data/maps.js';
 import { CATALOG, makeItem, EQUIP_SLOTS } from '../data/gear.js';
 import { SKILLS, canLearn } from '../data/skilltree.js';
@@ -564,7 +565,9 @@ export class Game {
   // silent autosave (subtle indicator, no big toast); skips while a menu is paused mid-action
   autosave(reason){
     if(!this.running || this.player.dead) return;
-    const u=this._username; if(u) SaveSystem.saveUser(u,this.slot,this._buildState()); else SaveSystem.save(this.slot,this._buildState());
+    const u=this._username; const state=this._buildState();
+    if(u){ SaveSystem.saveUser(u,this.slot,state); tursoSave(u,this.slot,state).catch(()=>{}); }
+    else { SaveSystem.save(this.slot,state); }
     this._autoT=0;
     this.hud.autosaveFlash(reason||'Autosaved');
   }

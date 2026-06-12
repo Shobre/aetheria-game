@@ -3,7 +3,7 @@ import { Game } from './systems/game.js';
 import { SaveSystem } from './systems/save.js';
 
 
-import { tursoInit, tursoListSlots, tursoLoad, tursoSave, tursoDelete } from './systems/turso.js';
+import { tursoInit, tursoListSlots, tursoLoad, tursoSave, tursoDelete, tursoRegister, tursoCheckPassword } from './systems/turso.js';
 
 // ---- Auth system ----
 const AUTH_KEY = 'aetheria_auth';
@@ -24,14 +24,20 @@ if(auth.username){
   if(u) u.value=auth.username;
 }
 
-document.getElementById('login-btn').addEventListener('click', ()=>{
+document.getElementById('login-btn').addEventListener('click', async ()=>{
   const u=document.getElementById('login-user').value.trim().toLowerCase();
   const p=document.getElementById('login-pass').value.trim();
   const err=document.getElementById('login-error');
   if(!u){ err.textContent='Enter a username'; err.classList.remove('hidden'); return; }
   if(p.length<3){ err.textContent='Password must be 3+ chars'; err.classList.remove('hidden'); return; }
-  const token = btoa(u+':'+p);
-  setAuth({username:u, token});
+  err.textContent='Connecting...'; err.classList.remove('hidden');
+  const hash = btoa(u+':'+p);
+  // Try to register first, then login
+  const reg = await tursoRegister(u, hash);
+  if(reg && reg.error) { err.textContent='DB error: '+reg.error; return; }
+  const ok = await tursoCheckPassword(u, hash);
+  if(!ok){ err.textContent='Login failed'; err.classList.remove('hidden'); return; }
+  setAuth({username:u, hash});
   err.classList.add('hidden');
   renderSlotsWithAuth(u);
   showStart();
@@ -76,27 +82,65 @@ function fmtTime(ms){ const s=Math.floor(ms/1000),m=Math.floor(s/60); return m+'
 function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
 
 // ---- save slots ----
-function renderSlotsWithAuth(username){
+async function renderSlotsWithAuth(username){
   const wrap=document.getElementById('save-slots'); wrap.innerHTML='';
   if(username) wrap.dataset.user=username;
-  for(const {slot,data} of SaveSystem.listSlotsUser(username)){
+  // Show loading state
+  wrap.innerHTML='<div style="color:#889;text-align:center;padding:20px">Loading saves...</div>';
+  // Fetch cloud slots
+  let cloudSlots = [];
+  try { cloudSlots = await tursoListSlots(username); } catch(e){}
+  // Build slot data from local + cloud
+  const localSlots = SaveSystem.listSlotsUser(username);
+  wrap.innerHTML='';
+  for(let i=0;i<3;i++){
+    const slot=i+1;
+    const local = localSlots[i] ? localSlots[i].data : null;
+    const cloud = cloudSlots.find(c=>c[0]==slot);
+    const data = local || (cloud ? {slot, savedAt:cloud[1], cloudOnly:true} : null);
     const btn=document.createElement('button'); btn.className='save-slot';
-    if(data){
+    if(data && !data.cloudOnly){
       btn.innerHTML=`<div class="sl-title">SLOT ${slot}</div>
         <div class="sl-info">LV ${data.level} &nbsp; ${data.hpMax} HP<br>
           GOLD ${data.gold}<br>${fmtTime((data.playtime||0)*1000)}<br>
           <span style="color:#667">${fmtDate(data.savedAt)}</span></div>
         <span class="sl-del" title="Delete">🗑</span>`;
       btn.querySelector('.sl-del').onclick=(e)=>{ e.stopPropagation();
-        if(confirm('Delete?')){ SaveSystem.deleteUser(username,slot); renderSlotsWithAuth(username); } };
-      btn.onclick=()=>launchUser(SaveSystem.getSlotUser(username,slot),username);
+        if(confirm('Delete?')){ cloudDelete(username,slot); renderSlotsWithAuth(username); } };
+      btn.onclick=()=>cloudLoad(username,slot).then(s=>launchUser(s,username));
+    } else if(data && data.cloudOnly){
+      btn.innerHTML=`<div class="sl-title">SLOT ${slot}</div>
+        <div class="sl-info" style="color:#8af">☁ Cloud Save<br>
+          <span style="color:#667">${fmtDate(data.savedAt)}</span></div>`;
+      btn.onclick=()=>cloudLoad(username,slot).then(s=>launchUser(s,username));
     } else {
       btn.innerHTML=`<div class="sl-title">SLOT ${slot}</div><div class="sl-empty">— EMPTY —<br><br>Click to start<br>a new game</div>`;
-      btn.onclick=()=>launchUser(SaveSystem.newGameUser(username,slot),username);
+      btn.onclick=()=>{ const s=SaveSystem.newGameUser(username,slot); cloudSave(username,slot,s); launchUser(s,username); };
     }
     wrap.appendChild(btn);
   }
 }
+// Cloud sync: save to both localStorage and Turso
+async function cloudSave(username, slot, state){
+  SaveSystem.saveUser(username, slot, state);
+  try { await tursoSave(username, slot, state); } catch(e){ console.warn('cloud save failed', e); }
+}
+async function cloudLoad(username, slot){
+  const local = SaveSystem.getSlotUser(username, slot);
+  try {
+    const cloud = await tursoLoad(username, slot);
+    if(cloud && (!local || (cloud.savedAt||0) > (local.savedAt||0))){
+      SaveSystem.saveUser(username, slot, cloud);
+      return cloud;
+    }
+  } catch(e){ console.warn('cloud load failed', e); }
+  return local;
+}
+async function cloudDelete(username, slot){
+  SaveSystem.deleteUser(username, slot);
+  try { await tursoDelete(username, slot); } catch(e){ console.warn('cloud delete failed', e); }
+}
+
 function launchUser(state,username){ show('game-container'); game.resize(); game.start(state); game._username=username; applySettings(); }
 function launch(state){ show('game-container'); game.resize(); game.start(state); applySettings(); }
 
@@ -144,7 +188,11 @@ document.getElementById('skills-btn').onclick=openSkills;
 document.getElementById('quests-btn').onclick=openQuests;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeModal(document.getElementById(b.dataset.close)));
 document.getElementById('shop-close').onclick=()=>closeModal(shopModal);
-document.getElementById('save-game-btn').onclick=()=>game.save();
+document.getElementById('save-game-btn').onclick=()=>{
+  const uname=game._username;
+  if(uname){ cloudSave(uname, game._slot, game.saveState()); }
+  else game.save();
+};
 document.getElementById('quit-btn').addEventListener('click', ()=>{ if(confirm('Quit to menu?')){ game.quitToMenu(); show('start-screen'); } });
 document.getElementById('logout-btn').addEventListener('click', ()=>{
   if(confirm('Logout? Unsaved progress may be lost.')){
@@ -182,4 +230,8 @@ window.addEventListener('focus', ()=>{ if(game.running && !anyModalOpen() &&
 
 window.addEventListener('beforeunload', ()=>{ if(game.running) game.autosave(); });
 document.getElementById('quit-btn').onclick=()=>{ if(confirm('Quit to menu?')){ game._username=null; game.quitToMenu(); show('login-screen'); } };
-window.addEventListener('load', ()=>{ setTimeout(()=>{ const a=getAuth(); if(a.username){ renderSlotsWithAuth(a.username); show('start-screen'); } else { show('login-screen'); } },700); });
+window.addEventListener('load', ()=>{
+  // Init Turso tables
+  tursoInit().catch(()=>{});
+  setTimeout(()=>{ const a=getAuth(); if(a.username){ renderSlotsWithAuth(a.username); show('start-screen'); } else { show('login-screen'); } },700);
+});
