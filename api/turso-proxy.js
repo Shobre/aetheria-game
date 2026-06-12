@@ -1,4 +1,3 @@
-const fetch = require('node:fetch');
 const TURSO_URL = process.env.TURSO_DB_URL || '';
 const TURSO_TOKEN = process.env.TURSO_TOKEN || '';
 

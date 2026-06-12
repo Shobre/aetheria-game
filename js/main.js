@@ -120,10 +120,13 @@ async function renderSlotsWithAuth(username){
     wrap.appendChild(btn);
   }
 }
-// Cloud sync: save to both localStorage and Turso
+// Cloud sync: save to both localStorage and Turso (falls back to local-only)
 async function cloudSave(username, slot, state){
   SaveSystem.saveUser(username, slot, state);
-  try { await tursoSave(username, slot, state); } catch(e){ console.warn('cloud save failed', e); }
+  try {
+    const r = await tursoSave(username, slot, state);
+    if (r && r.localOnly) console.log('Cloud unavailable - saved locally');
+  } catch(e){ console.warn('cloud save failed', e); }
 }
 async function cloudLoad(username, slot){
   const local = SaveSystem.getSlotUser(username, slot);
@@ -136,6 +139,7 @@ async function cloudLoad(username, slot){
   } catch(e){ console.warn('cloud load failed', e); }
   return local;
 }
+// Note: tursoLoad returns null when cloud is unavailable, so local is used automatically
 async function cloudDelete(username, slot){
   SaveSystem.deleteUser(username, slot);
   try { await tursoDelete(username, slot); } catch(e){ console.warn('cloud delete failed', e); }
