@@ -1,7 +1,9 @@
 import { TILE } from '../systems/world.js';
-import { CATALOG, EQUIP_SLOTS, equipStats } from '../data/gear.js';
+import { CATALOG, EQUIP_SLOTS, equipStats, resolveEquip } from '../data/gear.js';
 import { SKILLS, BRANCHES, canLearn } from '../data/skilltree.js';
 import { SHOP_STOCK } from '../data/maps.js';
+import { rarityColor, rarityName, affixText } from '../data/affixes.js';
+import { QUESTS } from '../data/quests.js';
 
 export class HUD {
   constructor(game){
@@ -22,6 +24,9 @@ export class HUD {
       skillPts:$('skill-points'),skillTree:$('skill-tree'),
       // shop
       shopBuy:$('shop-buy'),shopSell:$('shop-sell'),shopGold:$('shop-gold'),
+      // boss bar + quests
+      bossBar:$('boss-bar'),bossName:$('boss-name'),bossFill:$('boss-fill'),bossPips:$('boss-pips'),
+      questTracker:$('quest-tracker'),questLog:$('quest-log'),
     };
     this.mmCtx=this.el.minimap.getContext('2d');
     this.activeSlot=0;
@@ -65,6 +70,46 @@ export class HUD {
     // skill point badge on char/skill buttons
     const badge=document.getElementById('skill-badge');
     if(badge){ badge.textContent=p.skillPoints; badge.style.display=p.skillPoints>0?'flex':'none'; }
+    this._updateBossBar();
+  }
+
+  _updateBossBar(){
+    const b=this.game.boss, bar=this.el.bossBar; if(!bar) return;
+    if(b && !b.dead && b.intro<=0){
+      bar.classList.remove('hidden');
+      this.el.bossName.textContent=b.def.name;
+      this.el.bossFill.style.width=Math.max(0,b.hp/b.hpMax*100)+'%';
+      if(this.el.bossPips){
+        const ph=b.def.phases.length, cur=b.phaseIdx;
+        this.el.bossPips.innerHTML=b.def.phases.map((_,i)=>
+          `<span class="boss-pip${i<=ph-1-cur?' on':''}"></span>`).join('');
+      }
+    } else { bar.classList.add('hidden'); }
+  }
+
+  // quest tracker (always-on HUD) + full log
+  refreshQuests(){
+    if(!this.game.quests) return;
+    const list=this.game.quests.activeList();
+    const tr=this.el.questTracker;
+    if(tr){
+      if(!list.length){ tr.innerHTML=''; tr.classList.add('hidden'); }
+      else {
+        tr.classList.remove('hidden');
+        tr.innerHTML=list.slice(0,3).map(q=>{
+          const lines=q.lines.map(l=>`<div class="qt-obj${l.done?' done':''}">${l.done?'✓':'•'} ${l.text} ${l.need>1?'('+l.have+'/'+l.need+')':''}</div>`).join('');
+          return `<div class="qt-quest"><div class="qt-name">${q.complete?'★ ':''}${q.name}</div>${lines}</div>`;
+        }).join('');
+      }
+    }
+    const log=this.el.questLog;
+    if(log){
+      if(!list.length){ log.innerHTML='<p class="text-[9px] text-gray-500">No active quests. Seek out NPCs (look for ❗).</p>'; }
+      else log.innerHTML=list.map(q=>{
+        const lines=q.lines.map(l=>`<div class="qt-obj${l.done?' done':''}">${l.done?'✓':'•'} ${l.text} ${l.need>1?'('+l.have+'/'+l.need+')':''}</div>`).join('');
+        return `<div class="quest-entry"><div class="qe-name">${q.complete?'★ ':''}${q.name}</div><div class="qe-desc">${q.desc}</div>${lines}</div>`;
+      }).join('');
+    }
   }
 
   refreshBag(){
@@ -72,10 +117,12 @@ export class HUD {
     cells.forEach((c,i)=>{
       const item=inv[i];
       if(item){ c.innerHTML=`${item.icon}<span class="qty">${item.qty>1?item.qty:''}</span>`;
-        c.title=CATALOG[item.id]?CATALOG[item.id].name:item.id;
+        if(item.type!=='consumable'){ c.style.borderColor=rarityColor(item);
+          const ax=affixText(item); c.title=rarityName(item)+' '+item.name+(ax?' ('+ax+')':''); }
+        else { c.style.borderColor=''; c.title=CATALOG[item.id]?CATALOG[item.id].name:item.id; }
         c.onclick=()=>{ if(item.type==='consumable') this.game.useConsumable(item.id);
           else this.game.equipItem(item); this.refreshBag(); };
-      } else { c.innerHTML=''; c.onclick=null; c.title=''; }
+      } else { c.innerHTML=''; c.onclick=null; c.title=''; c.style.borderColor=''; }
     });
     this.el.goldText.textContent=this.game.player.gold;
     this.el.slotsText.textContent=`${inv.length}/30`;
@@ -125,14 +172,15 @@ export class HUD {
     const slotsDiv=this.el.charEquip; if(!slotsDiv) return;
     slotsDiv.innerHTML='';
     for(const slot of EQUIP_SLOTS){
-      const id=p.equipment[slot];
-      const c=id?CATALOG[id]:null;
+      const it=resolveEquip(p.equipment[slot]);
       const d=document.createElement('div'); d.className='equip-slot';
+      const col=it?rarityColor(it):'#cdd';
+      const ax=it?affixText(it):'';
       d.innerHTML=`<span class="slot-label">${slot.toUpperCase()}</span>
-        <span class="slot-icon">${c?c.icon:'—'}</span>
-        <span class="slot-name">${c?c.name:''}</span>`;
-      d.onclick=()=>{ if(id) this.game.unequip(slot); this.refreshChar(); };
-      d.title=id?'Click to unequip':'Empty';
+        <span class="slot-icon">${it?it.icon:'—'}</span>
+        <span class="slot-name" style="color:${col}">${it?it.name:''}${ax?'<br><span class=\'affix-line\'>'+ax+'</span>':''}</span>`;
+      d.onclick=()=>{ if(it) this.game.unequip(slot); this.refreshChar(); };
+      d.title=it?(rarityName(it)+(ax?' · '+ax:'')+' — click to unequip'):'Empty';
       slotsDiv.appendChild(d);
     }
     // stat lines
@@ -148,8 +196,11 @@ export class HUD {
       gearDiv.innerHTML='';
       this.game.inventory.filter(it=>it.type!=='consumable').forEach(item=>{
         const c=document.createElement('div'); c.className='inv-cell gear-cell';
-        c.innerHTML=`${item.icon}<span class="qty">1</span>`;
-        c.title='Click to equip'; c.onclick=()=>{ this.game.equipItem(item); this.refreshChar(); this.refreshBag(); };
+        c.style.borderColor=rarityColor(item);
+        c.innerHTML=`${item.icon}`;
+        const ax=affixText(item);
+        c.title=rarityName(item)+' '+item.name+(ax?' ('+ax+')':'')+' — click to equip';
+        c.onclick=()=>{ this.game.equipItem(item); this.refreshChar(); this.refreshBag(); };
         gearDiv.appendChild(c);
       });
     }

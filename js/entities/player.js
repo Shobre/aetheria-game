@@ -1,6 +1,7 @@
 import { TILE } from '../systems/world.js';
 import { equipStats } from '../data/gear.js';
 import { skillStats } from '../data/skilltree.js';
+import { tickStatuses, drawStatusPips } from '../systems/status.js';
 
 export class Player {
   constructor(x,y,state){
@@ -23,6 +24,7 @@ export class Player {
     this.attacking=0; this.attackCd=0; this.blocking=false;
     this.dodging=0; this.dodgeCd=0; this.invuln=0; this.dodgeDir={x:0,y:0};
     this.spellCd={q:0,e:0,r:0};
+    this.statuses={};
     this.flash=0; this.dead=false;
   }
 
@@ -53,14 +55,18 @@ export class Player {
   update(dt, input, world, cam, game){
     if(this.dead) return;
     this._tickTimers(dt);
+    // status effects (burn/poison dot, chill slow, stun)
+    const st=tickStatuses(this,dt,game,true);
+    if(this.dead) return;
+    this._statusSlow=st.slow; this._stunned=st.stunned;
     // aim toward mouse (world space)
     this._aim=Math.atan2((cam.y+input.mouse.y)-this.y, (cam.x+input.mouse.x)-this.x);
     // regen
     this.mp=Math.min(this.mpMax, this.mp+dt*3*this.mpRegenMul);
     if(!this.dodging) this.stam=Math.min(this.stamMax, this.stam+dt*22);
     this._handleMovement(dt, input, world, game);
-    this.blocking = input.mouseDown.right && !this.dodging;
-    this._handleCombat(input, game);
+    this.blocking = input.mouseDown.right && !this.dodging && !this._stunned;
+    if(!this._stunned) this._handleCombat(input, game);
   }
 
   _tickTimers(dt){
@@ -73,6 +79,7 @@ export class Player {
   }
 
   _handleMovement(dt, input, world, game){
+    if(this._stunned){ return; }
     if(this.dodging>0){
       this.dodging-=dt; const ds=7.0*(this.dodging/0.22);
       this._move(this.dodgeDir.x*ds,this.dodgeDir.y*ds,world);
@@ -87,7 +94,8 @@ export class Player {
     }
     // walk
     if(mv.x||mv.y){
-      const sp=this.blocking?this.speed*0.45:this.speed;
+      let sp=this.blocking?this.speed*0.45:this.speed;
+      sp*=(1-(this._statusSlow||0));
       this._move(mv.x*sp,mv.y*sp,world); this.dir=mv;
       this.facing=Math.abs(mv.x)>Math.abs(mv.y)?(mv.x>0?'right':'left'):(mv.y>0?'down':'up');
     }
@@ -183,6 +191,7 @@ export class Player {
       ctx.fillStyle='#8a8fa0'; ctx.fillRect(14,-9,5,18);
       ctx.fillStyle='#cfd4e0'; ctx.fillRect(15,-7,3,14); ctx.restore();
     }
+    drawStatusPips(this,ctx,sx,sy-8);
   }
 
   serialize(){

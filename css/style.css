@@ -144,3 +144,26 @@ body{image-rendering:pixelated}
 /* scrollbars */
 .skill-tree::-webkit-scrollbar,.shop-col::-webkit-scrollbar{width:8px}
 .skill-tree::-webkit-scrollbar-thumb,.shop-col::-webkit-scrollbar-thumb{background:var(--gpanel2);border-radius:4px}
+
+/* ===== boss health bar ===== */
+#boss-name{text-shadow:1px 1px 0 #000,0 0 8px rgba(232,65,60,.6)}
+.boss-pip{width:10px;height:6px;background:var(--gpanel2);border:1px solid #000;display:inline-block}
+.boss-pip.on{background:var(--hp);box-shadow:0 0 5px rgba(232,65,60,.7)}
+
+/* ===== quest tracker (HUD) ===== */
+#quest-tracker{font-size:8px}
+.qt-quest{background:rgba(20,24,36,.7);border-left:3px solid var(--gold);padding:5px 8px;margin-bottom:5px}
+.qt-name{color:var(--gold);font-size:9px;margin-bottom:3px}
+.qt-obj{color:#bcc;line-height:1.7}
+.qt-obj.done{color:var(--stam);text-decoration:line-through;opacity:.8}
+
+/* ===== quest log modal ===== */
+.quest-log{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto}
+.quest-entry{background:var(--gpanel2);border:2px solid #000;border-left:3px solid var(--gold);padding:10px}
+.qe-name{color:var(--gold);font-size:10px;margin-bottom:4px}
+.qe-desc{color:#9aa;font-size:8px;margin-bottom:6px;line-height:1.6}
+.quest-log::-webkit-scrollbar{width:8px}
+.quest-log::-webkit-scrollbar-thumb{background:var(--gpanel2);border-radius:4px}
+
+/* ===== rarity affix lines ===== */
+.affix-line{font-size:7px;color:#8fd;opacity:.9}

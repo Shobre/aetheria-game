@@ -1,4 +1,7 @@
 import { TILE } from '../systems/world.js';
+import { applyStatus, tickStatuses, drawStatusPips } from '../systems/status.js';
+import { makeItem } from '../data/gear.js';
+import { rollRarity, applyRarity } from '../data/affixes.js';
 
 // Enemy configs per type. Behaviors: chase (touch), ranged (shoots), lunge (telegraph+dash).
 const CFG = {
@@ -15,6 +18,12 @@ const CFG = {
   golem:   { hp:120,speed:0.5, dmg:24, xp:60, gold:[15,30],color:'#5a6472', r:17, behavior:'chase' },
   // dungeon
   skeleton:{ hp:46, speed:1.1, dmg:15, xp:34, gold:[9,18], color:'#d8d0c0', r:11, behavior:'lunge' },
+  // snow (Frostpeak)
+  frostling:{ hp:36, speed:1.5, dmg:11, xp:30, gold:[6,14], color:'#bfe8ff', r:10, behavior:'chase', onHit:'chill' },
+  yeti:    { hp:140,speed:0.6, dmg:26, xp:70, gold:[16,32],color:'#e8f4ff', r:18, behavior:'lunge', onHit:'chill' },
+  // swamp (Murkbog)
+  spitter: { hp:34, speed:0.7, dmg:9,  xp:30, gold:[7,15], color:'#5a8a3a', r:11, behavior:'ranged', shootRange:320, shootCd:1.8, onHit:'poison' },
+  croaker: { hp:60, speed:1.0, dmg:14, xp:36, gold:[8,18], color:'#3a6a2a', r:13, behavior:'lunge', onHit:'poison' },
 };
 
 export class Enemy {
@@ -31,6 +40,8 @@ export class Enemy {
     this.goldMin=c.gold[0]; this.goldMax=c.gold[1];
     this.shootRange=c.shootRange||0; this.shootCd=c.shootCd||0; this.shootTimer=0;
     this.erratic=c.erratic||false;
+    this.onHit=c.onHit||null;
+    this.statuses={};
     this.hitFlash=0; this.knockback={x:0,y:0}; this.frozen=0;
     this.bob=Math.random()*7; this.dead=false; this.attackCd=0;
     // lunge state
@@ -45,6 +56,11 @@ export class Enemy {
     this.shootTimer=Math.max(0,this.shootTimer-dt);
     this.bob+=dt*6;
     if(this.frozen>0){ this.frozen-=dt; return; }
+    // status effects (burn/poison dot, chill slow, stun)
+    const st=tickStatuses(this,dt,game,false);
+    if(this.dead) return;
+    if(st.stunned) return;
+    this._slowMul=1-st.slow;
     // knockback
     if(Math.abs(this.knockback.x)>0.1||Math.abs(this.knockback.y)>0.1){
       this._move(this.knockback.x,this.knockback.y,world);
@@ -60,7 +76,8 @@ export class Enemy {
         if(dist<160){ this._move(-nx*this.speed,-ny*this.speed,world); } // back away
         else if(dist>240){ this._move(nx*this.speed*0.6,ny*this.speed*0.6,world); }
         if(this.shootTimer<=0){ this.shootTimer=this.shootCd;
-          game.enemyShoot(this.x,this.y,Math.atan2(dy,dx),this.dmg); }
+          if(this.onHit) game.enemyShootStatus(this.x,this.y,Math.atan2(dy,dx),this.dmg,this.onHit);
+          else game.enemyShoot(this.x,this.y,Math.atan2(dy,dx),this.dmg); }
       } else if(dist<aggro){ this._move(nx*this.speed,ny*this.speed,world); }
     }
     else if(this.behavior==='lunge'){
@@ -74,6 +91,7 @@ export class Enemy {
       }
       if(dist<this.r+player.r+2 && this.attackCd<=0){
         this.attackCd=0.8; player.takeDamage(this.dmg,Math.atan2(dy,dx)+Math.PI,game);
+        if(this.onHit) applyStatus(player,this.onHit);
         this.knockback.x=-nx*2; this.knockback.y=-ny*2;
       }
     }
@@ -92,6 +110,7 @@ export class Enemy {
       this._move(this.lungeDir.x*this.speed*4.5,this.lungeDir.y*this.speed*4.5,world);
       if(dist<this.r+player.r+4 && this.attackCd<=0){
         this.attackCd=1.0; player.takeDamage(Math.round(this.dmg*1.4),Math.atan2(this.lungeDir.y,this.lungeDir.x),game);
+        if(this.onHit) applyStatus(player,this.onHit);
       }
       if(this.lungeTimer<=0){ this.lungeState='recover'; this.lungeTimer=0.6; }
     } else { // recover
@@ -100,6 +119,7 @@ export class Enemy {
   }
 
   _move(dx,dy,world){
+    const m=this._slowMul==null?1:this._slowMul; dx*=m; dy*=m;
     if(!world.isSolid(this.x+dx+Math.sign(dx)*this.r,this.y)) this.x+=dx;
     if(!world.isSolid(this.x,this.y+dy+Math.sign(dy)*this.r)) this.y+=dy;
   }
@@ -111,7 +131,7 @@ export class Enemy {
     game.floater('-'+dmg, this.x, this.y-14, '#fff');
     if(this.hp<=0) this.kill(game);
   }
-  freeze(t){ this.frozen=Math.max(this.frozen,t); }
+  freeze(t){ this.frozen=Math.max(this.frozen,t); applyStatus(this,'chill',t); }
   kill(game){
     this.dead=true;
     game.player.gainXp(this.xp, game);
@@ -122,6 +142,7 @@ export class Enemy {
     // occasional item drop
     if(Math.random()<0.08) game.dropItem(this.x,this.y);
     game.sfx('kill');
+    game.onEnemyKilled(this);
   }
 
   draw(ctx,cam){
@@ -163,6 +184,23 @@ export class Enemy {
       ctx.fillStyle=c; ctx.fillRect(sx-7,sy-8+bob,14,16);
       ctx.fillStyle='#d8d0c0'; ctx.beginPath(); ctx.arc(sx,sy-12+bob,6,0,7); ctx.fill();
       ctx.fillStyle='#000'; ctx.fillRect(sx-3,sy-13+bob,2,2); ctx.fillRect(sx+1,sy-13+bob,2,2);
+    } else if(t==='frostling'){
+      ctx.fillStyle=c; ctx.beginPath(); ctx.arc(sx,sy+bob,9,0,7); ctx.fill();
+      ctx.fillStyle='#eaf7ff'; ctx.fillRect(sx-7,sy-12+bob,3,6); ctx.fillRect(sx+4,sy-12+bob,3,6); // ice horns
+      ctx.fillStyle='#2a5a7a'; ctx.fillRect(sx-3,sy-2+bob,2,2); ctx.fillRect(sx+1,sy-2+bob,2,2);
+    } else if(t==='yeti'){
+      ctx.fillStyle=c; ctx.fillRect(sx-this.r,sy-this.r+bob,this.r*2,this.r*2);
+      ctx.fillStyle='#cfe6f5'; ctx.fillRect(sx-this.r+3,sy-this.r+3+bob,this.r*2-6,6); // fur
+      ctx.fillStyle='#2a5a7a'; ctx.fillRect(sx-6,sy-4+bob,4,4); ctx.fillRect(sx+2,sy-4+bob,4,4);
+      ctx.fillStyle='#fff'; ctx.fillRect(sx-4,sy+5+bob,3,4); ctx.fillRect(sx+1,sy+5+bob,3,4); // fangs
+    } else if(t==='spitter'){
+      ctx.fillStyle=c; ctx.beginPath(); ctx.ellipse(sx,sy+bob,this.r,this.r*0.8,0,0,7); ctx.fill();
+      ctx.fillStyle='#9aff5f'; ctx.beginPath(); ctx.arc(sx,sy-2+bob,3,0,7); ctx.fill(); // glowing maw
+      ctx.fillStyle='#1a3a0a'; ctx.fillRect(sx-6,sy-5+bob,3,3); ctx.fillRect(sx+3,sy-5+bob,3,3);
+    } else if(t==='croaker'){
+      ctx.fillStyle=c; ctx.beginPath(); ctx.ellipse(sx,sy+bob,this.r,this.r*0.7,0,0,7); ctx.fill();
+      ctx.fillStyle='#7aff8a'; ctx.fillRect(sx-7,sy-9+bob,4,4); ctx.fillRect(sx+3,sy-9+bob,4,4); // eyes
+      ctx.fillStyle='#1a3a0a'; ctx.fillRect(sx-6,sy-8+bob,2,2); ctx.fillRect(sx+4,sy-8+bob,2,2);
     } else { // brute / fallback
       ctx.fillStyle=c; ctx.fillRect(sx-this.r,sy-this.r+bob,this.r*2,this.r*2);
       ctx.fillStyle='#ffcf4d'; ctx.fillRect(sx-6,sy-5+bob,3,3); ctx.fillRect(sx+3,sy-5+bob,3,3);
@@ -172,6 +210,7 @@ export class Enemy {
       ctx.fillStyle='#000'; ctx.fillRect(sx-this.r,sy-this.r-7,this.r*2,3);
       ctx.fillStyle='#e8413c'; ctx.fillRect(sx-this.r,sy-this.r-7,this.r*2*(this.hp/this.hpMax),3);
     }
+    drawStatusPips(this,ctx,sx,sy);
   }
 }
 
@@ -181,7 +220,7 @@ export class Projectile {
     this.speed=opts.speed||5; this.dmg=opts.dmg||10; this.r=opts.r||5;
     this.color=opts.color||'#ffcf4d'; this.life=opts.life||1.2;
     this.kind=opts.kind||'fire'; this.hostile=opts.hostile||false;
-    this.aoe=opts.aoe||0; this.dead=false; this.trail=[];
+    this.aoe=opts.aoe||0; this.status=opts.status||null; this.dead=false; this.trail=[];
   }
   update(dt, world, enemies, game){
     this.x+=Math.cos(this.angle)*this.speed; this.y+=Math.sin(this.angle)*this.speed;
@@ -193,14 +232,17 @@ export class Projectile {
       // hits player
       const p=game.player;
       if(Math.hypot(p.x-this.x,p.y-this.y)<p.r+this.r){
-        p.takeDamage(this.dmg, this.angle, game); this.dead=true;
+        p.takeDamage(this.dmg, this.angle, game);
+        if(this.status) applyStatus(p,this.status);
+        this.dead=true;
         game.spawnParticles(this.x,this.y,this.color,6);
       }
     } else {
       for(const e of enemies){ if(e.dead) continue;
         if(Math.hypot(e.x-this.x,e.y-this.y)<e.r+this.r){
           if(this.aoe){ this._burst(game,enemies); }
-          else { e.hit(this.dmg,this.angle,game,5); if(this.kind==='ice') e.freeze(1.5); }
+          else { e.hit(this.dmg,this.angle,game,5); if(this.kind==='ice') e.freeze(1.5);
+            else if(this.status) applyStatus(e,this.status); }
           this.dead=true; game.spawnParticles(this.x,this.y,this.color,8); break;
         }
       }

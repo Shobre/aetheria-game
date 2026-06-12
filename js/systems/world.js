@@ -13,6 +13,8 @@ const BIOMES = {
   cave:   { fa:'#2a2f3e', fb:'#333a4d', pa:'#3e4658', pb:'#4a5468', wd:'#12151d', wl:'#1d2330', liquid:'#7a3fb0', liquid2:'#9a5fd0', deco:['crystal','rock','crystal'] },
   dungeon:{ fa:'#26262e', fb:'#2e2e38', pa:'#3a3a46', pb:'#444452', wd:'#101014', wl:'#1c1c24', liquid:'#8a2020', liquid2:'#b03030', deco:['bones','rock','pillar'] },
   house:  { fa:'#6b4a2f', fb:'#75512f', pa:'#8a6a3f', pb:'#967440', wd:'#3a2a1a', wl:'#5a4226', liquid:'#3a82c8', liquid2:'#52a0d8', deco:['barrel','crate'] },
+  snow:   { fa:'#dfe9f2', fb:'#eaf2fa', pa:'#b8c6d6', pb:'#c6d2e0', wd:'#6a7c92', wl:'#8a9cb2', liquid:'#7fc8e8', liquid2:'#a0dcf2', deco:['pine','snowrock','pine'] },
+  swamp:  { fa:'#3a4a2a', fb:'#445232', pa:'#4a4030', pb:'#564a38', wd:'#1a2410', wl:'#26341a', liquid:'#4a5a2a', liquid2:'#5e7236', deco:['deadtree','reed','rock'] },
 };
 const SOLID = new Set([T.WATER, T.WALL, T.LAVA]);
 
@@ -233,6 +235,16 @@ export class World {
         ctx.fillStyle='#5a3a1f'; ctx.fillRect(sx+9,sy+14,14,2); ctx.fillRect(sx+9,sy+22,14,2); break;
       case 'crate': ctx.fillStyle='#8a6a3f'; ctx.fillRect(sx+8,sy+12,16,16);
         ctx.strokeStyle='#5a4226'; ctx.lineWidth=2; ctx.strokeRect(sx+8,sy+12,16,16); break;
+      case 'pine': ctx.fillStyle='#5a3a22'; ctx.fillRect(sx+14,sy+22,4,8);
+        ctx.fillStyle='#2c5e44'; ctx.beginPath(); ctx.moveTo(sx+16,sy+4); ctx.lineTo(sx+25,sy+22); ctx.lineTo(sx+7,sy+22); ctx.closePath(); ctx.fill();
+        ctx.fillStyle='#eaf2fa'; ctx.beginPath(); ctx.moveTo(sx+16,sy+4); ctx.lineTo(sx+20,sy+12); ctx.lineTo(sx+12,sy+12); ctx.closePath(); ctx.fill(); break;
+      case 'snowrock': ctx.fillStyle='#9aa6b4'; ctx.beginPath(); ctx.arc(sx+16,sy+20,9,0,7); ctx.fill();
+        ctx.fillStyle='#eaf2fa'; ctx.beginPath(); ctx.arc(sx+14,sy+17,5,0,7); ctx.fill(); break;
+      case 'deadtree': ctx.strokeStyle='#3a2e22'; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.moveTo(sx+16,sy+28); ctx.lineTo(sx+16,sy+8);
+        ctx.moveTo(sx+16,sy+16); ctx.lineTo(sx+9,sy+9); ctx.moveTo(sx+16,sy+14); ctx.lineTo(sx+23,sy+8); ctx.stroke(); break;
+      case 'reed': ctx.strokeStyle='#6a7a3a'; ctx.lineWidth=2;
+        for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(sx+16+k*4,sy+26); ctx.lineTo(sx+16+k*4,sy+12); ctx.stroke(); } break;
     }
   }
 }

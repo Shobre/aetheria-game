@@ -40,6 +40,7 @@ const settingsModal=document.getElementById('settings-modal');
 const bagModal=document.getElementById('bag-modal');
 const charModal=document.getElementById('char-modal');
 const skillsModal=document.getElementById('skills-modal');
+const questsModal=document.getElementById('quests-modal');
 const shopModal=document.getElementById('shop-modal');
 function applySettings(){
   game.settings.shake=document.getElementById('set-shake').checked;
@@ -47,27 +48,30 @@ function applySettings(){
   game.settings.fps=document.getElementById('set-fps').checked;
   game.audio.musicVol=document.getElementById('set-music').value/100;
   game.audio.sfxVol=document.getElementById('set-sfx').value/100;
+  if(game.audio.applyMusicVol) game.audio.applyMusicVol();
 }
 ['set-shake','set-minimap','set-fps','set-music','set-sfx'].forEach(id=>{
   const el=document.getElementById(id); if(el) el.addEventListener('input',applySettings); });
 
-function anyModalOpen(){ return [settingsModal,bagModal,charModal,skillsModal,shopModal]
+function anyModalOpen(){ return [settingsModal,bagModal,charModal,skillsModal,questsModal,shopModal]
   .some(m=>!m.classList.contains('hidden')); }
 function openModal(m){ game.paused=true; m.classList.remove('hidden'); m.classList.add('flex'); }
 function closeModal(m){ m.classList.add('hidden'); m.classList.remove('flex');
   if(!anyModalOpen() && !document.getElementById('death-screen').classList.contains('flex')) game.paused=false; }
-function closeAll(){ [settingsModal,bagModal,charModal,skillsModal,shopModal].forEach(m=>{
+function closeAll(){ [settingsModal,bagModal,charModal,skillsModal,questsModal,shopModal].forEach(m=>{
   m.classList.add('hidden'); m.classList.remove('flex'); });
   if(!document.getElementById('death-screen').classList.contains('flex')) game.paused=false; }
 
 function openChar(){ game.hud.refreshChar(); game.hud.refreshBag(); openModal(charModal); }
 function openSkills(){ game.hud.refreshSkills(); openModal(skillsModal); }
 function openBag(){ game.hud.refreshBag(); openModal(bagModal); }
+function openQuests(){ game.hud.refreshQuests(); openModal(questsModal); }
 
 document.getElementById('settings-btn').onclick=()=>openModal(settingsModal);
 document.getElementById('bag-btn').onclick=openBag;
 document.getElementById('char-btn').onclick=openChar;
 document.getElementById('skills-btn').onclick=openSkills;
+document.getElementById('quests-btn').onclick=openQuests;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeModal(document.getElementById(b.dataset.close)));
 document.getElementById('shop-close').onclick=()=>closeModal(shopModal);
 document.getElementById('save-game-btn').onclick=()=>game.save();
@@ -86,6 +90,7 @@ window.addEventListener('keydown', e=>{
   if(k==='b'){ bagModal.classList.contains('hidden')?openBag():closeModal(bagModal); }
   if(k==='c'){ charModal.classList.contains('hidden')?openChar():closeModal(charModal); }
   if(k==='k'){ skillsModal.classList.contains('hidden')?openSkills():closeModal(skillsModal); }
+  if(k==='j'){ questsModal.classList.contains('hidden')?openQuests():closeModal(questsModal); }
   // hotbar 1-9 (only when not in a menu)
   if(/^[1-9]$/.test(k) && !game.paused) game.useHotbar(parseInt(k)-1);
 });

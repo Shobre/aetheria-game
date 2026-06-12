@@ -7,9 +7,13 @@ import { SaveSystem } from './save.js';
 import { MAPS } from '../data/maps.js';
 import { CATALOG, makeItem, EQUIP_SLOTS } from '../data/gear.js';
 import { SKILLS, canLearn } from '../data/skilltree.js';
+import { Boss, BOSSES } from '../entities/boss.js';
+import { QuestLog } from './quests.js';
+import { rollRarity, applyRarity, rarityName } from '../data/affixes.js';
 
 // difficulty scale per map (deeper = tougher enemies)
-const MAP_SCALE = { meadow:1, forest:1.25, desert:1.45, cave:1.6, dungeon1:1.9, house1:1 };
+const MAP_SCALE = { meadow:1, forest:1.25, desert:1.45, cave:1.6, dungeon1:1.9, house1:1,
+  snow:1.7, swamp:1.8, dungeon2:2.3 };
 
 export class Game {
   constructor(canvas, input){
@@ -20,6 +24,7 @@ export class Game {
     this.enemies=[]; this.projectiles=[]; this.particles=[]; this.golds=[]; this.drops=[];
     this.playtime=0; this._lastT=0; this._fpsT=0; this._fpsCount=0; this._fps=60;
     this.nearInteract=null; this.transition=0;
+    this.boss=null; this.killedEnemies={}; this.bossesDead={};
   }
 
   start(state){
@@ -29,6 +34,9 @@ export class Game {
     this.inventory=state.inventory.map(i=>({...i}));
     this.hotbar=[...state.hotbar];
     this.openedChests=state.openedChests||{};
+    this.killedEnemies=state.killedEnemies||{};
+    this.bossesDead=state.bossesDead||{};
+    this.quests=new QuestLog(this, state);
     this.hud=new HUD(this);
     this.loadMap(state.map, state.pos.x/TILE, state.pos.y/TILE, true);
     this.player.invuln=2.5;
@@ -44,23 +52,34 @@ export class Game {
     if(!keepPos){ this.player.x=tx*TILE+TILE/2; this.player.y=ty*TILE+TILE/2; }
     // restore opened-chest state for this map
     this.world.chests.forEach(c=>{ if(this.openedChests[mapId+':'+c.idx]) c.opened=true; });
-    // spawn enemies on load
-    this.enemies=[]; this.projectiles=[]; this.golds=[]; this.drops=[];
+    // spawn enemies on load (ONCE; persisted-dead ones don't respawn)
+    this.enemies=[]; this.projectiles=[]; this.golds=[]; this.drops=[]; this.boss=null;
     const def=MAPS[mapId];
     const scale=MAP_SCALE[mapId]||1;
     let seed=def.seed*7+13;
     const rand=()=>{ seed=(seed*9301+49297)%233280; return seed/233280; };
+    const deadSet=this.killedEnemies[mapId]||{};
     for(let i=0;i<(def.enemies.count||0);i++){
       const pos=this.world.randomFloor(rand);
       // don't spawn on top of player
       if(Math.hypot(pos.x-this.player.x,pos.y-this.player.y)<200){ i--; continue; }
       const types=def.enemies.types;
       const t=types[Math.floor(rand()*types.length)];
-      this.enemies.push(new Enemy(pos.x,pos.y,t,scale));
+      if(deadSet[i]) continue; // already cleared this slot
+      const e=new Enemy(pos.x,pos.y,t,scale); e.spawnIdx=i; this.enemies.push(e);
+    }
+    // boss for this map (if not already defeated)
+    for(const bid in BOSSES){
+      if(BOSSES[bid].map===mapId && !this.bossesDead[bid]){
+        this.boss=new Boss(bid);
+        setTimeout(()=>{ if(this.boss && !this.boss.dead) this.toast('⚠ '+this.boss.def.name+' awakens!'); }, 400);
+      }
     }
     this.cam.follow(this.player, this.world);
     this.transition=0.6; // fade-in
+    this.audio.setMusic(def.music, !!this.boss);
     this.toast('Entering '+def.name);
+    if(this.quests) this.quests.onReach(mapId);
   }
 
   _loop(now){
@@ -83,6 +102,7 @@ export class Game {
 
     for(const e of this.enemies) e.update(dt,this.player,this.world,this);
     this.enemies=this.enemies.filter(e=>!e.dead);
+    if(this.boss){ this.boss.update(dt,this.player,this.world,this); if(this.boss.dead) this.boss=null; }
 
     for(const p of this.projectiles) p.update(dt,this.world,this.enemies,this);
     this.projectiles=this.projectiles.filter(p=>!p.dead);
@@ -102,8 +122,8 @@ export class Game {
     // item drops pickup
     for(const it of this.drops){
       const d=Math.hypot(it.x-this.player.x,it.y-this.player.y);
-      if(d<22){ it.dead=true; this.addItem(makeItem(it.id,1)); this.sfx('pickup');
-        this.toast('Picked up '+CATALOG[it.id].name); }
+      if(d<22){ it.dead=true; const obj=it.item?it.item:makeItem(it.id,1); this.addItem(obj); this.sfx('pickup');
+        this.toast('Picked up '+(obj.name||CATALOG[it.id].name)); }
     }
     this.drops=this.drops.filter(it=>!it.dead);
 
@@ -123,7 +143,11 @@ export class Game {
     }
     for(const n of this.world.npcs){
       const d=Math.hypot(n.wx+16-this.player.x,n.wy+16-this.player.y);
-      if(d<nd){ near={type:'npc',ref:n,label:n.shop?'Shop ('+n.name+')':'Talk to '+n.name}; nd=d; } }
+      if(d<nd){ let label=n.shop?'Shop ('+n.name+')':'Talk to '+n.name;
+        if(this.quests && !n.shop){ const gs=this.quests.giverState(n.name);
+          if(gs.turnIn.length) label='Turn in quest ('+n.name+')';
+          else if(gs.available.length) label='Accept quest ('+n.name+')'; }
+        near={type:'npc',ref:n,label}; nd=d; } }
     for(const c of this.world.chests){ if(c.opened) continue;
       const d=Math.hypot(c.wx+16-this.player.x,c.wy+16-this.player.y);
       if(d<nd){ near={type:'chest',ref:c,label:'Open Chest'}; nd=d; } }
@@ -141,6 +165,13 @@ export class Game {
     if(near.type==='npc'){
       const n=near.ref;
       if(n.shop){ this.openShop(); return; }
+      // quest handling: turn in completed, else offer next available
+      if(this.quests){
+        const gs=this.quests.giverState(n.name);
+        if(gs.turnIn.length){ this.quests.turnIn(gs.turnIn[0]); return; }
+        if(gs.available.length){ this.quests.accept(gs.available[0]); return; }
+        if(gs.inProgress.length){ this.toast(n.name+': Come back when the task is done.'); return; }
+      }
       n._line=(n._line||0); this.toast(n.name+': '+n.lines[n._line%n.lines.length]); n._line++;
     } else if(near.type==='chest'){
       const c=near.ref; if(c.opened) return;
@@ -155,6 +186,7 @@ export class Game {
     const ctx=this.ctx;
     ctx.fillStyle='#0c0e16'; ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
     this.world.draw(ctx,this.cam);
+    this._drawQuestMarkers(ctx);
     // gold coins
     for(const g of this.golds){ ctx.fillStyle='#ffcf4d';
       ctx.beginPath(); ctx.arc(g.x-this.cam.x,g.y-this.cam.y,4,0,7); ctx.fill();
@@ -164,13 +196,32 @@ export class Game {
       ctx.font='18px serif'; ctx.textAlign='center';
       ctx.fillText(CATALOG[it.id].icon, sx, sy+6+Math.sin(performance.now()/300)*2); }
     // depth sort
-    const ents=[this.player,...this.enemies].sort((a,b)=>a.y-b.y);
+    const ents=[this.player,...this.enemies]; if(this.boss) ents.push(this.boss);
+    ents.sort((a,b)=>a.y-b.y);
     for(const e of ents) e.draw(ctx,this.cam);
     for(const p of this.projectiles) p.draw(ctx,this.cam);
     for(const p of this.particles) p.draw(ctx,this.cam);
     // transition fade
     if(this.transition>0){ ctx.fillStyle='rgba(0,0,0,'+(this.transition/0.6)+')';
       ctx.fillRect(0,0,this.canvas.width,this.canvas.height); }
+  }
+
+  // draw ❗/❓/★ markers above quest-giver NPCs
+  _drawQuestMarkers(ctx){
+    if(!this.quests || !this.world) return;
+    const bob=Math.sin(performance.now()/250)*3;
+    ctx.textAlign='center';
+    for(const n of this.world.npcs){
+      if(n.shop) continue;
+      const gs=this.quests.giverState(n.name);
+      let m=null,col='#ffcf4d';
+      if(gs.turnIn.length){ m='★'; col='#ffcf4d'; }
+      else if(gs.available.length){ m='❗'; col='#ffe24d'; }
+      else if(gs.inProgress.length){ m='❓'; col='#9aa'; }
+      if(m){ const sx=n.wx+16-this.cam.x, sy=n.wy-6-this.cam.y+bob;
+        ctx.font='16px serif'; ctx.fillStyle=col;
+        ctx.fillText(m, sx, sy); }
+    }
   }
 
   // ---- combat hooks ----
@@ -207,6 +258,35 @@ export class Game {
   enemyShoot(x,y,angle,dmg){
     this.projectiles.push(new Projectile(x,y,angle,{speed:3.5,dmg,r:5,color:'#e8413c',kind:'fire',life:2.0,hostile:true}));
   }
+  // enemy ranged attack that applies a status (poison/burn)
+  enemyShootStatus(x,y,angle,dmg,status){
+    const col=status==='poison'?'#74d83f':status==='burn'?'#ff7a2a':'#e8413c';
+    this.projectiles.push(new Projectile(x,y,angle,{speed:3.2,dmg,r:6,color:col,kind:'fire',life:2.2,hostile:true,status}));
+  }
+  // spawn a boss add (minion) at a position
+  spawnAdd(x,y,type){
+    x=Math.max(40,Math.min(this.world.w-40,x)); y=Math.max(40,Math.min(this.world.h-40,y));
+    if(this.world.isSolid(x,y)) return;
+    const e=new Enemy(x,y,type,(MAP_SCALE[this.currentMap]||1)); e.spawnIdx=-1; this.enemies.push(e);
+    this.spawnParticles(x,y,'#a45cff',10);
+  }
+  // boss defeat: rewards, drop, persist, quest hook
+  onBossDefeated(boss){
+    this.player.gainXp(boss.xp,this);
+    const amt=this.player.gainGold(boss.def.gold,this);
+    this.floater('+'+amt+'g',boss.x,boss.y-30,'#ffcf4d');
+    this.spawnParticles(boss.x,boss.y,boss.def.color,40);
+    this.cam.shake=16;
+    // guaranteed rare+ gear drop
+    const item=makeItem(boss.def.drop,1);
+    if(item){ const rar=rollRarity(Math.random,0.9); applyRarity(item,rar==='common'?'rare':rar);
+      this.addItem(item); this.toast('★ '+rarityName(item)+' '+item.name+' obtained!'); }
+    this.bossesDead[boss.id]=true;
+    this.audio.setMusic(MAPS[this.currentMap].music,false);
+    if(this.quests) this.quests.onKill(null,true,boss.id);
+    this.toast(boss.def.name+' defeated!');
+    this.sfx('levelup');
+  }
 
   spawnParticles(x,y,color,n){ for(let i=0;i<n;i++) this.particles.push(new Particle(x,y,color)); }
   dropGold(x,y,amount){ this.golds.push({x,y,amount,dead:false}); }
@@ -215,6 +295,24 @@ export class Game {
     const pool=['potion','ether','bomb','potion_l'];
     const id=pool[Math.floor(Math.random()*pool.length)];
     this.drops.push({x,y,id,dead:false});
+  }
+  // rare equippable drop with rolled rarity (from tougher enemies)
+  dropGear(x,y,luck){
+    const gearPool=['sword_iron','shield_iron','armor_leather','helm_iron','ring_power','ring_focus','sword_frost'];
+    const id=gearPool[Math.floor(Math.random()*gearPool.length)];
+    const item=makeItem(id,1); if(!item) return;
+    applyRarity(item, rollRarity(Math.random, luck||0));
+    this.drops.push({x,y,id,item,dead:false});
+  }
+  // enemy death bookkeeping: quest progress + per-map persistence + gear drop chance
+  onEnemyKilled(e){
+    if(this.quests) this.quests.onKill(e.type,false,null);
+    if(e.spawnIdx!=null && e.spawnIdx>=0){
+      (this.killedEnemies[this.currentMap]=this.killedEnemies[this.currentMap]||{})[e.spawnIdx]=true;
+    }
+    // tougher foes can drop rolled gear
+    const tough=['brute','golem','yeti','croaker','skeleton'];
+    if(tough.includes(e.type) && Math.random()<0.25) this.dropGear(e.x,e.y,0.3);
   }
   floater(t,x,y,c){ this.hud.floater(t,x,y,c); }
   toast(m){ this.hud.toast(m); }
@@ -228,8 +326,9 @@ export class Game {
       if(ex){ ex.qty+=item.qty; } else this.inventory.push({...item});
       if(!this.hotbar.includes(item.id)){ const idx=this.hotbar.indexOf(null); if(idx>=0) this.hotbar[idx]=item.id; }
     } else {
-      this.inventory.push({...item}); // gear stacks individually
+      this.inventory.push({...item}); // gear stacks individually (keeps rarity/affixes)
     }
+    if(this.quests) this.quests.onPickup();
     this.hud.refresh();
   }
   removeItem(item){
@@ -250,19 +349,20 @@ export class Game {
   equipItem(item){
     if(!item || item.type==='consumable') return;
     const slot=item.type; // weapon/shield/armor/helm/ring
-    const prevId=this.player.equipment[slot];
-    this.player.equipment[slot]=item.id;
+    const prev=this.player.equipment[slot];
+    // store rolled gear as full object; plain catalog gear as id string
+    this.player.equipment[slot]=(item.rarity||item.affixes)?{...item}:item.id;
     this.removeItem(item);
-    if(prevId){ this.addItem(makeItem(prevId,1)); } // old gear back to bag
+    if(prev){ this.addItem(typeof prev==='string'?makeItem(prev,1):prev); } // old gear back to bag
     this.player.recompute();
     this.player.hp=Math.min(this.player.hp,this.player.hpMax);
     this.player.mp=Math.min(this.player.mp,this.player.mpMax);
     this.sfx('open'); this.hud.refresh();
   }
   unequip(slot){
-    const id=this.player.equipment[slot]; if(!id) return;
+    const prev=this.player.equipment[slot]; if(!prev) return;
     this.player.equipment[slot]=null;
-    this.addItem(makeItem(id,1));
+    this.addItem(typeof prev==='string'?makeItem(prev,1):prev);
     this.player.recompute(); this.sfx('open'); this.hud.refresh();
   }
 
@@ -307,7 +407,9 @@ export class Game {
   save(){
     const st={ ...this.player.serialize(), slot:this.slot,
       map:this.currentMap, inventory:this.inventory, hotbar:this.hotbar,
-      playtime:this.playtime, openedChests:this.openedChests };
+      playtime:this.playtime, openedChests:this.openedChests,
+      killedEnemies:this.killedEnemies, bossesDead:this.bossesDead,
+      quests:this.quests?this.quests.serialize():undefined };
     SaveSystem.save(this.slot, st); this.toast('Game Saved!');
   }
   quitToMenu(){ this.running=false; location.reload(); }

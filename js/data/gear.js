@@ -49,13 +49,21 @@ export function makeItem(id, qty){
   return it;
 }
 
-// Sum stat bonuses from an equipment map {slot:id}
+// Resolve an equipment slot value (id string OR full item object) to a display item.
+export function resolveEquip(val){
+  if(!val) return null;
+  if(typeof val === 'string'){ const c = CATALOG[val]; if(!c) return null;
+    return { id:val, name:c.name, icon:c.icon, type:c.type, stats:c.stats||{} }; }
+  return val; // already an item object (rolled gear keeps its own stats/affixes)
+}
+
+// Sum stat bonuses from an equipment map {slot: id|itemObject}
 export function equipStats(equipment){
   const total = { atk:0, def:0, hp:0, mp:0, crit:0, cdr:0 };
   for(const slot of EQUIP_SLOTS){
-    const id = equipment[slot];
-    if(id && CATALOG[id] && CATALOG[id].stats){
-      for(const k in CATALOG[id].stats) total[k] = (total[k]||0) + CATALOG[id].stats[k];
+    const it = resolveEquip(equipment[slot]);
+    if(it && it.stats){
+      for(const k in it.stats) total[k] = (total[k]||0) + it.stats[k];
     }
   }
   return total;

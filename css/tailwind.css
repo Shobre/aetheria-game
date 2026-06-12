@@ -1,0 +1,92 @@
+/* Static Tailwind-equivalent utilities — precompiled subset used by Aetheria.
+   Replaces the Tailwind CDN <script> so the game is offline-capable and warning-free.
+   Only the utilities actually used in index.html + JS are included. */
+
+/* preflight-ish reset */
+*,::before,::after{box-sizing:border-box;border:0 solid}
+h1,h2,h3,p{margin:0}
+button{font-family:inherit;font-size:100%;color:inherit;background:none;cursor:pointer}
+input{font-family:inherit}
+
+/* theme colors */
+:root{
+  --gbg:#11131c;--gpanel:#1b2030;--gpanel2:#262c40;--gline:#3a4259;
+  --gold:#ffcf4d;--accent:#e8623d;--hp:#e8413c;--mp:#3b8be8;--xp:#a45cff;--stam:#4dd28a;
+}
+
+/* layout */
+.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}
+.inset-0{inset:0}
+.top-2{top:.5rem}.top-3{top:.75rem}.top-20{top:5rem}.top-24{top:6rem}.top-28{top:7rem}
+.bottom-1{bottom:.25rem}.bottom-3{bottom:.75rem}.bottom-24{bottom:6rem}
+.left-2{left:.5rem}.left-3{left:.75rem}.left-1\/2{left:50%}
+.right-2{right:.5rem}.right-3{right:.75rem}
+.z-10{z-index:10}.z-30{z-index:30}
+.block{display:block}.flex{display:flex}.grid{display:grid}.hidden{display:none}
+.flex-col{flex-direction:column}
+.items-center{align-items:center}.items-end{align-items:flex-end}
+.justify-center{justify-content:center}.justify-between{justify-content:space-between}
+.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}
+.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid-cols-5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}
+.gap-1{gap:.25rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}
+.space-y-1>*+*{margin-top:.25rem}.space-y-1\.5>*+*{margin-top:.375rem}.space-y-4>*+*{margin-top:1rem}
+.overflow-hidden{overflow:hidden}
+.-translate-x-1\/2{transform:translateX(-50%)}
+
+/* sizing */
+.h-2{height:.5rem}.h-3{height:.75rem}.h-4{height:1rem}.h-full{height:100%}
+.w-56{width:14rem}.w-80{width:20rem}.w-full{width:100%}
+.mx-auto{margin-left:auto;margin-right:auto}
+.max-w-lg{max-width:32rem}.max-w-md{max-width:28rem}.max-w-xl{max-width:36rem}
+.max-w-2xl{max-width:42rem}.max-w-3xl{max-width:48rem}.max-w-\[220px\]{max-width:220px}
+
+/* spacing */
+.mb-1{margin-bottom:.25rem}.mb-2{margin-bottom:.5rem}.mb-3{margin-bottom:.75rem}
+.mb-4{margin-bottom:1rem}.mb-6{margin-bottom:1.5rem}.mb-10{margin-bottom:2.5rem}
+.mt-0\.5{margin-top:.125rem}.mt-1{margin-top:.25rem}.mt-3{margin-top:.75rem}
+.mt-6{margin-top:1.5rem}.mt-10{margin-top:2.5rem}
+.p-1{padding:.25rem}.px-3{padding-left:.75rem;padding-right:.75rem}
+.px-4{padding-left:1rem;padding-right:1rem}.py-1\.5{padding-top:.375rem;padding-bottom:.375rem}
+.pt-3{padding-top:.75rem}
+
+/* borders */
+.border{border-width:1px}.border-2{border-width:2px}.border-t{border-top-width:1px}
+.border-black{border-color:#000}.border-gold{border-color:var(--gold)}
+.border-gpanel2{border-color:var(--gpanel2)}.border-hp{border-color:var(--hp)}
+
+/* backgrounds */
+.bg-gbg{background-color:var(--gbg)}.bg-gpanel{background-color:var(--gpanel)}
+.bg-hp{background-color:var(--hp)}.bg-mp{background-color:var(--mp)}
+.bg-xp{background-color:var(--xp)}.bg-stam{background-color:var(--stam)}
+.bg-black\/60{background-color:rgba(0,0,0,.6)}
+
+/* typography */
+.font-pixel{font-family:'Press Start 2P',monospace}
+.text-white{color:#fff}.text-gold{color:var(--gold)}.text-hp{color:var(--hp)}
+.text-mp{color:var(--mp)}.text-stam{color:var(--stam)}
+.text-gray-300{color:#cbd0d9}.text-gray-400{color:#9aa0ad}.text-gray-500{color:#6b7280}
+.text-sm{font-size:.875rem}.text-lg{font-size:1.125rem}.text-xl{font-size:1.25rem}
+.text-xs{font-size:.75rem}
+.text-3xl{font-size:1.875rem}.text-4xl{font-size:2.25rem}
+.text-\[7px\]{font-size:7px}.text-\[8px\]{font-size:8px}.text-\[9px\]{font-size:9px}.text-\[10px\]{font-size:10px}
+.text-center{text-align:center}
+.tracking-widest{letter-spacing:.1em}.tracking-\[0\.3em\]{letter-spacing:.3em}
+.leading-relaxed{line-height:1.625}
+.select-none{user-select:none}
+.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}
+
+/* transitions + animation */
+.transition-all{transition:all .15s}.duration-200{transition-duration:.2s}.duration-500{transition-duration:.5s}
+.animate-pulse{animation:tw-pulse 2s cubic-bezier(.4,0,.6,1) infinite}
+@keyframes tw-pulse{50%{opacity:.5}}
+.hover\:text-gold:hover{color:var(--gold)}
+
+/* responsive (md = 768px) */
+@media(min-width:768px){
+  .md\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .md\:text-6xl{font-size:3.75rem}
+  .md\:text-xs{font-size:.75rem}
+  .md\:text-\[10px\]{font-size:10px}
+}

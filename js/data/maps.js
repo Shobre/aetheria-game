@@ -13,6 +13,7 @@ export const MAPS = {
       { x:5,  y:40, to:'desert',  tx:55, ty:23, label:'Sunscar Desert' },
       { x:30, y:2,  to:'cave',    tx:8,  ty:38, label:'Crystal Cave' },
       { x:30, y:22, to:'house1',  tx:8,  ty:13, label:"Merchant's Hut", door:true },
+      { x:2,  y:5,  to:'snow',    tx:50, ty:30, label:'Frostpeak Tundra' },
     ],
     npcs:[
       { x:26, y:18, name:'Elder', icon:'🧙', lines:['Welcome, traveler.','Beasts roam each land. Gear up before you delve.','Visit the merchant in the hut to the south.'] },
@@ -48,6 +49,7 @@ export const MAPS = {
     enemies:{ count:10, types:['scorpion','archer','brute'] },
     portals:[
       { x:56, y:23, to:'meadow', tx:7, ty:38, label:'Greenwood Meadow' },
+      { x:3,  y:3,  to:'swamp',  tx:50, ty:40, label:'Murkbog Swamp' },
     ],
     npcs:[
       { x:30, y:20, name:'Nomad', icon:'🧕', lines:['Water is life out here.','Scorpions burrow and lunge — stay nimble.'] },
@@ -86,6 +88,56 @@ export const MAPS = {
       { x:38, y:48, loot:{type:'item',id:'armor_chain',qty:1} },
       { x:8,  y:48, loot:{type:'item',id:'sword_flame',qty:1} },
       { x:23, y:30, loot:{type:'gold',amount:200} },
+    ],
+  },
+
+  // ===================== FROSTPEAK TUNDRA (snow) =====================
+  snow: {
+    name:'Frostpeak Tundra', biome:'snow', cols:56, rows:46, seed:707,
+    music:'tense',
+    enemies:{ count:11, types:['frostling','yeti','bat'] },
+    portals:[
+      { x:52, y:30, to:'meadow', tx:4, ty:7, label:'Greenwood Meadow' },
+      { x:5,  y:5,  to:'dungeon2', tx:23, ty:50, label:'Sunken Catacomb', door:true },
+    ],
+    npcs:[
+      { x:30, y:24, name:'Wayfarer', icon:'🧗', lines:['The cold bites deep here.','Frostlings chill your blood — keep moving.','The catacomb lies past the northern pass.'] },
+    ],
+    chests:[
+      { x:48, y:8,  loot:{type:'item',id:'shield_iron',qty:1} },
+      { x:8,  y:40, loot:{type:'gold',amount:160} },
+    ],
+  },
+
+  // ===================== MURKBOG SWAMP (swamp) =====================
+  swamp: {
+    name:'Murkbog Swamp', biome:'swamp', cols:58, rows:48, seed:808,
+    music:'tense',
+    enemies:{ count:12, types:['spitter','croaker','bat'] },
+    portals:[
+      { x:52, y:42, to:'desert', tx:5, ty:5, label:'Sunscar Desert' },
+    ],
+    npcs:[
+      { x:30, y:24, name:'Hermit', icon:'🧓', lines:['Few return from the mire.','Spitters spew poison — strike fast.'] },
+    ],
+    chests:[
+      { x:50, y:10, loot:{type:'item',id:'armor_mage',qty:1} },
+      { x:10, y:42, loot:{type:'gold',amount:180} },
+    ],
+  },
+
+  // ===================== SUNKEN CATACOMB (dungeon 2, boss) =====================
+  dungeon2: {
+    name:'Sunken Catacomb', biome:'dungeon', cols:48, rows:56, seed:909,
+    music:'tense',
+    enemies:{ count:14, types:['skeleton','spitter','golem'] },
+    portals:[
+      { x:23, y:54, to:'snow', tx:6, ty:6, label:'Frostpeak Tundra' },
+    ],
+    npcs:[],
+    chests:[
+      { x:40, y:50, loot:{type:'item',id:'ring_focus',qty:1} },
+      { x:8,  y:50, loot:{type:'gold',amount:300} },
     ],
   },
 

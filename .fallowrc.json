@@ -1,11 +1,14 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "entry": [
-    "js/main.js"
+    "js/main.js",
+    "tests/run.js"
   ],
   "ignorePatterns": [
     "css/**",
-    "*.bat"
+    "*.bat",
+    "_payload.b64",
+    "_args.json"
   ],
   "duplicates": {
     "minOccurrences": 3
