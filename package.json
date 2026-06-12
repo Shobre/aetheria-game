@@ -1,11 +1,11 @@
 {
   "name": "aetheria-game",
   "version": "1.0.0",
-  "description": "Aetheria — a top-down Zelda-like action-RPG (vanilla JS + Canvas + Tailwind)",
+  "description": "Aetheria \u2014 a top-down Zelda-like action-RPG (vanilla JS + Canvas + Tailwind)",
   "type": "module",
   "scripts": {
-    "vercel-build": "node vercel-build.js",
-    "test": "node tests/run.js"
+    "test": "node tests/run.js",
+    "build": "echo build"
   },
   "license": "MIT"
 }

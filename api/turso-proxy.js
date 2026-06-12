@@ -1,3 +1,5 @@
+export const config = { runtime: 'edge' };
+
 const TURSO_URL = process.env['TURSO_DB_URL'] || '';
 const tursoToken = process.env['TURSO_TOKEN'] || '';
 
@@ -15,40 +17,47 @@ async function tursoExec(sql, args) {
   } catch(e) { return { error: e.message }; }
 }
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  const b = req.body || {};
+export default async function handler(req) {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 200, headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    }});
+  }
   try {
-    if (b.action === 'save') {
-      await tursoExec('INSERT OR REPLACE INTO saves (username, slot, data, updated_at) VALUES (?, ?, ?, ?)', [b.username, b.slot, JSON.stringify(b.state), Date.now()]);
-      return res.json({ ok: true });
+    const b = await req.json();
+    const action = b.action;
+    const username = b.username;
+    if (action === 'save') {
+      await tursoExec('INSERT OR REPLACE INTO saves (username, slot, data, updated_at) VALUES (?, ?, ?, ?)', [username, b.slot, JSON.stringify(b.state), Date.now()]);
+      return Response.json({ ok: true }, { headers: { 'Access-Control-Allow-Origin': '*' } });
     }
-    if (b.action === 'load') {
-      const r = await tursoExec('SELECT data FROM saves WHERE username=? AND slot=?', [b.username, b.slot]);
+    if (action === 'load') {
+      const r = await tursoExec('SELECT data FROM saves WHERE username=? AND slot=?', [username, b.slot]);
       const d = r.rows && r.rows[0] ? JSON.parse(r.rows[0][0]) : null;
-      return res.json({ data: d });
+      return Response.json({ data: d }, { headers: { 'Access-Control-Allow-Origin': '*' } });
     }
-    if (b.action === 'list') {
-      const r = await tursoExec('SELECT slot, updated_at FROM saves WHERE username=? ORDER BY slot', [b.username]);
-      return res.json({ slots: r.rows || [] });
+    if (action === 'list') {
+      const r = await tursoExec('SELECT slot, updated_at FROM saves WHERE username=? ORDER BY slot', [username]);
+      return Response.json({ slots: r.rows || [] }, { headers: { 'Access-Control-Allow-Origin': '*' } });
     }
-    if (b.action === 'delete') {
-      await tursoExec('DELETE FROM saves WHERE username=? AND slot=?', [b.username, b.slot]);
-      return res.json({ ok: true });
+    if (action === 'delete') {
+      await tursoExec('DELETE FROM saves WHERE username=? AND slot=?', [username, b.slot]);
+      return Response.json({ ok: true }, { headers: { 'Access-Control-Allow-Origin': '*' } });
     }
-    if (b.action === 'register') {
-      await tursoExec('INSERT OR IGNORE INTO users (username, password_hash, created_at) VALUES (?, ?, ?)', [b.username, b.hash, Date.now()]);
-      return res.json({ ok: true });
+    if (action === 'register') {
+      await tursoExec('INSERT OR IGNORE INTO users (username, password_hash, created_at) VALUES (?, ?, ?)', [username, b.hash, Date.now()]);
+      return Response.json({ ok: true }, { headers: { 'Access-Control-Allow-Origin': '*' } });
     }
-    if (b.action === 'login') {
-      const r = await tursoExec('SELECT password_hash FROM users WHERE username=?', [b.username]);
+    if (action === 'login') {
+      const r = await tursoExec('SELECT password_hash FROM users WHERE username=?', [username]);
       const ok = r.rows && r.rows[0] && r.rows[0][0] === b.hash;
-      if (ok) await tursoExec('UPDATE users SET last_login=? WHERE username=?', [Date.now(), b.username]);
-      return res.json({ ok });
+      if (ok) await tursoExec('UPDATE users SET last_login=? WHERE username=?', [Date.now(), username]);
+      return Response.json({ ok }, { headers: { 'Access-Control-Allow-Origin': '*' } });
     }
-    return res.status(400).json({ error: 'Unknown action' });
-  } catch(e) { return res.status(500).json({ error: e.message }); }
+    return Response.json({ error: 'Unknown action' }, { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } });
+  } catch(e) {
+    return Response.json({ error: e.message }, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } });
+  }
 }
