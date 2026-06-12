@@ -57,6 +57,16 @@ export class Player {
     this.attackSpeed = (w && w.atkSpeed) ? w.atkSpeed : 0.32;     // seconds between swings/shots
     this.reach    = (w && w.reach) ? w.reach : 44;                 // melee arc reach
     this.shotSpeed= (w && w.shotSpeed) ? w.shotSpeed : 7;          // ranged projectile speed
+    // weapon kind for slash animation variety
+    this.weaponKind = 'sword'; // default
+    if(w){
+      if(w.ranged) this.weaponKind = 'ranged';
+      else if(id.startsWith('dagger')) this.weaponKind = 'dagger';
+      else if(id.startsWith('spear') || id==='halberd') this.weaponKind = 'spear';
+      else if(id==='greatsword') this.weaponKind = 'greatsword';
+      else if(id==='warhammer') this.weaponKind = 'warhammer';
+      else if(id.startsWith('sword')) this.weaponKind = 'sword';
+    }
   }
 
   // damage multiplier (berserk when low hp + crit roll handled in game)
@@ -193,18 +203,106 @@ export class Player {
     ctx.fillStyle='#11131c';
     const ex=this.facing==='left'?-4:this.facing==='right'?2:-2;
     ctx.fillRect(sx+ex,sy-17,2,2); ctx.fillRect(sx+ex+5,sy-17,2,2);
+    // ---- per-weapon slash animation ----
     if(this.attacking>0){
-      const a=this._aim, prog=1-(this.attacking/0.18), sweep=-0.9+prog*1.8;
-      ctx.save(); ctx.translate(sx,sy); ctx.rotate(a+sweep);
-      ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=4;
-      ctx.beginPath(); ctx.arc(0,0,30,-0.5,0.5); ctx.stroke();
-      ctx.fillStyle='#ddd'; ctx.fillRect(24,-2,16,4); ctx.restore();
+      const a=this._aim, prog=1-(this.attacking/0.18);
+      ctx.save(); ctx.translate(sx,sy);
+      const wk=this.weaponKind||'sword';
+      if(wk==='ranged'){
+        // ranged: draw the bow/staff aim line
+        ctx.rotate(a); ctx.strokeStyle='rgba(200,180,140,0.5)'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(36,0); ctx.stroke();
+      } else if(wk==='dagger'){
+        // dagger: fast short stab, quick flash
+        const sweep=-1.3+prog*2.6;
+        ctx.rotate(a+sweep);
+        ctx.strokeStyle=`rgba(255,255,255,${0.9-prog*0.9})`; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.moveTo(8,0); ctx.lineTo(26,0); ctx.stroke();
+        // small arc
+        ctx.beginPath(); ctx.arc(0,0,18,-0.3,0.3); ctx.stroke();
+        ctx.fillStyle=`rgba(220,220,255,${0.7-prog*0.7})`;
+        ctx.fillRect(22,-1.5,10,3);
+      } else if(wk==='spear'){
+        // spear: long thrust line, narrow arc
+        const sweep=-0.5+prog*1.0;
+        ctx.rotate(a+sweep);
+        ctx.strokeStyle=`rgba(255,255,240,${0.85-prog*0.85})`; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.moveTo(12,0); ctx.lineTo(50,0); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0,0,40,-0.2,0.2); ctx.stroke();
+        ctx.fillStyle='#c8bfa0';
+        ctx.fillRect(44,-2,18,4);
+        // spear tip
+        ctx.fillStyle='#e8e0c0';
+        ctx.beginPath(); ctx.arc(62,0,3,0,7); ctx.fill();
+      } else if(wk==='greatsword'){
+        // greatswide: wide slow arc, heavy trail
+        const sweep=-1.2+prog*2.4;
+        ctx.rotate(a+sweep);
+        ctx.strokeStyle=`rgba(255,255,255,${0.8-prog*0.8})`; ctx.lineWidth=6;
+        ctx.beginPath(); ctx.arc(0,0,38,-0.7,0.7); ctx.stroke();
+        // inner trail
+        ctx.strokeStyle=`rgba(200,200,255,${0.4-prog*0.4})`; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.arc(0,0,32,-0.6,0.6); ctx.stroke();
+        ctx.fillStyle='#ccc';
+        ctx.fillRect(30,-3,20,6);
+        // impact dust at peak
+        if(prog>0.3&&prog<0.7){
+          ctx.globalAlpha=(0.5-Math.abs(prog-0.5))*2;
+          ctx.fillStyle='#ddd';
+          ctx.beginPath(); ctx.arc(Math.cos(a+sweep)*38,Math.sin(a+sweep)*38,8,0,7); ctx.fill();
+          ctx.globalAlpha=1;
+        }
+      } else if(wk==='warhammer'){
+        // warhammer: overhead slam arc + shockwave
+        const sweep=-1.5+prog*3.0;
+        ctx.rotate(a+sweep);
+        ctx.strokeStyle=`rgba(255,240,200,${0.85-prog*0.85})`; ctx.lineWidth=7;
+        ctx.beginPath(); ctx.arc(0,0,34,-0.8,0.8); ctx.stroke();
+        ctx.fillStyle='#b8a080';
+        ctx.fillRect(28,-4,22,8);
+        // slam shockwave at peak
+        if(prog>0.4&&prog<0.65){
+          ctx.globalAlpha=1-prog;
+          ctx.strokeStyle='#ffcf4d'; ctx.lineWidth=2;
+          ctx.beginPath(); ctx.arc(0,0,44+(prog*30),-0.4,0.4); ctx.stroke();
+          ctx.globalAlpha=1;
+        }
+      } else {
+        // default sword: classic arc slash + trail
+        const sweep=-0.9+prog*1.8;
+        ctx.rotate(a+sweep);
+        ctx.strokeStyle=`rgba(255,255,255,${0.85-prog*0.85})`; ctx.lineWidth=4;
+        ctx.beginPath(); ctx.arc(0,0,30,-0.5,0.5); ctx.stroke();
+        // glow trail
+        ctx.strokeStyle=`rgba(200,220,255,${0.3-prog*0.3})`; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(0,0,26,-0.4,0.4); ctx.stroke();
+        ctx.fillStyle='#ddd'; ctx.fillRect(24,-2,16,4);
+      }
+      ctx.restore();
     }
+    // ---- shield block visual ----
     if(this.blocking){
       const a=this._aim!=null?this._aim:0;
       ctx.save(); ctx.translate(sx,sy); ctx.rotate(a);
-      ctx.fillStyle='#8a8fa0'; ctx.fillRect(14,-9,5,18);
-      ctx.fillStyle='#cfd4e0'; ctx.fillRect(15,-7,3,14); ctx.restore();
+      // shield body (larger)
+      ctx.fillStyle='#7a8090';
+      ctx.beginPath();
+      ctx.moveTo(12,-11); ctx.lineTo(20,-11); ctx.lineTo(22,0); ctx.lineTo(20,11); ctx.lineTo(12,11);
+      ctx.closePath(); ctx.fill();
+      // shield face highlight
+      ctx.fillStyle='#a0a8b8';
+      ctx.beginPath();
+      ctx.moveTo(14,-8); ctx.lineTo(18,-8); ctx.lineTo(19,0); ctx.lineTo(18,8); ctx.lineTo(14,8);
+      ctx.closePath(); ctx.fill();
+      // shield rim
+      ctx.strokeStyle='#c0c8d8'; ctx.lineWidth=1.5;
+      ctx.beginPath();
+      ctx.moveTo(12,-11); ctx.lineTo(20,-11); ctx.lineTo(22,0); ctx.lineTo(20,11); ctx.lineTo(12,11);
+      ctx.closePath(); ctx.stroke();
+      // block sparkle (subtle animation)
+      ctx.fillStyle=`rgba(100,200,255,${0.3+0.2*Math.sin(performance.now()/150)})`;
+      ctx.beginPath(); ctx.arc(18,0,2,0,7); ctx.fill();
+      ctx.restore();
     }
     drawStatusPips(this,ctx,sx,sy-8);
   }

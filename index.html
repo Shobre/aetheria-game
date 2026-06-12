@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+  <meta name="turso-url" content="">
+  <meta name="turso-token" content="">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aetheria - An Action-RPG Adventure</title>
 <!-- Precompiled static utility CSS (replaces the Tailwind CDN — offline-capable, no prod warning) -->
@@ -16,6 +18,29 @@
   <div class="text-center">
     <div class="loader mx-auto mb-6"></div>
     <p class="text-gold text-sm tracking-widest">LOADING...</p>
+  </div>
+</div>
+
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="login-screen" class="screen hidden">
+  <div class="absolute inset-0 starfield"></div>
+  <div class="relative z-10 h-full flex flex-col items-center justify-center px-4">
+    <h1 class="title text-2xl md:text-4xl text-gold mb-2">AETHERIA</h1>
+    <p class="text-[9px] text-gray-500 mb-8 tracking-widest">SIGN IN TO CONTINUE</p>
+    <div class="w-full max-w-xs space-y-3">
+      <div>
+        <label class="text-[9px] text-gray-400 block mb-1">USERNAME</label>
+        <input id="login-user" type="text" class="w-full bg-gpanel border border-gpanel2 px-3 py-2 text-[10px] text-white focus:border-gold outline-none" placeholder="Enter username">
+      </div>
+      <div>
+        <label class="text-[9px] text-gray-400 block mb-1">PASSWORD</label>
+        <input id="login-pass" type="password" class="w-full bg-gpanel border border-gpanel2 px-3 py-2 text-[10px] text-white focus:border-gold outline-none" placeholder="Enter password">
+      </div>
+      <button id="login-btn" class="menu-btn w-full mt-2" >SIGN IN</button>
+      <p class="text-[8px] text-gray-600 text-center mt-2">Local auth - data stored on this device.</p>
+    </div>
+    <div id="login-error" class="text-[9px] text-hp mt-2 hidden"></div>
   </div>
 </div>
 
@@ -86,12 +111,9 @@
     <!-- quest tracker (top-left under vitals) -->
     <div id="quest-tracker" class="absolute top-28 left-3 hidden max-w-[220px]"></div>
 
-    <!-- top-right: minimap -->
-    <div class="absolute top-3 right-3">
-      <div class="relative border-2 border-gpanel2 bg-black/60 p-1">
-        <canvas id="minimap" width="160" height="160" class="block"></canvas>
-        <span class="absolute bottom-1 right-2 text-[7px] text-gray-400">MAP</span>
-      </div>
+    <!-- top-right: quick map button (replaces minimap) -->
+    <div class="absolute top-3 right-3 pointer-events-auto">
+      <button id="map-btn" class="hud-btn" title="Map (M)">🗺️</button>
     </div>
 
     <!-- spells (left of items) -->
@@ -157,11 +179,11 @@
         <label class="setting"><span>SFX</span><input type="range" id="set-sfx" min="0" max="100" value="70"></label>
         <label class="setting"><span>SHOW FPS</span><input type="checkbox" id="set-fps"></label>
         <label class="setting"><span>SCREEN SHAKE</span><input type="checkbox" id="set-shake" checked></label>
-        <label class="setting"><span>MINIMAP</span><input type="checkbox" id="set-minimap" checked></label>
       </div>
-      <div class="grid grid-cols-2 gap-2 mt-6">
+      <div class="grid grid-cols-3 gap-2 mt-6">
         <button id="save-game-btn" class="menu-btn">SAVE</button>
         <button id="quit-btn" class="menu-btn">QUIT TO MENU</button>
+        <button id="logout-btn" class="menu-btn">LOGOUT</button>
       </div>
     </div>
   </div>

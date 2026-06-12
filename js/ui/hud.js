@@ -15,7 +15,7 @@ export class HUD {
       hpFill:$('hp-fill'),hpText:$('hp-text'),mpFill:$('mp-fill'),mpText:$('mp-text'),
       stamFill:$('stam-fill'),xpFill:$('xp-fill'),xpText:$('xp-text'),levelText:$('level-text'),
       itemSlots:$('item-slots'),
-      minimap:$('minimap'),invGrid:$('inv-grid'),
+      invGrid:$('inv-grid'),
       goldText:$('gold-text'),slotsText:$('slots-text'),
       toast:$('toast'),floaters:$('floaters'),
       interact:$('interact-prompt'),interactLabel:$('interact-label'),fps:$('fps'),
@@ -332,25 +332,7 @@ export class HUD {
     setTimeout(()=>d.remove(),900);
   }
 
-  drawMinimap(){
-    const ctx=this.mmCtx,w=this.game.world,mm=this.el.minimap;
-    const sx=mm.width/Math.max(w.cols,1),sy=mm.height/Math.max(w.rows,1);
-    ctx.clearRect(0,0,mm.width,mm.height);
-    for(let y=0;y<w.rows;y++)for(let x=0;x<w.cols;x++){
-      const t=w.map[y][x]; let c='#2c4a30';
-      if(t===2)c='#2f6fb0';else if(t===1)c='#b89b72';else if(t===7)c='#1d2330';else if(t===3)c='#1d3a22';else if(t===4)c='#555';
-      ctx.fillStyle=c; ctx.fillRect(x*sx,y*sy,Math.ceil(sx),Math.ceil(sy));
-    }
-    ctx.fillStyle='#ffcf4d';
-    for(const c of w.chests)if(!c.opened)ctx.fillRect(c.x/TILE*sx-1,c.y/TILE*sy-1,3,3);
-    ctx.fillStyle='#4dd28a'; for(const n of w.npcs) ctx.fillRect(n.x/TILE*sx-1,n.y/TILE*sy-1,3,3);
-    ctx.fillStyle='#a45cff';
-    for(const p of w.portals) ctx.fillRect(p.x/TILE*sx-2,p.y/TILE*sy-2,5,5);
-    ctx.fillStyle='#e8413c';
-    for(const e of this.game.enemies) if(!e.dead) ctx.fillRect(e.x/TILE*sx-1,e.y/TILE*sy-1,2,2);
-    ctx.fillStyle='#fff';
-    ctx.fillRect(this.game.player.x/TILE*sx-2,this.game.player.y/TILE*sy-2,4,4);
-  }
+  drawMinimap(){} // minimap removed — use M key for full map
 
   // ===== FULL MAP (M) =====
   showFullMap(){

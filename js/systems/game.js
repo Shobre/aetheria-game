@@ -33,7 +33,7 @@ export class Game {
   }
 
   start(state){
-    this.state=state; this.slot=state.slot;
+    this.state=state; this.slot=state.slot; this._username=state.username||null;
     this.cam=new Camera(this.canvas.width, this.canvas.height);
     this.player=new Player(state.pos.x, state.pos.y, state);
     this.inventory=state.inventory.map(i=>({...i}));
@@ -107,7 +107,7 @@ export class Game {
     this.toast('Entering '+def.name);
     if(this.quests) this.quests.onReach(mapId);
     // autosave when entering a new area (but not on the initial load from start())
-    if(!keepPos && this.running) this.autosave('Checkpoint saved');
+    if(!keepPos && this.running){ this._username=state.username||null; this.autosave('Checkpoint saved'); }
     if(this.hud) this.hud._updateTownBtn();
   }
 
@@ -554,15 +554,17 @@ export class Game {
       playtime:this.playtime, openedChests:this.openedChests, stash:this.stash,
       bossesDead:this.bossesDead, checkpoint:this.checkpoint,
       quests:this.quests?this.quests.serialize():undefined,
-      boughtSpells:this._boughtSpells };
+      boughtSpells:this._boughtSpells,
+      username:this._username };
   }
   save(){
-    SaveSystem.save(this.slot, this._buildState()); this.toast('Game Saved!');
+    const u=this._username; if(u) SaveSystem.saveUser(u,this.slot,this._buildState()); else SaveSystem.save(this.slot,this._buildState());
+    this.toast('Game Saved!');
   }
   // silent autosave (subtle indicator, no big toast); skips while a menu is paused mid-action
   autosave(reason){
     if(!this.running || this.player.dead) return;
-    SaveSystem.save(this.slot, this._buildState());
+    const u=this._username; if(u) SaveSystem.saveUser(u,this.slot,this._buildState()); else SaveSystem.save(this.slot,this._buildState());
     this._autoT=0;
     this.hud.autosaveFlash(reason||'Autosaved');
   }

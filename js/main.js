@@ -2,6 +2,69 @@ import { Input } from './systems/input.js';
 import { Game } from './systems/game.js';
 import { SaveSystem } from './systems/save.js';
 
+
+import { tursoInit, tursoListSlots, tursoLoad, tursoSave, tursoDelete } from './systems/turso.js';
+
+// ---- Auth system ----
+const AUTH_KEY = 'aetheria_auth';
+function getAuth(){ try{return JSON.parse(localStorage.getItem(AUTH_KEY)||'{}');}catch{return{}} }
+function setAuth(a){ localStorage.setItem(AUTH_KEY, JSON.stringify(a)); }
+
+// Wire login screen
+const loginScreen=document.getElementById('login-screen');
+const startScreen=document.getElementById('start-screen');
+function showLogin(){ show('login-screen'); }
+function showStart(){ show('start-screen'); }
+
+// Auto-login if we have a stored session
+const auth=getAuth();
+if(auth.username){
+  // Still show login but pre-fill
+  const u=document.getElementById('login-user');
+  if(u) u.value=auth.username;
+}
+
+document.getElementById('login-btn').addEventListener('click', ()=>{
+  const u=document.getElementById('login-user').value.trim().toLowerCase();
+  const p=document.getElementById('login-pass').value.trim();
+  const err=document.getElementById('login-error');
+  if(!u){ err.textContent='Enter a username'; err.classList.remove('hidden'); return; }
+  if(p.length<3){ err.textContent='Password must be 3+ chars'; err.classList.remove('hidden'); return; }
+  const token = btoa(u+':'+p);
+  setAuth({username:u, token});
+  err.classList.add('hidden');
+  renderSlotsWithAuth(u);
+  showStart();
+});
+
+// ---- per-user save slots ----
+function usernameKey(username){ return 'aetheria_saves_v2_user_'+username; }
+
+SaveSystem._allForUser=function(username){
+  try{ return JSON.parse(localStorage.getItem(usernameKey(username)))||{}; }
+  catch{ return {}; }
+};
+SaveSystem.getSlotUser=function(username,n){ return this._allForUser(username)[n]||null; };
+SaveSystem.listSlotsUser=function(username){
+  const all=this._allForUser(username);
+  return [1,2,3].map(n=>({slot:n,data:all[n]||null}));
+};
+SaveSystem.saveUser=function(username,n,state){
+  const all=this._allForUser(username);
+  all[n]={...state,savedAt:Date.now(),version:2};
+  localStorage.setItem(usernameKey(username),JSON.stringify(all));
+};
+SaveSystem.deleteUser=function(username,n){
+  const all=this._allForUser(username);
+  delete all[n];
+  localStorage.setItem(usernameKey(username),JSON.stringify(all));
+};
+SaveSystem.newGameUser=function(username,n){
+  const state=this.newGame(n);
+  this.saveUser(username,n,state);
+  return state;
+};
+
 const canvas=document.getElementById('game-canvas');
 const input=new Input(canvas);
 const game=new Game(canvas,input);
@@ -52,7 +115,7 @@ function applySettings(){
   game.audio.sfxVol=document.getElementById('set-sfx').value/100;
   if(game.audio.applyMusicVol) game.audio.applyMusicVol();
 }
-['set-shake','set-minimap','set-fps','set-music','set-sfx'].forEach(id=>{
+['set-shake','set-fps','set-music','set-sfx'].forEach(id=>{
   const el=document.getElementById(id); if(el) el.addEventListener('input',applySettings); });
 
 function anyModalOpen(){ return [settingsModal,bagModal,charModal,skillsModal,questsModal,shopModal,stashModal,craftModal,document.getElementById('fullmap-modal')]
@@ -73,13 +136,23 @@ function openQuests(){ game.hud.refreshQuests(); openModal(questsModal); }
 
 document.getElementById('settings-btn').onclick=()=>openModal(settingsModal);
 document.getElementById('bag-btn').onclick=openBag;
+document.getElementById('map-btn').onclick=()=>{ const fm=document.getElementById('fullmap-modal'); if(fm.classList.contains('hidden')){ game.hud.showFullMap(); openModal(fm); } else closeModal(fm); };
 document.getElementById('char-btn').onclick=openChar;
 document.getElementById('skills-btn').onclick=openSkills;
 document.getElementById('quests-btn').onclick=openQuests;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeModal(document.getElementById(b.dataset.close)));
 document.getElementById('shop-close').onclick=()=>closeModal(shopModal);
 document.getElementById('save-game-btn').onclick=()=>game.save();
-document.getElementById('quit-btn').onclick=()=>{ if(confirm('Quit to menu? (save first!)')) game.quitToMenu(); };
+document.getElementById('quit-btn').addEventListener('click', ()=>{ if(confirm('Quit to menu?')){ game.quitToMenu(); show('start-screen'); } });
+document.getElementById('logout-btn').addEventListener('click', ()=>{
+  if(confirm('Logout? Unsaved progress may be lost.')){
+    game.quitToMenu();
+    localStorage.removeItem('aetheria_auth');
+    show('login-screen');
+    document.getElementById('login-user').value='';
+    document.getElementById('login-pass').value='';
+  }
+});
 document.getElementById('respawn-btn').onclick=()=>game.respawn();
 document.getElementById('town-btn').onclick=()=>{ if(game.canTeleportTown && game.canTeleportTown()) game.teleportToTown(); };
 
@@ -106,4 +179,5 @@ window.addEventListener('focus', ()=>{ if(game.running && !anyModalOpen() &&
   !document.getElementById('death-screen').classList.contains('flex')) game.paused=false; });
 
 window.addEventListener('beforeunload', ()=>{ if(game.running) game.autosave(); });
-window.addEventListener('load', ()=>{ setTimeout(()=>{ renderSlots(); show('start-screen'); },700); });
+document.getElementById('quit-btn').onclick=()=>{ if(confirm('Quit to menu?')){ game._username=null; game.quitToMenu(); show('login-screen'); } };
+window.addEventListener('load', ()=>{ setTimeout(()=>{ const a=getAuth(); if(a.username){ renderSlotsWithAuth(a.username); show('start-screen'); } else { show('login-screen'); } },700); });

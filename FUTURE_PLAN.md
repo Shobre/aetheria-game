@@ -83,3 +83,10 @@ Status legend: 🔴 high impact · 🟡 medium · ⚪ polish/nice-to-have
 2. **Quest variety** — escort, fetch, timed-clear objectives beyond kill/reach/boss.
 3. **Elite/champion enemies** — buffed variants that drop guaranteed rare loot; pairs perfectly with the new Forge (gold sink for upgrading those drops).
 4. **`Projectile.update` refactor** — biggest remaining complexity hotspot (cognitive 66).
+
+- ✅ **Login screen** — Per-user authentication before save slot selection. Each user gets isolated save slots via `usernameKey()`. Logout button in settings.
+- ✅ **Turso cloud database** — `js/systems/turso.js` module with `tursoSave`, `tursoLoad`, `tursoListSlots`, `tursoInit`, `tursoDelete`. Meta tags for URL/token config.
+- ✅ **Per-user saves** — `SaveSystem.saveUser()`, `SaveSystem.loadUser()`, `SaveSystem.listSlotsUser()`, `SaveSystem.deleteUser()`. Username stored in save state.
+- ✅ **Weapon slash animations** — Unique slash visuals per weapon kind: dagger (fast stab), spear (long thrust), greatsword (wide heavy arc + dust), warhammer (overhead slam + shockwave), sword (classic arc + glow trail), ranged (aim line).
+- ✅ **Shield block visual improved** — Larger shield with rim highlight, animated sparkle, better shape.
+- ✅ **Map button replaces minimap** — Minimap canvas removed. 🗺️ button in top-right opens full map (M key still works). MINIMAP setting removed from settings.

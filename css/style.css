@@ -246,3 +246,7 @@ body{image-rendering:pixelated}
 #tooltip{z-index:200}
 .modal-box{overflow:visible!important}
 .char-inv{overflow-y:auto;max-height:40vh}
+
+/* Login screen */
+#login-screen input::placeholder { color: #555; }
+#login-screen input:focus { border-color: #c8a84e; }
