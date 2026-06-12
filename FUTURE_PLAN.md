@@ -16,6 +16,10 @@ Status legend: 🔴 high impact · 🟡 medium · ⚪ polish/nice-to-have
 - ✅ **Enemy update refactor** — extracted `_rangedAI`, `_chaseAI`, `_updatePerception`, `_applyKnockback`.
 - ✅ **Hover tooltips** — rich floating tooltips on items (bag/shop/character/hotbar) and spells (loadout/picker) with full stats, rarity, comparison, and action hints.
 - ✅ **Crafting bench + stash** — Forge at the Blacksmith (reforge rerolls affixes, upgrade raises rarity, gold cost scales); 40-slot shared Stash at the Banker NPC, persisted in save.
+- ✅ **Enemy↔player solid collision** — enemies can no longer walk through the player; they yield to the contact surface and are never shoved into walls.
+- ✅ **Spawn-in-wall fix** — `World.nearestOpen()` snaps the player (and bosses) to the closest walkable tile on every map load / checkpoint / portal landing.
+- ✅ **Elite (champion) enemies** — Vicious/Armored/Swift/Arcane modifiers buff hp/dmg/speed, paint a pulsing aura + name tag, and guarantee rolled gear on death. Spawn chance scales with map difficulty.
+- ✅ **One boss per biome** — added Meadow Warden, Thornroot Matron, Sandstone Colossus, Crystal Brood, Frostfang Jarl, and the Sunken Horror, each in its biome's deepest sub-area with themed attacks/drops (8 bosses total).
 
 ---
 
@@ -24,8 +28,8 @@ Status legend: 🔴 high impact · 🟡 medium · ⚪ polish/nice-to-have
 ### Gameplay systems
 - 🟡 **Ammo/quiver for ranged weapons** or a stamina/heat cost so bows aren't strictly better than melee.
 - 🟡 **Weapon-skill scaling** — let skill nodes boost melee vs ranged separately, giving builds identity.
-- 🟡 **Elite/champion enemies** — buffed variants that drop guaranteed rare loot.
-- 🟡 **More bosses** — one per biome (desert/cave/snow). Two exist (Bone Tyrant, Bog Witch).
+- ✅ **Elite/champion enemies** — buffed variants that drop guaranteed rare loot. *(done)*
+- ✅ **More bosses** — one per biome now live (8 total). *(done)*
 - ⚪ **Pets/summons** school, **dash-attack** arts, **parry** window on block (perfect-block reflects projectiles).
 - ⚪ **Day/night tint** and weather per biome.
 
@@ -43,7 +47,7 @@ Status legend: 🔴 high impact · 🟡 medium · ⚪ polish/nice-to-have
 
 - 🟡 **Refactor `Projectile.update`** (cognitive 66, CRITICAL) — extract `_hitEnemy`, `_hitBoss`, `_checkPlayerHit`, `_applyAoe`. This is now the biggest complexity hotspot.
 - 🟡 **Refactor `player.recompute`** (cognitive 28) — split into `_deriveBaseStats`, `_deriveFromEquipment`, `_deriveFromSkills`.
-- 🟡 **Spawn placement** — enemies sometimes spawn clumped or inside decor. Add spacing + walkability checks.
+- 🟡 **Spawn placement** — player spawn now walkability-checked (`nearestOpen`); enemy spawns could still use spacing + walkability checks.
 - 🟡 **Balance pass** — with farming enabled, XP/gold curves need tuning. Add per-map level recommendations.
 - 🟡 **Audio** — procedural music is thin; add per-biome motifs and a low-health heartbeat cue.
 - ⚪ **Sprite art** — replace canvas-drawn shapes with a real sprite sheet (draw methods are isolated).

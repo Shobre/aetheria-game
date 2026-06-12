@@ -395,5 +395,44 @@ console.log('=== enemy-player collision + spawn safety ===');
   ok('loadMap snaps spawn via nearestOpen', gameSrc.includes('nearestOpen('));
 }
 
+console.log('=== elites + biome bosses ===');
+{
+  const { BOSSES } = await import('../js/entities/boss.js');
+  const { MAPS } = await import('../js/data/maps.js');
+  const { CATALOG } = await import('../js/data/gear.js');
+  // one boss per overworld biome present
+  const bossMaps = Object.values(BOSSES).map(b=>b.map);
+  for(const m of ['meadow_glade','forest_deep','desert_ruins','cave','snow_glacier','swamp_depths','dungeon1','dungeon2']){
+    ok('boss exists for '+m, bossMaps.includes(m));
+  }
+  // every boss targets a real map, has phases, and drops a real catalog item
+  for(const id in BOSSES){
+    const b=BOSSES[id];
+    ok('boss '+id+' map exists', !!MAPS[b.map]);
+    ok('boss '+id+' has phases', Array.isArray(b.phases) && b.phases.length>=1);
+    ok('boss '+id+' drop in catalog', !!CATALOG[b.drop]);
+    ok('boss '+id+' adds are valid', (b.adds||[]).every(a=>typeof a==='string'));
+  }
+  // distinct biomes covered (grass/forest/desert/cave/snow/swamp/dungeon)
+  const biomes=new Set(Object.values(BOSSES).map(b=>MAPS[b.map].biome));
+  ok('bosses span 6+ biomes', biomes.size>=6);
+
+  // elite system wiring (source-level — Enemy needs canvas so we read the file)
+  const { readFileSync } = await import('node:fs');
+  const enemySrc = readFileSync(new URL('../js/entities/enemy.js', import.meta.url), 'utf8');
+  ok('enemy exports rollEliteMod', enemySrc.includes('export function rollEliteMod'));
+  ok('enemy has ELITE_MODS', enemySrc.includes('ELITE_MODS'));
+  ok('constructor takes elite param', /constructor\(x,y,type='slime', levelScale=1, elite=null\)/.test(enemySrc));
+  ok('elites buff hp/dmg', enemySrc.includes('levelScale*hpMul') && enemySrc.includes('levelScale*dmgMul'));
+  ok('elites guarantee gear on death', /this\.elite[\s\S]*?game\.dropGear/.test(enemySrc));
+  ok('elites draw an aura', enemySrc.includes('eliteMod.aura'));
+  const gameSrc = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
+  ok('game rolls elites on spawn', gameSrc.includes('rollEliteMod(') && gameSrc.includes('eliteChance'));
+  ok('game snaps boss off solid tiles', /this\.boss\.x[\s\S]*?nearestOpen/.test(gameSrc));
+  // rollEliteMod returns a known key deterministically
+  const k = enemySrc.match(/ELITE_MODS = \{([\s\S]*?)\n\};/);
+  ok('ELITE_MODS defines 4 mods', (k && (k[1].match(/\w+:\s*\{/g)||[]).length===4));
+}
+
 console.log('\n' + (fail === 0 ? '✅ ALL PASS' : '❌ FAILURES') + ` — ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }

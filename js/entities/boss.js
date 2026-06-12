@@ -24,6 +24,67 @@ export const BOSSES = {
       { at:0.33, attacks:['burst','poisonNova','summon','charge'], interval:1.2, tint:'#c8ff8a' },
     ],
   },
+
+  // ---- one boss per overworld biome, lurking in each biome's deepest sub-area ----
+  meadow_warden: {
+    name:'The Meadow Warden', map:'meadow_glade', x:24, y:8,
+    hp:520, dmg:14, r:24, color:'#4caf50', xp:320, gold:220,
+    drop:'spear_iron', adds:['slime','boar'],
+    phases:[
+      { at:1.00, attacks:['charge','burst'],            interval:2.6, tint:'#4caf50' },
+      { at:0.50, attacks:['burst','summon','charge'],   interval:1.9, tint:'#7fd884' },
+    ],
+  },
+  forest_matron: {
+    name:'Thornroot Matron', map:'forest_deep', x:26, y:8,
+    hp:680, dmg:17, r:23, color:'#2e7d32', xp:430, gold:300,
+    drop:'bow_long', adds:['archer','boar','bat'],
+    phases:[
+      { at:1.00, attacks:['burst','summon'],                  interval:2.3, tint:'#2e7d32' },
+      { at:0.55, attacks:['burst','summon','charge'],         interval:1.8, tint:'#66bb6a' },
+      { at:0.28, attacks:['burst','burst','summon','charge'], interval:1.3, tint:'#a5d6a7' },
+    ],
+  },
+  desert_colossus: {
+    name:'Sandstone Colossus', map:'desert_ruins', x:25, y:8,
+    hp:900, dmg:22, r:28, color:'#d2a04a', xp:560, gold:380,
+    drop:'warhammer', adds:['scorpion','brute'],
+    phases:[
+      { at:1.00, attacks:['charge','burst'],                  interval:2.5, tint:'#d2a04a' },
+      { at:0.55, attacks:['charge','charge','burst'],         interval:1.9, tint:'#e8c074' },
+      { at:0.28, attacks:['charge','burst','summon'],         interval:1.4, tint:'#f4dca0' },
+    ],
+  },
+  cave_brood: {
+    name:'The Crystal Brood', map:'cave', x:25, y:8,
+    hp:1000, dmg:24, r:26, color:'#9a5fd0', xp:640, gold:440,
+    drop:'staff_arcane', adds:['golem','bat'],
+    phases:[
+      { at:1.00, attacks:['burst','summon'],                       interval:2.2, tint:'#9a5fd0' },
+      { at:0.60, attacks:['burst','burst','summon'],               interval:1.7, tint:'#b478e8' },
+      { at:0.30, attacks:['burst','burst','summon','charge'],      interval:1.2, tint:'#d0a8ff' },
+    ],
+  },
+  snow_jarl: {
+    name:'Frostfang Jarl', map:'snow_glacier', x:25, y:8,
+    hp:1150, dmg:25, r:26, color:'#bfe8ff', xp:720, gold:500,
+    drop:'sword_frost', adds:['frostling','yeti'], onHit:'chill',
+    phases:[
+      { at:1.00, attacks:['charge','burst'],                  interval:2.3, tint:'#bfe8ff' },
+      { at:0.60, attacks:['burst','summon','charge'],         interval:1.8, tint:'#e0f4ff' },
+      { at:0.30, attacks:['burst','burst','charge','summon'], interval:1.3, tint:'#ffffff' },
+    ],
+  },
+  swamp_horror: {
+    name:'The Sunken Horror', map:'swamp_depths', x:26, y:8,
+    hp:1250, dmg:27, r:27, color:'#5e9e3a', xp:820, gold:560,
+    drop:'dagger_venom', adds:['spitter','croaker'], poison:true,
+    phases:[
+      { at:1.00, attacks:['poisonNova','burst'],                   interval:2.2, tint:'#5e9e3a' },
+      { at:0.60, attacks:['poisonNova','summon','burst'],          interval:1.7, tint:'#84c25a' },
+      { at:0.30, attacks:['poisonNova','burst','summon','charge'], interval:1.2, tint:'#aede82' },
+    ],
+  },
 };
 
 export class Boss {
@@ -73,7 +134,8 @@ export class Boss {
       this.atkTimer -= dt;
       if(this.atkTimer <= 0){ this._chooseAttack(player); }
       if(dist < this.r + player.r && this._touchCd<=0){ this._touchCd=1.0;
-        player.takeDamage(this.dmg, Math.atan2(dy,dx), game); }
+        player.takeDamage(this.dmg, Math.atan2(dy,dx), game);
+        if(this.def.onHit) applyStatus(player, this.def.onHit); }
     } else if(this.state === 'telegraph'){
       this.stateTimer -= dt;
       if(this.stateTimer <= 0) this._fireAttack(player, world, game);
@@ -81,7 +143,8 @@ export class Boss {
       this.stateTimer -= dt;
       this._move(this.chargeDir.x*this.speed*6, this.chargeDir.y*this.speed*6, world);
       if(dist < this.r + player.r + 4 && this._touchCd<=0){ this._touchCd=0.8;
-        player.takeDamage(Math.round(this.dmg*1.3), Math.atan2(this.chargeDir.y,this.chargeDir.x), game); }
+        player.takeDamage(Math.round(this.dmg*1.3), Math.atan2(this.chargeDir.y,this.chargeDir.x), game);
+        if(this.def.onHit) applyStatus(player, this.def.onHit); }
       if(this.stateTimer <= 0){ this.state='idle'; this.atkTimer=this.phase.interval; }
     }
   }

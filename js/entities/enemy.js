@@ -29,18 +29,34 @@ const CFG = {
   croaker: { hp:60, speed:0.78, dmg:14, xp:36, gold:[8,18], color:'#3a6a2a', r:13, behavior:'lunge', onHit:'poison', view:230, fov:0.9 },
 };
 
+// Elite (champion) modifiers. An elite enemy rolls one of these — it buffs the
+// base stats and paints a coloured aura, and always drops rolled gear on death.
+const ELITE_MODS = {
+  vicious:  { label:'Vicious',  aura:'#ff5a5a', dmg:1.9, hp:2.6, speed:1.0 },
+  armored:  { label:'Armored',  aura:'#9aa6c0', dmg:1.4, hp:4.0, speed:0.9, knockResist:0.6 },
+  swift:    { label:'Swift',    aura:'#ffe24d', dmg:1.4, hp:2.2, speed:1.18 },
+  arcane:   { label:'Arcane',   aura:'#b06bff', dmg:1.6, hp:2.8, speed:1.0, burstOnDeath:true },
+};
+const ELITE_KEYS = Object.keys(ELITE_MODS);
+export function rollEliteMod(rand=Math.random){ return ELITE_KEYS[Math.floor(rand()*ELITE_KEYS.length)]; }
+
 export class Enemy {
-  constructor(x,y,type='slime', levelScale=1){
+  constructor(x,y,type='slime', levelScale=1, elite=null){
     this.x=x; this.y=y; this.type=type;
     const c=CFG[type]||CFG.slime;
     this.base=c;
     this.r=c.r; this.speed=c.speed; this.color=c.color;
     this.behavior=c.behavior;
+    // elite (champion) modifier: buffs stats, paints an aura, guarantees gear
+    this.elite = (elite && ELITE_MODS[elite]) ? elite : null;
+    const m = this.elite ? ELITE_MODS[this.elite] : null;
+    const hpMul=m?m.hp:1, dmgMul=m?m.dmg:1, spdMul=m?m.speed:1;
+    if(m){ this.eliteMod=m; this.r=Math.round(c.r*1.25); this.speed=c.speed*spdMul; }
     // light level scaling so deeper maps are tougher
-    this.hpMax=Math.round(c.hp*levelScale); this.hp=this.hpMax;
-    this.dmg=Math.round(c.dmg*levelScale);
-    this.xp=Math.round(c.xp*levelScale);
-    this.goldMin=c.gold[0]; this.goldMax=c.gold[1];
+    this.hpMax=Math.round(c.hp*levelScale*hpMul); this.hp=this.hpMax;
+    this.dmg=Math.round(c.dmg*levelScale*dmgMul);
+    this.xp=Math.round(c.xp*levelScale*(m?3:1));
+    this.goldMin=Math.round(c.gold[0]*(m?3:1)); this.goldMax=Math.round(c.gold[1]*(m?3:1));
     this.shootRange=c.shootRange||0; this.shootCd=c.shootCd||0; this.shootTimer=0;
     this.erratic=c.erratic||false;
     this.onHit=c.onHit||null;
@@ -251,7 +267,8 @@ export class Enemy {
     if(this.dead) return;
     this.alert=4.0;  // taking a hit always alerts the enemy
     this.hp-=dmg; this.hitFlash=0.18;
-    this.knockback.x+=Math.cos(angle)*knock; this.knockback.y+=Math.sin(angle)*knock;
+    const kr=this.eliteMod&&this.eliteMod.knockResist?this.eliteMod.knockResist:1;
+    this.knockback.x+=Math.cos(angle)*knock*kr; this.knockback.y+=Math.sin(angle)*knock*kr;
     game.floater('-'+dmg, this.x, this.y-14, '#fff');
     if(this.hp<=0) this.kill(game);
   }
@@ -265,12 +282,26 @@ export class Enemy {
     game.dropGold(this.x,this.y,amt);
     // occasional item drop
     if(Math.random()<0.08) game.dropItem(this.x,this.y);
+    // elites: guaranteed rolled gear, extra particles, optional death burst
+    if(this.elite){
+      game.spawnParticles(this.x,this.y,this.eliteMod.aura,24);
+      game.dropGear(this.x,this.y,0.85);
+      if(this.eliteMod.burstOnDeath && game.enemyShoot){
+        for(let i=0;i<8;i++) game.enemyShoot(this.x,this.y,(i/8)*Math.PI*2,Math.round(this.dmg*0.5));
+      }
+    }
     game.sfx('kill');
     game.onEnemyKilled(this);
   }
 
   draw(ctx,cam){
     const sx=this.x-cam.x, sy=this.y-cam.y;
+    // elite aura: pulsing coloured ring behind the body
+    if(this.elite){
+      const pulse=this.r+6+Math.sin(this.bob*1.5)*2;
+      ctx.save(); ctx.globalAlpha=0.35; ctx.strokeStyle=this.eliteMod.aura; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(sx,sy,pulse,0,7); ctx.stroke(); ctx.restore();
+    }
     let c=this.hitFlash>0?'#fff':(this.frozen>0?'#9fd8ff':this.color);
     // telegraph flash (lunge windup)
     if(this.lungeState==='telegraph'){ c=Math.floor(performance.now()/80)%2?'#ff5050':this.color; }
@@ -337,6 +368,8 @@ export class Enemy {
     // alert indicator when actively hunting the player
     if(this.alert>2.5){ ctx.fillStyle='#ffe24d'; ctx.font='bold 12px monospace'; ctx.textAlign='center';
       ctx.fillText('!', sx, sy-this.r-10); }
+    if(this.elite){ ctx.fillStyle=this.eliteMod.aura; ctx.font='bold 9px monospace'; ctx.textAlign='center';
+      ctx.fillText(this.eliteMod.label, sx, sy-this.r-16); }
     drawStatusPips(this,ctx,sx,sy);
   }
 }

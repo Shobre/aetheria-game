@@ -1,6 +1,6 @@
 import { World, Camera, TILE } from './world.js';
 import { Player } from '../entities/player.js';
-import { Enemy, Projectile, Particle } from '../entities/enemy.js';
+import { Enemy, Projectile, Particle, rollEliteMod } from '../entities/enemy.js';
 import { HUD } from '../ui/hud.js';
 import { Audio } from './audio.js';
 import { SaveSystem } from './save.js';
@@ -15,7 +15,9 @@ import { reforge, upgrade, reforgeCost, upgradeCost, canUpgrade } from './craft.
 
 // difficulty scale per map (deeper = tougher enemies)
 const MAP_SCALE = { meadow:1, forest:1.25, desert:1.45, cave:1.6, dungeon1:1.9, house1:1,
-  snow:1.7, swamp:1.8, dungeon2:2.3 };
+  snow:1.7, swamp:1.8, dungeon2:2.3,
+  // biome sub-areas hold that biome's boss — scaled a notch above the parent zone
+  meadow_glade:1.15, forest_deep:1.4, desert_ruins:1.6, snow_glacier:1.85, swamp_depths:2.0 };
 
 export class Game {
   constructor(canvas, input){
@@ -79,7 +81,10 @@ export class Game {
       if(Math.hypot(pos.x-this.player.x,pos.y-this.player.y)<220){ i--; continue; }
       const types=def.enemies.types;
       const t=types[Math.floor(rand()*types.length)];
-      const e=new Enemy(pos.x,pos.y,t,scale); e.spawnIdx=i; this.enemies.push(e);
+      // elite chance scales with map difficulty (scale); harder maps breed champions
+      const eliteChance=Math.min(0.22, 0.05*scale);
+      const elite = rand()<eliteChance ? rollEliteMod(rand) : null;
+      const e=new Enemy(pos.x,pos.y,t,scale,elite); e.spawnIdx=i; this.enemies.push(e);
     }
     // checkpoint: dying returns you to this area at this entry point
     this.checkpoint={ map:mapId, tx, ty };
@@ -87,6 +92,11 @@ export class Game {
     for(const bid in BOSSES){
       if(BOSSES[bid].map===mapId && !this.bossesDead[bid]){
         this.boss=new Boss(bid);
+        // keep the boss off solid tiles (carved-room maps may wall its anchor)
+        if(this.world.isSolid(this.boss.x,this.boss.y)){
+          const bp=this.world.nearestOpen(this.boss.x,this.boss.y);
+          this.boss.x=bp.x; this.boss.y=bp.y;
+        }
         setTimeout(()=>{ if(this.boss && !this.boss.dead) this.toast('⚠ '+this.boss.def.name+' awakens!'); }, 400);
       }
     }
