@@ -3,7 +3,7 @@ import { Game } from './systems/game.js';
 import { SaveSystem } from './systems/save.js';
 
 
-import { tursoInit, tursoListSlots, tursoLoad, tursoSave, tursoDelete, tursoRegister, tursoCheckPassword } from './systems/turso.js';
+import { tursoInit, tursoListSlots, tursoLoad, tursoSave, tursoDelete, tursoRegister, tursoLogin } from './systems/turso.js';
 
 // ---- Auth system ----
 const AUTH_KEY = 'aetheria_auth';
@@ -35,7 +35,7 @@ document.getElementById('login-btn').addEventListener('click', async ()=>{
   // Try to register first, then login
   const reg = await tursoRegister(u, hash);
   if(reg && reg.error) { err.textContent='DB error: '+reg.error; return; }
-  const ok = await tursoCheckPassword(u, hash);
+  const ok = await tursoLogin(u, hash);
   if(!ok){ err.textContent='Login failed'; err.classList.remove('hidden'); return; }
   setAuth({username:u, hash});
   err.classList.add('hidden');

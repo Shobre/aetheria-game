@@ -486,7 +486,8 @@ console.log('=== login + per-user saves ===');
   ok('game._username stored', gameSrc.includes('this._username'));
   ok('save uses per-user', gameSrc.includes('SaveSystem.saveUser'));
   ok('autosave uses per-user', gameSrc.includes('SaveSystem.saveUser'));
-  ok('turso meta tags in HTML', idxSrc.includes('turso-url') && idxSrc.includes('turso-token'));
+  const ts2 = readFileSync(new URL('../js/systems/turso.js', import.meta.url), 'utf8');
+  ok('turso proxy endpoint exists', ts2.includes('/api/turso'));
 }
 
 console.log('=== weapon slash animations ===');
@@ -525,7 +526,7 @@ console.log('=== turso module ===');
   ok('tursoListSlots export', ts.includes('export async function tursoListSlots'));
   ok('tursoInit export', ts.includes('export async function tursoInit'));
   ok('tursoDelete export', ts.includes('export async function tursoDelete'));
-  ok('uses meta tags for config', ts.includes('turso-url') && ts.includes('turso-token'));
+  ok('uses proxy for cloud saves', ts.includes('/api/turso'));
   ok('fetch-based HTTP client', ts.includes('fetch('));
 }
 
