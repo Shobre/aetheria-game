@@ -1,46 +1,36 @@
-// Turso cloud save client
-function getCfg() {
-  return (window.__TURSO_CONFIG || {});
-}
+// Turso cloud save client - uses Vercel serverless proxy
+const API = '/api/turso-proxy';
 
-async function tursoExec(sql, args) {
-  const cfg = getCfg();
-  if (!cfg.url || !cfg.token) return { error: 'Turso not configured' };
-  const res = await fetch(cfg.url.replace('libsql://', 'https://') + '/v2/pipeline', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.token },
-    body: JSON.stringify({ requests: [{ type: 'execute', stmt: { sql, args: args || [] } }] })
-  });
-  const data = await res.json();
+async function call(action, body) {
   try {
-    const r = data.results[0].response.result;
-    return { rows: (r.rows || []).map(row => row.map(c => c.value !== undefined ? c.value : c)) };
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ action }, body))
+    });
+    return await res.json();
   } catch(e) { return { error: e.message }; }
 }
 
-function rows(res) { return res.rows || []; }
-
 export async function tursoSave(username, slot, state) {
-  return tursoExec('INSERT OR REPLACE INTO saves (username, slot, data, updated_at) VALUES (?, ?, ?, ?)', [username, slot, JSON.stringify(state), Date.now()]);
+  return call('save', { username, slot, state });
 }
 export async function tursoLoad(username, slot) {
-  const r = rows(await tursoExec('SELECT data FROM saves WHERE username=? AND slot=?', [username, slot]));
-  if (r[0]) try { return JSON.parse(r[0][0]); } catch(e) {}
-  return null;
+  const r = await call('load', { username, slot });
+  return r.data || null;
 }
 export async function tursoListSlots(username) {
-  return rows(await tursoExec('SELECT slot, updated_at FROM saves WHERE username=? ORDER BY slot', [username]));
+  const r = await call('list', { username });
+  return r.slots || [];
 }
 export async function tursoDelete(username, slot) {
-  return tursoExec('DELETE FROM saves WHERE username=? AND slot=?', [username, slot]);
+  return call('delete', { username, slot });
 }
 export async function tursoRegister(username, hash) {
-  return tursoExec('INSERT OR IGNORE INTO users (username, password_hash, created_at) VALUES (?, ?, ?)', [username, hash, Date.now()]);
+  return call('register', { username, hash });
 }
 export async function tursoLogin(username, hash) {
-  const r = rows(await tursoExec('SELECT password_hash FROM users WHERE username=?', [username]));
-  const ok = r[0] && r[0][0] === hash;
-  if (ok) await tursoExec('UPDATE users SET last_login=? WHERE username=?', [Date.now(), username]);
-  return ok;
+  const r = await call('login', { username, hash });
+  return r.ok || false;
 }
 export async function tursoInit() { return true; }
