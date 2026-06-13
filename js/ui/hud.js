@@ -53,6 +53,12 @@ export class HUD {
         return item?this._buildItemTooltip(item,{hint:'Press '+(i+1)+' to use'}):''; });
       this.el.itemSlots.appendChild(d);
     }
+    // heat bar (for ranged weapons)
+    const heatBar=document.createElement('div');
+    heatBar.id='heat-bar';
+    heatBar.className='hidden';
+    heatBar.innerHTML='<div class="heat-fill" id="heat-fill"></div>';
+    this.el.itemSlots.parentElement.appendChild(heatBar);
   }
 
   // generic drag-to-swap between slots of the same kind ('hotbar' | 'spell')
@@ -223,6 +229,17 @@ export class HUD {
     });
     this.el.goldText.textContent=this.game.player.gold;
     this.el.slotsText.textContent=`${inv.length}/30`;
+    // heat bar
+    const heatBar=document.getElementById('heat-bar');
+    const heatFill=document.getElementById('heat-fill');
+    if(heatBar && heatFill){
+      const isRanged=p.ranged;
+      heatBar.classList.toggle('hidden',!isRanged);
+      if(isRanged){
+        heatFill.style.width=Math.min(100,p.heat/p.heatCap*100)+'%';
+        heatFill.className='heat-fill'+(p.heat>=p.heatCap?' overheat':'')+(p._overheatCd>0?' cooldown':'');
+      }
+    }
   }
 
   showInteract(label){ this.el.interactLabel.textContent=label; this.el.interact.classList.remove('hidden'); }

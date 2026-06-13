@@ -28,6 +28,10 @@ export class Game {
     this.enemies=[]; this.projectiles=[]; this.particles=[]; this.golds=[]; this.drops=[];
     this.playtime=0; this._lastT=0; this._fpsT=0; this._fpsCount=0; this._fps=60;
     this.nearInteract=null; this.transition=0;
+    // Quest tracking state
+    this._questTimers={};       // mapId -> {kind, deadline, started}
+    this._escortNpc=null;       // {name, x, y, map, alive}
+    this._surviveEnemies=0;     // spawned enemies for survive quests
     this.boss=null; this.bossesDead={}; this.checkpoint=null;
     this._autoT=0; this.autosaveInterval=60; // seconds between timed autosaves
   }
@@ -159,6 +163,8 @@ export class Game {
     this.drops=this.drops.filter(it=>!it.dead);
 
     this._checkInteract();
+    this._updateQuestTimers();
+    this._updateEscort();
     this.hud.refresh();
     if(this.settings.minimap) this.hud.drawMinimap();
     this.input.lateUpdate();
@@ -315,7 +321,20 @@ export class Game {
     this.projectiles.push(new Projectile(p.x,p.y,p._aim,{speed:4,dmg:40,r:8,color:'#444',kind:'fire',life:0.8,aoe:70})); }
   // enemy ranged attack
   enemyShoot(x,y,angle,dmg){
-    this.projectiles.push(new Projectile(x,y,angle,{speed:3.5,dmg,r:5,color:'#e8413c',kind:'fire',life:2.0,hostile:true}));
+    const proj=new Projectile(x,y,angle,{speed:3.5,dmg,r:5,color:'#e8413c',kind:'fire',life:2.0,hostile:true});
+    // check parry: if player is blocking with active parry window, reflect projectile
+    const p=this.player;
+    if(p.blocking && p._parryWindow>0 && !p._parried){
+      p._parried=true;
+      proj.hostile=false;
+      proj.angle=angle+Math.PI; // reverse direction
+      proj.color='#88ddff';
+      proj.dmg=Math.round(proj.dmg*1.5); // parry bonus damage
+      this.floater('PARRY!',p.x,p.y-34,'#88ddff');
+      this.sfx('parry');
+      this.cam.shake=4;
+    }
+    this.projectiles.push(proj);
   }
   // enemy ranged attack that applies a status (poison/burn)
   enemyShootStatus(x,y,angle,dmg,status){

@@ -382,62 +382,61 @@ export class Projectile {
     this.kind=opts.kind||'fire'; this.hostile=opts.hostile||false;
     this.aoe=opts.aoe||0; this.status=opts.status||null;
     this.chain=opts.chain||0; this.crit=opts.crit||false; this.lifesteal=opts.lifesteal||0;
-    this.hitSet=null;  // enemies already struck (for chaining)
-    this.dead=false; this.trail=[];
+    this.hitSet=null; this.dead=false; this.trail=[];
   }
   update(dt, world, enemies, game){
     this.x+=Math.cos(this.angle)*this.speed; this.y+=Math.sin(this.angle)*this.speed;
     this.life-=dt;
     this.trail.push({x:this.x,y:this.y}); if(this.trail.length>6) this.trail.shift();
-    if(this.life<=0 || world.isSolid(this.x,this.y)){ this.dead=true;
-      if(this.aoe) this._burst(game,enemies); game.spawnParticles(this.x,this.y,this.color,6); return; }
-    if(this.hostile){
-      // hits player
-      const p=game.player;
-      if(Math.hypot(p.x-this.x,p.y-this.y)<p.r+this.r){
-        p.takeDamage(this.dmg, this.angle, game);
-        if(this.status) applyStatus(p,this.status);
-        this.dead=true;
-        game.spawnParticles(this.x,this.y,this.color,6);
+    if(this.life<=0 || world.isSolid(this.x,this.y)){
+      this.dead=true; if(this.aoe && !this.hostile) this._applyAoe(game,enemies);
+      game.spawnParticles(this.x,this.y,this.color,6); return; }
+    if(this.hostile){ this._hitPlayer(game); }
+    else { this._hitBoss(game,enemies); this._hitEnemy(game,enemies); }
+  }
+  _hitPlayer(game){
+    const p=game.player;
+    if(Math.hypot(p.x-this.x,p.y-this.y)<p.r+this.r){
+      p.takeDamage(this.dmg,this.angle,game);
+      if(this.status) applyStatus(p,this.status);
+      this.dead=true; game.spawnParticles(this.x,this.y,this.color,6); }
+  }
+  _hitBoss(game,enemies){
+    const boss=game.boss;
+    if(boss && !boss.dead && Math.hypot(boss.x-this.x,boss.y-this.y)<boss.r+this.r){
+      if(this.aoe) this._applyAoe(game,enemies);
+      else { boss.hit(this.dmg,this.angle,game,3);
+        if(this.kind==='ice') boss.freeze(1.0);
+        else if(this.status) applyStatus(boss,this.status); }
+      if(this.lifesteal>0) game.player.heal(this.dmg*this.lifesteal,game);
+      this.dead=true; game.spawnParticles(this.x,this.y,this.color,8); }
+  }
+  _hitEnemy(game,enemies){
+    for(const e of enemies){ if(e.dead) continue;
+      if(this.hitSet && this.hitSet.has(e)) continue;
+      if(Math.hypot(e.x-this.x,e.y-this.y)>=e.r+this.r) continue;
+      if(this.aoe){ this._applyAoe(game,enemies); this.dead=true;
+        game.spawnParticles(this.x,this.y,this.color,8); return; }
+      e.hit(this.dmg,this.angle,game,5);
+      if(this.crit) game.floater('CRIT',e.x,e.y-24,'#ffcf4d');
+      if(this.kind==='ice') e.freeze(1.5);
+      else if(this.status) applyStatus(e,this.status);
+      if(this.lifesteal>0) game.player.heal(this.dmg*this.lifesteal,game);
+      game.spawnParticles(this.x,this.y,this.color,8);
+      if(this.chain>0){
+        (this.hitSet=this.hitSet||new Set()).add(e);
+        const next=enemies.find(o=>!o.dead && !this.hitSet.has(o) &&
+          Math.hypot(o.x-this.x,o.y-this.y)<160);
+        if(next){ this.chain--; this.dmg=Math.round(this.dmg*0.8);
+          this.angle=Math.atan2(next.y-this.y,next.x-this.x); break; }
       }
-    } else {
-      // boss takes friendly projectile damage too
-      const boss=game.boss;
-      if(boss && !boss.dead && Math.hypot(boss.x-this.x,boss.y-this.y)<boss.r+this.r){
-        if(this.aoe) this._burst(game,enemies);
-        else { boss.hit(this.dmg,this.angle,game,3); if(this.kind==='ice') boss.freeze(1.0);
-          else if(this.status) applyStatus(boss,this.status); }
-        if(this.lifesteal>0) game.player.heal(this.dmg*this.lifesteal,game);
-        this.dead=true; game.spawnParticles(this.x,this.y,this.color,8); return;
-      }
-      for(const e of enemies){ if(e.dead) continue;
-        if(this.hitSet && this.hitSet.has(e)) continue;
-        if(Math.hypot(e.x-this.x,e.y-this.y)<e.r+this.r){
-          if(this.aoe){ this._burst(game,enemies); this.dead=true;
-            game.spawnParticles(this.x,this.y,this.color,8); return; }
-          e.hit(this.dmg,this.angle,game,5);
-          if(this.crit) game.floater('CRIT',e.x,e.y-24,'#ffcf4d');
-          if(this.kind==='ice') e.freeze(1.5);
-          else if(this.status) applyStatus(e,this.status);
-          if(this.lifesteal>0) game.player.heal(this.dmg*this.lifesteal,game);
-          game.spawnParticles(this.x,this.y,this.color,8);
-          // chain lightning: jump to a nearby unstruck enemy instead of dying
-          if(this.chain>0){
-            (this.hitSet=this.hitSet||new Set()).add(e);
-            const next=enemies.find(o=>!o.dead && !this.hitSet.has(o) &&
-              Math.hypot(o.x-this.x,o.y-this.y)<160);
-            if(next){ this.chain--; this.dmg=Math.round(this.dmg*0.8);
-              this.angle=Math.atan2(next.y-this.y,next.x-this.x); break; }
-          }
-          this.dead=true; break;
-        }
-      }
+      this.dead=true; break;
     }
   }
-  _burst(game,enemies){
+  _applyAoe(game,enemies){
     game.spawnParticles(this.x,this.y,this.color,24); game.cam.shake=10;
     for(const e of enemies){ if(e.dead) continue;
-      if(Math.hypot(e.x-this.x,e.y-this.y)<this.aoe){ e.hit(this.dmg,Math.random()*7,game,8); } }
+      if(Math.hypot(e.x-this.x,e.y-this.y)<this.aoe) e.hit(this.dmg,Math.random()*7,game,8); }
   }
   draw(ctx,cam){
     const sx=this.x-cam.x, sy=this.y-cam.y;

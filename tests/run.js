@@ -6,6 +6,7 @@ import { RARITY, RARITY_ORDER, rollRarity, applyRarity, affixText, rarityName } 
 import { SKILLS, skillStats, canLearn } from '../js/data/skilltree.js';
 import { QUESTS, questsForGiver } from '../js/data/quests.js';
 import { STATUS, applyStatus, hasStatus, tickStatuses } from '../js/systems/status.js';
+import { readFileSync } from 'node:fs';
 
 let pass = 0, fail = 0;
 const fails = [];
@@ -174,7 +175,7 @@ console.log('=== weapons (ranged + melee variety) ===');
 console.log('=== enemy speeds vs player ===');
 {
   // mirror player baseSpeed (1.9) and assert every enemy is slower than it
-  const { readFileSync } = await import('node:fs');
+
   const enemySrc = readFileSync(new URL('../js/entities/enemy.js', import.meta.url), 'utf8');
   const playerSrc = readFileSync(new URL('../js/entities/player.js', import.meta.url), 'utf8');
   const pm = playerSrc.match(/baseSpeed\s*=\s*([0-9.]+)/);
@@ -274,7 +275,7 @@ console.log('=== pathfinding ===');
 console.log('=== autosave wiring ===');
 {
   // verify game.js exposes autosave + _buildState and hooks them in
-  const { readFileSync } = await import('node:fs');
+
   const gameSrc = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
   ok('has _buildState', gameSrc.includes('_buildState('));
   ok('has autosave method', gameSrc.includes('autosave(reason'));
@@ -288,7 +289,7 @@ console.log('=== autosave wiring ===');
 console.log('=== tooltip wiring ===');
 {
   // hud.js is DOM-bound, so verify the tooltip plumbing via source + data sanity.
-  const { readFileSync } = await import('node:fs');
+
   const hudSrc = readFileSync(new URL('../js/ui/hud.js', import.meta.url), 'utf8');
   ok('has _buildItemTooltip', hudSrc.includes('_buildItemTooltip('));
   ok('has _buildSpellTooltip', hudSrc.includes('_buildSpellTooltip('));
@@ -344,7 +345,7 @@ console.log('=== crafting (reforge + upgrade) ===');
 
 console.log('=== stash + craft wiring ===');
 {
-  const { readFileSync } = await import('node:fs');
+
   const gameSrc = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
   ok('game has openStash', gameSrc.includes('openStash('));
   ok('game has toStash/fromStash', gameSrc.includes('toStash(') && gameSrc.includes('fromStash('));
@@ -384,7 +385,7 @@ console.log('=== enemy-player collision + spawn safety ===');
     }
   }
   // enemy.js must wire solid-body collision against the player
-  const { readFileSync } = await import('node:fs');
+
   const enemySrc = readFileSync(new URL('../js/entities/enemy.js', import.meta.url), 'utf8');
   ok('enemy defines _collidePlayer', enemySrc.includes('_collidePlayer('));
   ok('enemy calls collision each update', /this\._collidePlayer\(player,world\)/.test(enemySrc));
@@ -418,7 +419,7 @@ console.log('=== elites + biome bosses ===');
   ok('bosses span 6+ biomes', biomes.size>=6);
 
   // elite system wiring (source-level — Enemy needs canvas so we read the file)
-  const { readFileSync } = await import('node:fs');
+
   const enemySrc = readFileSync(new URL('../js/entities/enemy.js', import.meta.url), 'utf8');
   ok('enemy exports rollEliteMod', enemySrc.includes('export function rollEliteMod'));
   ok('enemy has ELITE_MODS', enemySrc.includes('ELITE_MODS'));
@@ -438,7 +439,7 @@ console.log('=== elites + biome bosses ===');
 console.log('=== spell shop + teleport + shield + UI fixes ===');
 {
   const { SPELLS, STARTER_SPELLS, knownSpells, spellRank } = await import('../js/data/spells.js');
-  const { readFileSync } = await import('node:fs');
+
   const gs = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
   const ms = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
   const hs = readFileSync(new URL('../js/ui/hud.js', import.meta.url), 'utf8');
@@ -469,7 +470,7 @@ console.log('=== spell shop + teleport + shield + UI fixes ===');
 
 console.log('=== login + per-user saves ===');
 {
-  const { readFileSync } = await import('node:fs');
+
   const mainSrc = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
   const saveSrc = readFileSync(new URL('../js/systems/save.js', import.meta.url), 'utf8');
   const gameSrc = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
@@ -492,7 +493,7 @@ console.log('=== login + per-user saves ===');
 
 console.log('=== weapon slash animations ===');
 {
-  const { readFileSync } = await import('node:fs');
+
   const ps = readFileSync(new URL('../js/entities/player.js', import.meta.url), 'utf8');
   ok('player has weaponKind', ps.includes('this.weaponKind'));
   ok('dagger slash branch', ps.includes("wk==='dagger'"));
@@ -506,7 +507,7 @@ console.log('=== weapon slash animations ===');
 
 console.log('=== map button (minimap removed) ===');
 {
-  const { readFileSync } = await import('node:fs');
+
   const idx = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const main = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
   const hud = readFileSync(new URL('../js/ui/hud.js', import.meta.url), 'utf8');
@@ -519,7 +520,7 @@ console.log('=== map button (minimap removed) ===');
 
 console.log('=== turso module ===');
 {
-  const { readFileSync } = await import('node:fs');
+
   const ts = readFileSync(new URL('../js/systems/turso.js', import.meta.url), 'utf8');
   ok('tursoSave export', ts.includes('export async function tursoSave'));
   ok('turso uses API proxy', ts.includes('/api') && !ts.includes('/v2/pipeline'));
@@ -530,6 +531,83 @@ console.log('=== turso module ===');
   ok('turso uses server proxy', !ts.includes('/v2/pipeline') && ts.includes('/api'));
   ok('fetch-based HTTP client', ts.includes('fetch('));
 }
+
+console.log('=== projectile refactor ===');
+{
+  const src = readFileSync(new URL('../js/entities/enemy.js', import.meta.url), 'utf8');
+  ok('Projectile has _hitPlayer', src.includes('_hitPlayer('));
+  ok('Projectile has _hitBoss', src.includes('_hitBoss('));
+  ok('Projectile has _hitEnemy', src.includes('_hitEnemy('));
+  ok('Projectile has _applyAoe', src.includes('_applyAoe('));
+  ok('Projectile.update delegates to helpers', src.includes('this._hitPlayer(game)') && src.includes('this._hitBoss(game') );
+}
+
+console.log('=== quest variety ===');
+{
+  const { QUESTS } = await import('../js/data/quests.js');
+  ok('escort quest exists', QUESTS.q_escort && QUESTS.q_escort.objectives[0].kind === 'escort');
+  ok('timed_clear quest exists', QUESTS.q_timed && QUESTS.q_timed.objectives[0].kind === 'timed_clear');
+  ok('survive quest exists', QUESTS.q_survive && QUESTS.q_survive.objectives[0].kind === 'survive');
+  ok('escort has from/to', QUESTS.q_escort.objectives[0].from && QUESTS.q_escort.objectives[0].to);
+  ok('timed_clear has seconds', QUESTS.q_timed.objectives[0].seconds === 60);
+  ok('survive has seconds', QUESTS.q_survive.objectives[0].seconds === 45);
+}
+
+console.log('=== player recompute refactor ===');
+{
+  const src = readFileSync(new URL('../js/entities/player.js', import.meta.url), 'utf8');
+  ok('recompute calls _deriveBaseStats', src.includes('_deriveBaseStats()'));
+  ok('recompute calls _applyEquipmentBonuses', src.includes('_applyEquipmentBonuses()'));
+  ok('recompute calls _applySkillBonuses', src.includes('_applySkillBonuses()'));
+  ok('recompute calls _resolveWeapon', src.includes('_resolveWeapon()'));
+  ok('heat state in constructor', src.includes('this.heat=0'));
+  ok('parry window in constructor', src.includes('_parryWindow'));
+  ok('overheat cooldown', src.includes('_overheatCd'));
+}
+
+console.log('=== heat system ===');
+{
+  const src = readFileSync(new URL('../js/entities/player.js', import.meta.url), 'utf8');
+  ok('heat property on player', src.includes('this.heat'));
+  ok('heatCap property', src.includes('this.heatCap'));
+  ok('overheatCd property', src.includes('this._overheatCd'));
+  ok('heat decay in update', src.includes('-=dt') && src.includes('heat'));
+  ok('overheat floater', src.includes('OVERHEAT') || src.includes('overheat'));
+}
+
+console.log('=== parry system ===');
+{
+  const psrc = readFileSync(new URL('../js/entities/player.js', import.meta.url), 'utf8');
+  ok('parryWindow property', psrc.includes('_parryWindow'));
+  ok('parried flag', psrc.includes('_parried'));
+  const gsrc = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
+  ok('parry check in enemyShoot', gsrc.includes('_parryWindow'));
+  ok('parried projectile reflected', gsrc.includes('hostile=false'));
+  ok('parry SFX', gsrc.includes("'parry'"));
+}
+
+console.log('=== new skill nodes ===');
+{
+  const { SKILLS, skillStats } = await import('../js/data/skilltree.js');
+  const names = Object.keys(SKILLS);
+  ok('swordsmanship node exists', names.includes('swordsmanship'));
+  ok('polearm node exists', names.includes('polearm'));
+  ok('parry node exists', names.includes('parry'));
+  ok('archery node exists', names.includes('archery'));
+  ok('rangedMastery node exists', names.includes('rangedMastery'));
+  ok('skillStats has meleeAtk', skillStats({swordsmanship:1}).meleeAtk > 0);
+  ok('skillStats has rangedAtk', skillStats({archery:1}).rangedAtk > 0);
+}
+
+console.log('=== heat bar UI ===');
+{
+  const src = readFileSync(new URL('../js/ui/hud.js', import.meta.url), 'utf8');
+  ok('heat bar created', src.includes('heat-bar'));
+  ok('heat fill element', src.includes('heat-fill'));
+  ok('heat bar hidden when melee', src.includes("toggle('hidden',!isRanged)"));
+  ok('overheat class toggle', src.includes('overheat'));
+}
+
 
 console.log('\n' + (fail === 0 ? '✅ ALL PASS' : '❌ FAILURES') + ` — ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }

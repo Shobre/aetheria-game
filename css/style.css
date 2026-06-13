@@ -385,3 +385,31 @@ body{image-rendering:pixelated}
   margin-top: 12px;
   line-height: 1.5;
 }
+
+
+/* ===== Heat bar (ranged weapons) ===== */
+#heat-bar {
+  width: 120px; height: 8px;
+  background: #1a1a2e;
+  border: 1px solid #444;
+  border-radius: 4px;
+  margin: 4px auto 0;
+  overflow: hidden;
+}
+.heat-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #44aa44, #ffaa22, #ff4444);
+  transition: width 0.1s ease;
+  border-radius: 3px;
+}
+.heat-fill.overheat {
+  background: #ff2222;
+  animation: heat-pulse 0.3s infinite;
+}
+.heat-fill.cooldown {
+  background: #666;
+}
+@keyframes heat-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

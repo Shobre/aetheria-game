@@ -25,9 +25,19 @@ export class Player {
     this.attacking=0; this.attackCd=0; this.blocking=false;
     this.dodging=0; this.dodgeCd=0; this.invuln=0; this.dodgeDir={x:0,y:0};
     this.spellCd={q:0,e:0,r:0};
+    // heat system (ranged weapons)
+    this.heat=0;       // 0-100 current heat
+    this.heatCap=100;  // max heat before overheat
+    this._overheatCd=0; // cooldown when overheated
+    // parry system
+    this._parryWindow=0;  // seconds remaining for perfect-block window
+    this._parried=false;  // flag set when parry succeeds this block
     // 3 castable spell slots (q/e/r) holding spell ids; rearrangeable in the UI
     this.spellSlots = (state.spellSlots && state.spellSlots.length===3)
       ? [...state.spellSlots] : [...STARTER_SPELLS];
+    // load heat state
+    this.heat=state.heat||0;
+    this._overheatCd=state._overheatCd||0;
     this.statuses={};
     this.flash=0; this.dead=false;
   }
@@ -35,14 +45,37 @@ export class Player {
   // Derive final stats from base + equipment + skill tree
   // fallow-ignore-next-line complexity
   recompute(){
+    this._deriveBaseStats();
+    this._applyEquipmentBonuses();
+    this._applySkillBonuses();
+    this._resolveWeapon();
+  }
+  _deriveBaseStats(){
+    this.hpMax = this.baseHpMax;
+    this.mpMax = this.baseMpMax;
+    this.atk = 8 + this.level*2;
+    this.speed = this.baseSpeed;
+    this.stamMax = 100;
+    this.heatCap = 100;
+  }
+  _applyEquipmentBonuses(){
     const g=equipStats(this.equipment);
+    this.hpMax += g.hp||0;
+    this.mpMax += g.mp||0;
+    this.atk   += g.atk||0;
+    this.def    = g.def||0;
+    this.crit   = g.crit||0;
+    this.cdr    = Math.min(60, g.cdr||0);
+    this.spellMul = 1;
+  }
+  _applySkillBonuses(){
     const s=skillStats(this.skills);
-    this.hpMax = this.baseHpMax + (g.hp||0) + (s.hp||0);
-    this.mpMax = this.baseMpMax + (g.mp||0) + (s.mp||0);
-    this.atk   = 8 + this.level*2 + (g.atk||0) + (s.atk||0);
-    this.def   = (g.def||0) + (s.def||0);
-    this.crit  = (g.crit||0) + (s.crit||0);                 // %
-    this.cdr   = Math.min(60,(g.cdr||0) + (s.cdr||0));        // % cooldown reduction
+    this.hpMax += s.hp||0;
+    this.mpMax += s.mp||0;
+    this.atk   += s.atk||0;
+    this.def   += s.def||0;
+    this.crit  += s.crit||0;
+    this.cdr    = Math.min(60, this.cdr + (s.cdr||0));
     this.mpRegenMul = 1 + (s.mpregen||0);
     this.spellMul   = 1 + (s.spelldmg||0);
     this.speed = this.baseSpeed * (1 + (s.speed||0));
@@ -52,14 +85,23 @@ export class Player {
     this.hasBerserk = (s.berserk||0)>0;
     this.hasMeteor  = (s.meteor||0)>0;
     this.lifesteal  = (s.lifesteal||0);
-    // weapon kind: melee vs ranged, attack cadence + reach from the equipped weapon
+    this.heatCap = 100 + (s.rangedMastery||0)*10;
+    this._meleeAtkMul = 1 + (s.meleeAtk||0);
+    this._rangedAtkMul = 1 + (s.rangedAtk||0);
+    this._polearmBonus = s.polearmBonus||0;
+    this._parryBonus = s.parryBonus||0;
+    this._heatReduction = 1 - (s.heatReduction||0);
+    if(this._heatReduction<0.3) this._heatReduction=0.3;
+  }
+  _resolveWeapon(){
     const w=resolveEquip(this.equipment.weapon);
     this.ranged   = !!(w && w.ranged);
-    this.attackSpeed = (w && w.atkSpeed) ? w.atkSpeed : 0.32;     // seconds between swings/shots
-    this.reach    = (w && w.reach) ? w.reach : 44;                 // melee arc reach
-    this.shotSpeed= (w && w.shotSpeed) ? w.shotSpeed : 7;          // ranged projectile speed
-    // weapon kind for slash animation variety
-    this.weaponKind = 'sword'; // default
+    this.attackSpeed = (w && w.atkSpeed) ? w.atkSpeed : 0.32;
+    let baseReach=(w&&w.reach)?w.reach:44;
+    if(w && (w.id.startsWith('spear')||w.id==='halberd')) baseReach=Math.round(baseReach*(1+(this._polearmBonus||0)));
+    this.reach=baseReach;
+    this.shotSpeed= (w && w.shotSpeed) ? w.shotSpeed : 7;
+    this.weaponKind = 'sword';
     if(w){
       if(w.ranged) this.weaponKind = 'ranged';
       else if(w.id.startsWith('dagger')) this.weaponKind = 'dagger';

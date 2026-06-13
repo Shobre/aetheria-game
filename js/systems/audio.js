@@ -25,6 +25,7 @@ export class Audio {
       case 'ice':   this.beep(880,0.3,'sine',0.2,300); break;
       case 'dodge': this.beep(300,0.15,'sine',0.15,600); break;
       case 'block': this.beep(160,0.1,'square',0.25); break;
+      case 'parry': this.beep(800,0.06,'square',0.3,1200); this.beep(1200,0.08,'sine',0.2); break;
       case 'kill':  this.beep(140,0.2,'square',0.22,60); break;
       case 'drink': this.beep(500,0.15,'sine',0.2,800); break;
       case 'hurt':  this.beep(200,0.18,'sawtooth',0.25,90); break;

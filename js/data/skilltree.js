@@ -13,6 +13,13 @@ export const SKILLS = {
   berserk:    { name:'Berserker', icon:'😡', branch:'combat', max:1, cost:3, req:['might','toughness'],
                 desc:'UNLOCK: deal +30% damage below 30% HP', effect:(r)=>({berserk:r}) },
 
+  swordsmanship: { name:'Swordsmanship', icon:'⚔️', branch:'combat', max:3, cost:2, req:['crit'],
+                  desc:'+10% melee ATK per rank (swords/daggers)', effect:(r)=>({meleeAtk:0.1*r}) },
+  polearm:     { name:'Polearm Mastery', icon:'🔱', branch:'combat', max:3, cost:2, req:['toughness'],
+                  desc:'+15% reach and +8% ATK with polearms', effect:(r)=>({polearmBonus:0.15*r}) },
+  parry:       { name:'Parry Mastery', icon:'🛡️', branch:'combat', max:1, cost:3, req:['swordsmanship','polearm'],
+                  desc:'UNLOCK: parry window +0.1s, parried enemies take +25% damage', effect:(r)=>({parryBonus:r}) },
+
   // --- Arcane branch ---
   focus:      { name:'Focus', icon:'🔮', branch:'arcane', max:5, cost:1, req:[],
                 desc:'+20 max MP per rank', effect:(r)=>({mp:20*r}) },
@@ -36,6 +43,10 @@ export const SKILLS = {
                 desc:'+20% gold from kills per rank', effect:(r)=>({greed:0.2*r}) },
   lifesteal:  { name:'Lifesteal', icon:'🩸', branch:'survival', max:1, cost:3, req:['evasion','greed'],
                 desc:'UNLOCK: heal 8% of melee damage dealt', effect:(r)=>({lifesteal:0.08*r}) },
+  archery:    { name:'Archery', icon:'🏹', branch:'survival', max:3, cost:2, req:['greed'],
+                desc:'+15% ranged ATK, -10% heat per rank', effect:(r)=>({rangedAtk:0.15*r,heatReduction:0.1*r}) },
+  rangedMastery:{ name:'Heat Sink', icon:'❄️', branch:'survival', max:2, cost:2, req:['archery'],
+                desc:'+10 heat cap per rank', effect:(r)=>({rangedMastery:r}) },
 };
 
 export const BRANCHES = ['combat','arcane','survival'];
@@ -44,7 +55,9 @@ export const BRANCHES = ['combat','arcane','survival'];
 export function skillStats(skills){
   const out = { hp:0,mp:0,atk:0,def:0,crit:0,cdr:0,mpregen:0,spelldmg:0,
                 speed:0,stam:0,iframe:0,greed:0,
-                berserk:0,meteor:0,lifesteal:0 };
+                berserk:0,meteor:0,lifesteal:0,
+                meleeAtk:0,rangedAtk:0,polearmBonus:0,parryBonus:0,
+                rangedMastery:0,heatReduction:0 };
   for(const id in skills){
     const rank = skills[id];
     if(rank>0 && SKILLS[id]){

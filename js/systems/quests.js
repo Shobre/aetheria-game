@@ -68,6 +68,27 @@ export class QuestLog {
     this._notify();
   }
   onPickup(){ for(const id in this.active) this._syncCollect(id); this._notify(); }
+  onEscort(mapId){
+    for(const id in this.active){
+      const q = QUESTS[id], st = this.active[id];
+      q.objectives.forEach((o, i) => { if(o.kind === 'escort' && o.to === mapId) st.prog[i] = 1; });
+    }
+    this._notify();
+  }
+  onTimedClear(mapId){
+    for(const id in this.active){
+      const q = QUESTS[id], st = this.active[id];
+      q.objectives.forEach((o, i) => { if(o.kind === 'timed_clear' && o.map === mapId) st.prog[i] = 1; });
+    }
+    this._notify();
+  }
+  onSurvive(mapId){
+    for(const id in this.active){
+      const q = QUESTS[id], st = this.active[id];
+      q.objectives.forEach((o, i) => { if(o.kind === 'survive' && o.map === mapId) st.prog[i] = 1; });
+    }
+    this._notify();
+  }
   _syncCollect(id){
     const q = QUESTS[id], st = this.active[id]; if(!st) return;
     q.objectives.forEach((o, i) => {

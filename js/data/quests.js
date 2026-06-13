@@ -1,9 +1,12 @@
 // Quest registry. Each quest has a giver NPC (by name), objectives, and rewards.
 // Objective kinds:
-//   kill   {enemy:<type|'any'>, count:N}     - tracked on enemy death
-//   reach  {map:<mapId>}                     - tracked on map load
-//   boss   {boss:<bossId>}                   - tracked on boss defeat
-//   collect{item:<id>, count:N}              - tracked on pickup/own
+//   kill         {enemy:<type|'any'>, count:N}     - tracked on enemy death
+//   reach        {map:<mapId>}                     - tracked on map load
+//   boss         {boss:<bossId>}                   - tracked on boss defeat
+//   collect      {item:<id>, count:N}              - tracked on pickup/own
+//   escort       {npc:<name>, from:<map>, to:<map>}- NPC follows player to destination
+//   timed_clear  {map:<mapId>, seconds:N}          - clear all enemies in map within time
+//   survive      {map:<mapId>, seconds:N}          - survive waves for N seconds
 // Rewards: { xp, gold, items:[{id,qty}] }
 export const QUESTS = {
   q_slimes: {
@@ -76,6 +79,26 @@ export const QUESTS = {
     desc:'Wild boars trample the glade. Thin the herd.',
     objectives:[{ kind:'kill', enemy:'boar', count:5, text:'Hunt boars' }],
     reward:{ xp:140, gold:110, items:[{id:'bow_short',qty:1}] },
+  },
+
+  // ---- New quest types ----
+  q_escort: {
+    name:'Escort the Merchant', giver:'Captain',
+    desc:'A merchant needs safe passage to the Whispering Forest. Get them there alive.',
+    objectives:[{ kind:'escort', npc:'Merchant', from:'meadow', to:'forest', text:'Escort Merchant to forest' }],
+    reward:{ xp:300, gold:200, items:[{id:'armor_chain',qty:1}] },
+  },
+  q_timed: {
+    name:'Speed Clear', giver:'Captain',
+    desc:'Clear the Forgotten Crypt of all enemies — fast. You have 60 seconds.',
+    objectives:[{ kind:'timed_clear', map:'dungeon1', seconds:60, text:'Clear the crypt in 60s' }],
+    reward:{ xp:350, gold:250, items:[{id:'ring_haste',qty:1}] },
+  },
+  q_survive: {
+    name:'Survival Trial', giver:'Elder',
+    desc:'Survive the swamp for 45 seconds. Enemies will keep coming.',
+    objectives:[{ kind:'survive', map:'swamp', seconds:45, text:'Survive for 45 seconds' }],
+    reward:{ xp:280, gold:180, items:[{id:'potion_l',qty:3}] },
   },
 };
 
