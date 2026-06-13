@@ -62,11 +62,11 @@ export class Player {
     this.weaponKind = 'sword'; // default
     if(w){
       if(w.ranged) this.weaponKind = 'ranged';
-      else if(id.startsWith('dagger')) this.weaponKind = 'dagger';
-      else if(id.startsWith('spear') || id==='halberd') this.weaponKind = 'spear';
-      else if(id==='greatsword') this.weaponKind = 'greatsword';
-      else if(id==='warhammer') this.weaponKind = 'warhammer';
-      else if(id.startsWith('sword')) this.weaponKind = 'sword';
+      else if(w.id.startsWith('dagger')) this.weaponKind = 'dagger';
+      else if(w.id.startsWith('spear') || w.id==='halberd') this.weaponKind = 'spear';
+      else if(w.id==='greatsword') this.weaponKind = 'greatsword';
+      else if(w.id==='warhammer') this.weaponKind = 'warhammer';
+      else if(w.id.startsWith('sword')) this.weaponKind = 'sword';
     }
   }
 
