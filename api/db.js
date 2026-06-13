@@ -11,25 +11,15 @@ function toValue(v) {
 }
 
 async function tursoExec(sql, args) {
-  if (!_u) return { error: 'no DB URL' };
-  if (!_tok) return { error: 'no DB token' };
-  const body = {
-    requests: [{
-      type: 'execute',
-      stmt: {
-        sql,
-        args: (args || []).map(toValue)
-      }
-    }]
-  };
+  if (!_u || !_tok) return { error: 'not configured' };
   const res = await fetch(_u.replace('libsql://', 'https://') + '/v2/pipeline', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tok },
-    body: JSON.stringify(body)
+    body: JSON.stringify({ requests: [{ type: 'execute', stmt: { sql, args: (args || []).map(toValue) } }] })
   });
   if (!res.ok) {
     const errText = await res.text();
-    return { error: 'HTTP ' + res.status + ': ' + errText.substring(0, 300) };
+    return { error: 'HTTP ' + res.status + ': ' + errText.substring(0, 200) };
   }
   const data = await res.json();
   try {

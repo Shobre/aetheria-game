@@ -15,14 +15,12 @@ module.exports = async function handler(req, res) {
       if (!username || !hash) { res.statusCode = 400; res.end(JSON.stringify({ error: 'missing fields' })); return; }
 
       if (action === 'register') {
-        const check = await tursoExec('SELECT password_hash FROM users WHERE username = ?', [username]);
-        if (check.rows && check.rows[0]) {
-          res.end(JSON.stringify({ ok: false, error: 'username taken' }));
-          return;
-        }
-        const r = await tursoExec('INSERT INTO users (username, password_hash, created_at) VALUES (?,?,?)', [username, hash, Date.now()]);
+        const r = await tursoExec('INSERT OR IGNORE INTO users (username, password_hash, created_at) VALUES (?,?,?)', [username, hash, Date.now()]);
         if (r.error) { res.statusCode = 500; res.end(JSON.stringify({ error: r.error })); return; }
-        res.end(JSON.stringify({ ok: true, created: true }));
+        const check = await tursoExec('SELECT password_hash FROM users WHERE username = ?', [username]);
+        const row = check.rows && check.rows[0];
+        const created = !row || row[0] === hash;
+        res.end(JSON.stringify({ ok: true, created }));
         return;
       }
 
