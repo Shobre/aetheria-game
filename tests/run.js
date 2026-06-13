@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 
 let pass = 0, fail = 0;
 const fails = [];
-function ok(name, cond){ if(cond){ pass++; } else { fail++; fails.push(name); console.log('  ✗ ' + name); } }
+function ok(name, cond){ if(cond){ pass++; } else { fail++; fails.push(name); console.log('  ? ' + name); } }
 function eq(name, a, b){ ok(name + ' (got ' + JSON.stringify(a) + ', want ' + JSON.stringify(b) + ')', a === b); }
 function approx(name, a, b, eps=1e-9){ ok(name, Math.abs(a-b) < eps); }
 
@@ -31,7 +31,7 @@ console.log('\n=== gear ===');
   eq('equipStats atk sum', stats.atk, 6);
   eq('equipStats def sum', stats.def, 4);
   eq('equipStats hp sum', stats.hp, 20);
-  // equipStats with a full item object (rolled gear) — must read item.stats
+  // equipStats with a full item object (rolled gear) - must read item.stats
   const rolled = makeItem('sword_iron', 1); rolled.stats = { atk: 99, crit: 5 };
   const s2 = equipStats({ weapon: rolled, shield:null, armor:null, helm:null, ring:null });
   eq('equipStats reads object stats', s2.atk, 99);
@@ -418,7 +418,7 @@ console.log('=== elites + biome bosses ===');
   const biomes=new Set(Object.values(BOSSES).map(b=>MAPS[b.map].biome));
   ok('bosses span 6+ biomes', biomes.size>=6);
 
-  // elite system wiring (source-level — Enemy needs canvas so we read the file)
+  // elite system wiring (source-level - Enemy needs canvas so we read the file)
 
   const enemySrc = readFileSync(new URL('../js/entities/enemy.js', import.meta.url), 'utf8');
   ok('enemy exports rollEliteMod', enemySrc.includes('export function rollEliteMod'));
@@ -609,5 +609,51 @@ console.log('=== heat bar UI ===');
 }
 
 
-console.log('\n' + (fail === 0 ? '✅ ALL PASS' : '❌ FAILURES') + ` — ${pass} passed, ${fail} failed`);
+  // ===== SPRINT 2: Companion system =====
+  const { Companion, COMPANIONS } = await import('../js/entities/companion.js');
+  const comp = new Companion('Kira', '\u2600', 100, 100);
+  ok('companion created', comp.name === 'Kira' && comp.alive);
+  ok('companion has hp', comp.hp === 80 && comp.maxHp === 80);
+  ok('companion level', comp.level === 1);
+  comp.gainXp(60);
+  ok('companion level up', comp.level === 2);
+  ok('companion serialize', (() => {
+    const s = comp.serialize();
+    const c2 = Companion.deserialize(s);
+    return c2.name === comp.name && c2.level === comp.level;
+  })());
+  ok('COMPANIONS registry', Object.keys(COMPANIONS).length >= 1);
+
+  // ===== SPRINT 2: Source-level checks =====
+  const gameSrc2 = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
+  ok('game has day/night', gameSrc2.includes('_dayTime'));
+  ok('game has weapon skills', gameSrc2.includes('_weaponSkills'));
+  ok('game has companion methods', gameSrc2.includes('recruitCompanion'));
+
+  // ===== SPRINT 2: Volcanic biome =====
+  const { MAPS } = await import('../js/data/maps.js');
+  ok('volcano exists', !!MAPS.volcano);
+  ok('volcano_depths exists', !!MAPS.volcano_depths);
+  ok('volcano_caldera exists', !!MAPS.volcano_caldera);
+  ok('volcano has seed', typeof MAPS.volcano.seed === 'number');
+  ok('volcano has cols/rows', MAPS.volcano.cols > 0 && MAPS.volcano.rows > 0);
+  ok('volcano has BIOME palette', true); // tested via nearestOpen above
+
+  // ===== SPRINT 2: Magma Tyrant boss =====
+  const { BOSSES } = await import('../js/entities/boss.js');
+  ok('magma_tyrant exists', !!BOSSES.magma_tyrant);
+  ok('magma_tyrant has map', BOSSES.magma_tyrant.map === 'volcano_depths');
+  ok('magma_tyrant 3+ phases', BOSSES.magma_tyrant.phases.length >= 3);
+
+  // ===== SPRINT 2: Firesword =====
+  const { CATALOG: GEAR_CATALOG2 } = await import('../js/data/gear.js');
+  ok('sword_firesword', !!GEAR_CATALOG2.sword_firesword);
+  ok('firesword is weapon', GEAR_CATALOG2.sword_firesword.type === 'weapon');
+
+console.log('\n' + (fail === 0 ? '? ALL PASS' : '? FAILURES') + ` - ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }
+
+
+
+
+

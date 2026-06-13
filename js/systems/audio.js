@@ -1,4 +1,4 @@
-// Procedural sound + music via Web Audio API (no asset files needed — stays portable).
+// Procedural sound + music via Web Audio API (no asset files needed - stays portable).
 export class Audio {
   constructor(){
     this.ctx=null; this.sfxVol=0.7; this.musicVol=0.4;
@@ -92,3 +92,4 @@ export class Audio {
     if(this.music && this.music.master) this.music.master.gain.value=this.musicVol*(this.boss?0.5:0.32);
   }
 }
+

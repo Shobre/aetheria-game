@@ -13,6 +13,7 @@ import { QUESTS } from '../data/quests.js';
 import { rollRarity, applyRarity, rarityName } from '../data/affixes.js';
 import { SPELLS, STARTER_SPELLS, knownSpells, spellRank } from '../data/spells.js';
 import { reforge, upgrade, reforgeCost, upgradeCost, canUpgrade } from './craft.js';
+import { Companion, COMPANIONS } from '../entities/companion.js';
 
 // difficulty scale per map (deeper = tougher enemies)
 const MAP_SCALE = { meadow:1, forest:1.25, desert:1.45, cave:1.6, dungeon1:1.9, house1:1,
@@ -35,6 +36,9 @@ export class Game {
     this._surviveEnemies=0;     // spawned enemies for survive quests
     this.boss=null; this.bossesDead={}; this.checkpoint=null;
     this._autoT=0; this.autosaveInterval=60; // seconds between timed autosaves
+    this._dayTime=0; this._dayLen=120; // day/night cycle (seconds)
+    this._weaponSkills={}; // {sword:0, axe:0, spear:0, bow:0, staff:0}
+    this._companions=[]; // active companions
   }
 
   start(state){
@@ -43,6 +47,8 @@ export class Game {
     this.player=new Player(state.pos.x, state.pos.y, state);
     this.inventory=state.inventory.map(i=>({...i}));
     this.hotbar=[...state.hotbar];
+    this._weaponSkills=state.weaponSkills||{};
+    this._companions=(state.companions||[]).map(c=>Companion.deserialize(c));
     this.openedChests=state.openedChests||{};
     this.stash=(state.stash||[]).map(i=>({...i}));
     this.bossesDead=state.bossesDead||{};
@@ -241,6 +247,16 @@ export class Game {
       if(n.bank){ this.openStash(n.name); return; }
       if(n.craft){ this.openCraft(n.name); return; }
       if(n.shop){ this.openShop(n.stock, n.name); return; }
+      // companion recruitment
+      if(n.companion){
+        if(this._companions.length>=1){ this.toast('Your party is full. Dismiss your current companion first.'); return; }
+        this.recruitCompanion(n.companion);
+        return;
+      }
+      // dismiss companion (talk to any NPC while holding Shift)
+      if(this._companions.length>0 && this.input.shift){
+        this.dismissCompanion(); return;
+      }
       // quest handling: turn in completed, else offer next available
       if(this.quests){
         const gs=this.quests.giverState(n.name);
@@ -277,6 +293,23 @@ export class Game {
     for(const e of ents) e.draw(ctx,this.cam);
     for(const p of this.projectiles) p.draw(ctx,this.cam);
     for(const p of this.particles) p.draw(ctx,this.cam);
+    // day/night overlay
+    if(this._dayTime>0){
+      const dayFrac=(Math.sin((this._dayTime/this._dayLen)*Math.PI*2-Math.PI/2)+1)/2;
+      const nightAlpha=Math.max(0,0.45-dayFrac*0.45);
+      if(nightAlpha>0.01){
+        ctx.fillStyle='rgba(10,10,30,'+nightAlpha+')';
+        ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+        // torch glow around player
+        const p=this.player;
+        const grad=ctx.createRadialGradient(p.x-cam.x,p.y-cam.y,10,p.x-cam.x,p.y-cam.y,90);
+        grad.addColorStop(0,'rgba(255,180,60,'+(nightAlpha*0.15)+')');
+        grad.addColorStop(1,'rgba(255,180,60,0)');
+        ctx.fillStyle=grad; ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+      }
+    }
+    // companion drawing
+    for(const c of this._companions) c.draw(ctx,this.cam);
     // transition fade
     if(this.transition>0){ ctx.fillStyle='rgba(0,0,0,'+(this.transition/0.6)+')';
       ctx.fillRect(0,0,this.canvas.width,this.canvas.height); }
@@ -332,6 +365,16 @@ export class Game {
     const reach=p.reach||44, arc=1.15;
     for(const e of this.enemies){ if(e.dead) continue; this._hitTargetInArc(e,p,reach,arc); }
     if(this.boss && !this.boss.dead) this._hitTargetInArc(this.boss,p,reach,arc);
+    // weapon skill XP
+    this._addWeaponSkillXp(p);
+  }
+  _addWeaponSkillXp(p){
+    if(!p.ranged){
+      const w=p.weapon||'sword';
+      const key=w.includes('axe')?'axe':w.includes('spear')||w.includes('halberd')?'spear':'sword';
+      if(!this._weaponSkills[key]) this._weaponSkills[key]=0;
+      this._weaponSkills[key]+=1;
+    }
   }
   castSpell(p, id){
     const sp=SPELLS[id]; if(!sp) return;
@@ -599,6 +642,23 @@ export class Game {
     this.loadMap(cp.map, cp.tx, cp.ty, false);
     const ds=document.getElementById('death-screen'); ds.classList.add('hidden'); ds.classList.remove('flex');
   }
+
+  // ===== COMPANION SYSTEM =====
+  recruitCompanion(id){
+    const def=COMPANIONS[id]; if(!def) return;
+    if(this._companions.length>=1) return; // max 1 companion for now
+    const c=new Companion(def.name, def.icon, this.player.x+20, this.player.y+20);
+    c.color=def.color;
+    this._companions.push(c);
+    this.toast(def.name+' joined your party!');
+    this.sfx('pickup');
+  }
+  dismissCompanion(){
+    if(!this._companions.length) return;
+    const c=this._companions.pop();
+    this.toast(c.name+' left the party.');
+  }
+
   _buildState(){
     return { ...this.player.serialize(), slot:this.slot,
       map:this.currentMap, inventory:this.inventory, hotbar:this.hotbar,
@@ -607,7 +667,9 @@ export class Game {
       quests:this.quests?this.quests.serialize():undefined,
       boughtSpells:this._boughtSpells,
       username:this._username,
-      heat:this.player.heat, _overheatCd:this.player._overheatCd };
+      heat:this.player.heat, _overheatCd:this.player._overheatCd,
+      weaponSkills:this._weaponSkills,
+      companions:this._companions.map(c=>c.serialize()) };
   }
   save(){
     const u=this._username; if(u) SaveSystem.saveUser(u,this.slot,this._buildState()); else SaveSystem.save(this.slot,this._buildState());
@@ -635,6 +697,9 @@ export class Game {
   resize(){ this.canvas.width=window.innerWidth; this.canvas.height=window.innerHeight;
     this.ctx.imageSmoothingEnabled=false; if(this.cam) this.cam.resize(this.canvas.width,this.canvas.height); }
 }
+
+
+
 
 
 

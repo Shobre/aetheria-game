@@ -170,6 +170,8 @@ export class World {
   isSolid(px,py){
     const x=Math.floor(px/TILE), y=Math.floor(py/TILE);
     if(x<0||y<0||x>=this.cols||y>=this.rows) return true;
+    if(y<0||y>=this.rows||x<0||x>=this.cols) return true;
+    if(!this.map[y]) return true;
     return SOLID.has(this.map[y][x]);
   }
 
@@ -378,4 +380,6 @@ export class Camera {
       this.shake*=0.85; if(this.shake<0.3) this.shake=0; }
   }
 }
+
+
 

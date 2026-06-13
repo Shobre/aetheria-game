@@ -2,51 +2,52 @@
 // slot: weapon | shield | armor | helm | ring  (equippable)  OR  consumable
 export const CATALOG = {
   // ---- consumables ----
-  potion:   { name:'Health Potion', icon:'🧪', type:'consumable', price:25,  sell:10,
+  potion:   { name:'Health Potion', icon:'??', type:'consumable', price:25,  sell:10,
               use:(g)=>{ g.player.heal(40,g); g.sfx('drink'); } },
-  potion_l: { name:'Greater Potion', icon:'🍶', type:'consumable', price:70, sell:30,
+  potion_l: { name:'Greater Potion', icon:'??', type:'consumable', price:70, sell:30,
               use:(g)=>{ g.player.heal(110,g); g.sfx('drink'); } },
-  ether:    { name:'Mana Ether', icon:'🔮', type:'consumable', price:30, sell:12,
+  ether:    { name:'Mana Ether', icon:'??', type:'consumable', price:30, sell:12,
               use:(g)=>{ g.player.restoreMp(30); g.floater('+30 MP',g.player.x,g.player.y-16,'#3b8be8'); g.sfx('drink'); } },
-  bomb:     { name:'Bomb', icon:'💣', type:'consumable', price:40, sell:15,
+  bomb:     { name:'Bomb', icon:'??', type:'consumable', price:40, sell:15,
               use:(g)=>{ g.throwBomb(); g.sfx('fire'); } },
-  elixir:   { name:'Elixir', icon:'✨', type:'consumable', price:120, sell:50,
+  elixir:   { name:'Elixir', icon:'?', type:'consumable', price:120, sell:50,
               use:(g)=>{ g.player.heal(200,g); g.player.restoreMp(120); g.sfx('levelup'); } },
 
   // ---- weapons (atk) ----
-  sword_wood:  { name:'Wooden Sword', icon:'🗡️', type:'weapon', price:0,   sell:5,   stats:{atk:2} },
-  sword_iron:  { name:'Iron Sword',   icon:'⚔️', type:'weapon', price:120, sell:50,  stats:{atk:6} },
-  sword_flame: { name:'Flameblade',   icon:'🔥', type:'weapon', price:380, sell:160, stats:{atk:12,mp:10} },
-  sword_frost: { name:'Frostfang',    icon:'❄️', type:'weapon', price:420, sell:175, stats:{atk:11,crit:8} },
+  sword_wood:  { name:'Wooden Sword', icon:'???', type:'weapon', price:0,   sell:5,   stats:{atk:2} },
+  sword_iron:  { name:'Iron Sword',   icon:'??', type:'weapon', price:120, sell:50,  stats:{atk:6} },
+  sword_flame: { name:'Flameblade',   icon:'??', type:'weapon', price:380, sell:160, stats:{atk:12,mp:10} },
+  sword_frost: { name:'Frostfang',    icon:'??', type:'weapon', price:420, sell:175, stats:{atk:11,crit:8} },
   // melee variety: daggers (fast, short), spears (slow, long reach), greatswords (slow, heavy)
-  dagger:      { name:'Dagger',       icon:'🔪', type:'weapon', price:90,  sell:38,  stats:{atk:4,crit:10}, atkSpeed:0.20, reach:34 },
-  dagger_venom:{ name:'Venom Dagger', icon:'🗡️', type:'weapon', price:300, sell:125, stats:{atk:7,crit:12}, atkSpeed:0.20, reach:34 },
-  spear_iron:  { name:'Iron Spear',   icon:'🔱', type:'weapon', price:180, sell:75,  stats:{atk:8}, atkSpeed:0.42, reach:68 },
-  halberd:     { name:'Halberd',      icon:'⚜️', type:'weapon', price:360, sell:150, stats:{atk:13,def:2}, atkSpeed:0.46, reach:72 },
-  greatsword:  { name:'Greatsword',   icon:'🗡', type:'weapon', price:340, sell:140, stats:{atk:16}, atkSpeed:0.55, reach:54 },
-  warhammer:   { name:'Warhammer',    icon:'🔨', type:'weapon', price:400, sell:165, stats:{atk:18,def:3}, atkSpeed:0.62, reach:50 },
+  dagger:      { name:'Dagger',       icon:'??', type:'weapon', price:90,  sell:38,  stats:{atk:4,crit:10}, atkSpeed:0.20, reach:34 },
+  dagger_venom:{ name:'Venom Dagger', icon:'???', type:'weapon', price:300, sell:125, stats:{atk:7,crit:12}, atkSpeed:0.20, reach:34 },
+  spear_iron:  { name:'Iron Spear',   icon:'??', type:'weapon', price:180, sell:75,  stats:{atk:8}, atkSpeed:0.42, reach:68 },
+  halberd:     { name:'Halberd',      icon:'??', type:'weapon', price:360, sell:150, stats:{atk:13,def:2}, atkSpeed:0.46, reach:72 },
+  greatsword:  { name:'Greatsword',   icon:'??', type:'weapon', price:340, sell:140, stats:{atk:16}, atkSpeed:0.55, reach:54 },
+  warhammer:   { name:'Warhammer',    icon:'??', type:'weapon', price:400, sell:165, stats:{atk:18,def:3}, atkSpeed:0.62, reach:50 },
   // ranged weapons: left-click fires a physical bolt toward the mouse
-  bow_short:   { name:'Short Bow',    icon:'🏹', type:'weapon', price:150, sell:62,  stats:{atk:6}, ranged:true, atkSpeed:0.40, shotSpeed:7.5 },
-  bow_long:    { name:'Long Bow',     icon:'🏹', type:'weapon', price:340, sell:140, stats:{atk:10,crit:6}, ranged:true, atkSpeed:0.46, shotSpeed:8.5 },
-  crossbow:    { name:'Crossbow',     icon:'🎯', type:'weapon', price:300, sell:125, stats:{atk:12}, ranged:true, atkSpeed:0.70, shotSpeed:9.5 },
-  staff_arcane:{ name:'Arcane Staff', icon:'🪄', type:'weapon', price:380, sell:160, stats:{atk:7,mp:30,spelldmg:0}, ranged:true, atkSpeed:0.50, shotSpeed:6.5 },
+  bow_short:   { name:'Short Bow',    icon:'??', type:'weapon', price:150, sell:62,  stats:{atk:6}, ranged:true, atkSpeed:0.40, shotSpeed:7.5 },
+  bow_long:    { name:'Long Bow',     icon:'??', type:'weapon', price:340, sell:140, stats:{atk:10,crit:6}, ranged:true, atkSpeed:0.46, shotSpeed:8.5 },
+  crossbow:    { name:'Crossbow',     icon:'??', type:'weapon', price:300, sell:125, stats:{atk:12}, ranged:true, atkSpeed:0.70, shotSpeed:9.5 },
+  staff_arcane:{ name:'Arcane Staff', icon:'??', type:'weapon', price:380, sell:160, stats:{atk:7,mp:30,spelldmg:0}, ranged:true, atkSpeed:0.50, shotSpeed:6.5 },
 
   // ---- shields (def + block) ----
-  shield_wood: { name:'Wooden Shield', icon:'🛡️', type:'shield', price:60,  sell:25,  stats:{def:3} },
-  shield_iron: { name:'Iron Shield',   icon:'🔰', type:'shield', price:200, sell:85,  stats:{def:7} },
+  shield_wood: { name:'Wooden Shield', icon:'???', type:'shield', price:60,  sell:25,  stats:{def:3} },
+  shield_iron: { name:'Iron Shield',   icon:'??', type:'shield', price:200, sell:85,  stats:{def:7} },
 
   // ---- armor (def + hp) ----
-  armor_leather:{ name:'Leather Armor', icon:'🧥', type:'armor', price:90,  sell:38,  stats:{def:4,hp:20} },
-  armor_chain:  { name:'Chainmail',     icon:'🪖', type:'armor', price:260, sell:110, stats:{def:9,hp:50} },
-  armor_mage:   { name:'Mage Robe',     icon:'👘', type:'armor', price:240, sell:100, stats:{def:3,mp:40,hp:15} },
+  armor_leather:{ name:'Leather Armor', icon:'??', type:'armor', price:90,  sell:38,  stats:{def:4,hp:20} },
+  armor_chain:  { name:'Chainmail',     icon:'??', type:'armor', price:260, sell:110, stats:{def:9,hp:50} },
+  armor_mage:   { name:'Mage Robe',     icon:'??', type:'armor', price:240, sell:100, stats:{def:3,mp:40,hp:15} },
 
   // ---- helms ----
-  helm_iron:   { name:'Iron Helm', icon:'⛑️', type:'helm', price:110, sell:46, stats:{def:5,hp:15} },
+  helm_iron:   { name:'Iron Helm', icon:'??', type:'helm', price:110, sell:46, stats:{def:5,hp:15} },
 
   // ---- rings (utility) ----
-  ring_power:  { name:'Ring of Power',  icon:'💍', type:'ring', price:300, sell:125, stats:{atk:5,crit:5} },
-  ring_vigor:  { name:'Ring of Vigor',  icon:'💎', type:'ring', price:300, sell:125, stats:{hp:60,def:2} },
-  ring_focus:  { name:'Ring of Focus',  icon:'🔷', type:'ring', price:300, sell:125, stats:{mp:60,cdr:15} },
+  ring_power:  { name:'Ring of Power',  icon:'??', type:'ring', price:300, sell:125, stats:{atk:5,crit:5} },
+  ring_vigor:  { name:'Ring of Vigor',  icon:'??', type:'ring', price:300, sell:125, stats:{hp:60,def:2} },
+  ring_focus:  { name:'Ring of Focus',  icon:'??', type:'ring', price:300, sell:125, stats:{mp:60,cdr:15} },
+  sword_firesword: { name:'Firesword', icon:'??', type:'weapon', slot:'hand', atk:26, atkSpeed:1.0, crit:10, elemental:'fire', price:280, weight:4 },
 };
 
 export const EQUIP_SLOTS = ['weapon','shield','armor','helm','ring'];
@@ -102,7 +103,10 @@ export function compareItem(item, equipment){
   const a = _scoreStats(item.stats);
   const b = _scoreStats(equipped ? equipped.stats : null);
   const delta = a - b;
-  if(delta > 0)  return { delta, dir:'better',  text:'▲ '+Math.round(delta) };
-  if(delta < 0)  return { delta, dir:'worse',   text:'▼ '+Math.round(Math.abs(delta)) };
+  if(delta > 0)  return { delta, dir:'better',  text:' '+Math.round(delta) };
+  if(delta < 0)  return { delta, dir:'worse',   text:' '+Math.round(Math.abs(delta)) };
   return { delta:0, dir:'equal', text:'=' };
 }
+
+
+

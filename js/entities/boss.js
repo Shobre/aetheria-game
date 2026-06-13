@@ -85,6 +85,17 @@ export const BOSSES = {
       { at:0.30, attacks:['poisonNova','burst','summon','charge'], interval:1.2, tint:'#aede82' },
     ],
   },
+  magma_tyrant: {
+    name:'Magma Tyrant', icon:'??', color:'#ff4400',
+    map:'volcano_depths',
+    hp:1800, atk:28, def:12, xp:800, gold:600,
+    drop:'sword_firesword',
+    phases:[
+      { at:1.0, attacks:['fireball','summon','charge'], interval:1.8, tint:'#ff6600' },
+      { at:0.50, attacks:['fireball','lavaPool','summon','charge'], interval:1.3, tint:'#ff2200' },
+      { at:0.25, attacks:['lavaPool','fireball','summon','charge','nova'], interval:0.9, tint:'#ff0000' },
+    ],
+  },
 };
 
 export class Boss {
@@ -217,3 +228,5 @@ export class Boss {
       ctx.beginPath(); ctx.arc(sx,sy+bob,this.r+5,0,7); ctx.stroke(); }
   }
 }
+
+

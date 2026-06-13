@@ -18,7 +18,7 @@ export const MAPS = {
       { x:58, y:38, to:'meadow_glade', tx:3, ty:20, label:'Sunlit Glade' },
     ],
     npcs:[
-      { x:26, y:18, name:'Elder', icon:'🧙', lines:['Welcome, traveler.','Beasts roam each land. Gear up before you delve.','Aldermere City lies to the south — shops, quests and folk await.'] },
+      { x:26, y:18, name:'Elder', icon:'??', lines:['Welcome, traveler.','Beasts roam each land. Gear up before you delve.','Aldermere City lies to the south - shops, quests and folk await.'] },
     ],
     chests:[
       { x:50, y:38, loot:{type:'item',id:'potion',qty:3} },
@@ -37,7 +37,7 @@ export const MAPS = {
       { x:52, y:3, to:'forest_deep', tx:3, ty:25, label:'Deepwood Thicket' },
     ],
     npcs:[
-      { x:28, y:25, name:'Ranger', icon:'🏹', lines:['The crypt below crawls with undead.','Mind the archers — they strike from afar.'] },
+      { x:28, y:25, name:'Ranger', icon:'??', lines:['The crypt below crawls with undead.','Mind the archers - they strike from afar.'] },
     ],
     chests:[
       { x:45, y:10, loot:{type:'item',id:'armor_leather',qty:1} },
@@ -56,7 +56,7 @@ export const MAPS = {
       { x:30, y:40, to:'desert_ruins', tx:24, ty:3, label:'Buried Ruins' },
     ],
     npcs:[
-      { x:30, y:20, name:'Nomad', icon:'🧕', lines:['Water is life out here.','Scorpions burrow and lunge — stay nimble.'] },
+      { x:30, y:20, name:'Nomad', icon:'??', lines:['Water is life out here.','Scorpions burrow and lunge - stay nimble.'] },
     ],
     chests:[
       { x:50, y:8,  loot:{type:'item',id:'sword_iron',qty:1} },
@@ -106,7 +106,7 @@ export const MAPS = {
       { x:52, y:5, to:'snow_glacier', tx:3, ty:23, label:'Glacier Hollow' },
     ],
     npcs:[
-      { x:30, y:24, name:'Wayfarer', icon:'🧗', lines:['The cold bites deep here.','Frostlings chill your blood — keep moving.','The catacomb lies past the northern pass.'] },
+      { x:30, y:24, name:'Wayfarer', icon:'??', lines:['The cold bites deep here.','Frostlings chill your blood - keep moving.','The catacomb lies past the northern pass.'] },
     ],
     chests:[
       { x:48, y:8,  loot:{type:'item',id:'shield_iron',qty:1} },
@@ -124,7 +124,7 @@ export const MAPS = {
       { x:5, y:5, to:'swamp_depths', tx:50, ty:40, label:'Bog Depths' },
     ],
     npcs:[
-      { x:30, y:24, name:'Hermit', icon:'🧓', lines:['Few return from the mire.','Spitters spew poison — strike fast.'] },
+      { x:30, y:24, name:'Hermit', icon:'??', lines:['Few return from the mire.','Spitters spew poison - strike fast.'] },
     ],
     chests:[
       { x:50, y:10, loot:{type:'item',id:'armor_mage',qty:1} },
@@ -159,11 +159,11 @@ export const MAPS = {
       { x:42, y:30, to:'shop_general',tx:6,ty:12, label:'General Store', door:true },
     ],
     npcs:[
-      { x:24, y:20, name:'Mayor', icon:'🤵', lines:['Welcome to Aldermere!','Our shops ring the plaza. Adventurers are always needed.'] },
-      { x:16, y:14, name:'Captain', icon:'💂', lines:['Monsters press in from every road.','Clear the crypts and you will be rewarded.'] },
-      { x:32, y:26, name:'Scholar', icon:'👩‍🏫', lines:['Knowledge is the sharpest blade.','Seek the arcane staff in the Arcanum.'] },
-      { x:24, y:32, name:'Bard', icon:'🎻', lines:['A song for a coin?','They say a witch haunts the bog depths...'] },
-      { x:33, y:14, name:'Banker', icon:'🏦', bank:true, lines:['Store your treasures safely.','Press F to open your stash.'] },
+      { x:24, y:20, name:'Mayor', icon:'??', lines:['Welcome to Aldermere!','Our shops ring the plaza. Adventurers are always needed.'] },
+      { x:16, y:14, name:'Captain', icon:'??', lines:['Monsters press in from every road.','Clear the crypts and you will be rewarded.'] },
+      { x:32, y:26, name:'Scholar', icon:'?????', lines:['Knowledge is the sharpest blade.','Seek the arcane staff in the Arcanum.'] },
+      { x:24, y:32, name:'Bard', icon:'??', lines:['A song for a coin?','They say a witch haunts the bog depths...'] },
+      { x:33, y:14, name:'Banker', icon:'??', bank:true, lines:['Store your treasures safely.','Press F to open your stash.'] },
     ],
     chests:[ { x:3, y:3, loot:{type:'gold',amount:60} } ],
   },
@@ -173,17 +173,17 @@ export const MAPS = {
     name:'Blacksmith', biome:'house', cols:14, rows:14, seed:121, music:'calm', interior:true,
     enemies:{ count:0, types:[] },
     portals:[ { x:6, y:12, to:'city', tx:6, ty:11, label:'Plaza', door:true } ],
-    npcs:[ { x:7, y:5, name:'Smith Garon', icon:'🧔', shop:true,
+    npcs:[ { x:7, y:5, name:'Smith Garon', icon:'??', shop:true,
       stock:['sword_iron','greatsword','warhammer','spear_iron','halberd','dagger','shield_wood','shield_iron','helm_iron','armor_chain'],
       lines:['Steel for steel coin.','Press F to browse my forge.'] },
-      { x:10, y:7, name:'Forge', icon:'⚒️', craft:true, lines:['Reforge and upgrade your gear here.','Press F to use the anvil.'] } ],
+      { x:10, y:7, name:'Forge', icon:'??', craft:true, lines:['Reforge and upgrade your gear here.','Press F to use the anvil.'] } ],
     chests:[],
   },
   shop_alch: {
     name:'Alchemist', biome:'house', cols:14, rows:14, seed:122, music:'calm', interior:true,
     enemies:{ count:0, types:[] },
     portals:[ { x:6, y:12, to:'city', tx:42, ty:11, label:'Plaza', door:true } ],
-    npcs:[ { x:7, y:5, name:'Mira the Alchemist', icon:'🧑‍🔬', shop:true,
+    npcs:[ { x:7, y:5, name:'Mira the Alchemist', icon:'?????', shop:true,
       stock:['potion','potion_l','ether','elixir','bomb'],
       lines:['Potions, tonics, cures!','Press F to trade.'] } ],
     chests:[],
@@ -192,7 +192,7 @@ export const MAPS = {
     name:'Arcanum', biome:'house', cols:14, rows:14, seed:123, music:'calm', interior:true,
     enemies:{ count:0, types:[] },
     portals:[ { x:6, y:12, to:'city', tx:6, ty:31, label:'Plaza', door:true } ],
-    npcs:[ { x:7, y:5, name:'Archmage Vael', icon:'🧙‍♂️', shop:true,
+    npcs:[ { x:7, y:5, name:'Archmage Vael', icon:'????', shop:true,
       stock:['staff_arcane','sword_flame','sword_frost','armor_mage','ring_focus','ether'],
       lines:['The weave bends to the worthy.','Press F to peruse arcane goods.'] } ],
     chests:[],
@@ -201,7 +201,7 @@ export const MAPS = {
     name:'General Store', biome:'house', cols:14, rows:14, seed:124, music:'calm', interior:true,
     enemies:{ count:0, types:[] },
     portals:[ { x:6, y:12, to:'city', tx:42, ty:31, label:'Plaza', door:true } ],
-    npcs:[ { x:7, y:5, name:'Trader Pol', icon:'🧑‍🌾', shop:true,
+    npcs:[ { x:7, y:5, name:'Trader Pol', icon:'?????', shop:true,
       stock:['bow_short','bow_long','crossbow','dagger','dagger_venom','armor_leather','shield_wood','ring_vigor','ring_power','potion','bomb'],
       lines:['A bit of everything!','Press F to shop.'] } ],
     chests:[],
@@ -212,7 +212,7 @@ export const MAPS = {
     name:'Sunlit Glade', biome:'grass', cols:48, rows:40, seed:131, music:'calm',
     enemies:{ count:8, types:['slime','bat','boar'] },
     portals:[ { x:2, y:20, to:'meadow', tx:55, ty:38, label:'Greenwood Meadow' } ],
-    npcs:[ { x:24, y:20, name:'Forager', icon:'🧺', lines:['The glade is peaceful... mostly.','Boars charge when startled.'] } ],
+    npcs:[ { x:24, y:20, name:'Forager', icon:'??', lines:['The glade is peaceful... mostly.','Boars charge when startled.'] } ],
     chests:[ { x:42, y:6, loot:{type:'item',id:'dagger',qty:1} }, { x:6, y:34, loot:{type:'gold',amount:90} } ],
   },
   forest_deep: {
@@ -253,14 +253,81 @@ export const MAPS = {
       { x:8, y:14, to:'meadow', tx:30, ty:24, label:'Outside', door:true },
     ],
     npcs:[
-      { x:9, y:5, name:'Merchant', icon:'🧌', shop:true,
+      { x:9, y:5, name:'Merchant', icon:'??', shop:true,
         lines:['Finest wares in the realm!','Press F to browse my shop.'] },
     ],
     chests:[],
   },
+  // ===================== VOLCANIC ZONE =====================
+  volcano: {
+    id:'volcano', name:'Scorched Caldera', cols:40, rows:40, seed:777, biome:'volcano',
+    pal:{ fa:'#3a1a0a', fb:'#4a2a1a', pa:'#5a3a2a', pb:'#6a4a3a', wd:'#2a1a0a', wl:'#8a5a3a', liquid:'#8a2a0a', liquid2:'#9a3a1a', deco:['rock','crystal','barrel','cactus','bones'] },
+    npcs:[
+      { x:7, y:5, name:'Ember Sage', icon:'??', lines:['The caldera burns with ancient fire.','Beware the Magma Tyrant below.'] },
+    ],
+    portals:[
+      { x:38, y:20, to:'city', tx:12, ty:56 },
+      { x:20, y:1, to:'volcano_depths', tx:20, ty:38 },
+    ],
+    chests:[
+      { x:30, y:32 }, { x:12, y:30 },
+    ],
+    enemies:[
+      { type:'bat', x:15, y:15 },
+      { type:'bat', x:25, y:25 },
+    ],
+    enemies2:[
+      { type:'scorpion', x:30, y:10 },
+      { type:'scorpion', x:10, y:30 },
+    ],
+    decor:[
+      { x:5, y:5, type:'rock' }, { x:35, y:35, type:'rock' },
+      { x:20, y:20, type:'crystal' },
+    ],
+  },
+  volcano_depths: {
+    id:'volcano_depths', name:'Magma Core', cols:40, rows:40, seed:778, biome:'volcano',
+    pal:{ fa:'#2a0a00', fb:'#3a1a0a', pa:'#5a2a1a', pb:'#6a3a2a', wd:'#1a0a00', wl:'#7a3a1a', liquid:'#8a1a0a', liquid:'#9a2a1a' },
+    npcs:[],
+    portals:[
+      { x:20, y:38, to:'volcano', tx:20, ty:3 },
+    ],
+    chests:[
+      { x:25, y:25 }, { x:15, y:15 },
+    ],
+    enemies:[
+      { type:'bat', x:20, y:20 },
+    ],
+    enemies2:[],
+    decor:[
+      { x:10, y:10, type:'crystal' }, { x:30, y:30, type:'crystal' },
+      { x:20, y:10, type:'rock' }, { x:10, y:30, type:'rock' },
+      { x:30, y:10, type:'rock' },
+    ],
+    boss:'magma_tyrant',
+  },
+  volcano_caldera: {
+    id:'volcano_caldera', name:'Caldera Rim', cols:35, rows:35, seed:779, biome:'volcano',
+    pal:{ fa:'#3a1a0a', fb:'#4a2a1a', pa:'#5a3a2a', pb:'#6a4a3a', wd:'#1a0a00', wl:'#7a4a2a', liquid:'#8a2a0a', liquid2:'#9a3a1a', deco:['rock','crystal','cactus','bones'] },
+    npcs:[],
+    portals:[
+      { x:1, y:17, to:'city', tx:78, ty:30 },
+    ],
+    chests:[],
+    enemies:[
+      { type:'scorpion', x:17, y:20 },
+      { type:'bat', x:25, y:10 },
+    ],
+    enemies2:[
+      { type:'scorpion', x:10, y:25 },
+    ],
+    decor:[
+      { x:5, y:5, type:'rock' }, { x:30, y:30, type:'rock' },
+    ],
+  },
 };
 
-// Shop stock — what the merchant sells (ids reference gear.js CATALOG)
+// Shop stock - what the merchant sells (ids reference gear.js CATALOG)
 export const SHOP_STOCK = [
   'potion','potion_l','ether','bomb','elixir',
   'sword_iron','shield_wood','shield_iron','armor_leather','armor_chain',
@@ -268,3 +335,9 @@ export const SHOP_STOCK = [
 ];
 
 export const STARTING_MAP = 'meadow';
+
+
+
+
+
+
