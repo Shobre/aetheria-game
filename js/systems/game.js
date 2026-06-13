@@ -118,7 +118,7 @@ export class Game {
     this.toast('Entering '+def.name);
     if(this.quests) this.quests.onReach(mapId);
     // autosave when entering a new area (but not on the initial load from start())
-    if(!keepPos && this.running){ this._username=state.username||null; this.autosave('Checkpoint saved'); }
+    if(!keepPos && this.running){ this.autosave('Checkpoint saved'); }
     if(this.hud) this.hud._updateTownBtn();
   }
 
