@@ -487,7 +487,7 @@ console.log('=== login + per-user saves ===');
   ok('save uses per-user', gameSrc.includes('SaveSystem.saveUser'));
   ok('autosave uses per-user', gameSrc.includes('SaveSystem.saveUser'));
   const ts2 = readFileSync(new URL('../js/systems/turso.js', import.meta.url), 'utf8');
-  ok('turso uses API proxy', ts2.includes('/api') && ts2.includes('apiCall'));
+  ok('turso uses API proxy', ts2.includes('/api') && ts2.includes('proxyCall'));
 }
 
 console.log('=== weapon slash animations ===');
