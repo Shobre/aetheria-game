@@ -167,7 +167,7 @@ export class Game {
     this._updateQuestTimers();
     this._updateEscort();
     this.hud.refresh();
-    if(this.settings.minimap) this.hud.drawMinimap();
+    if(this.settings.minimap && this.hud.drawMinimap) this.hud.drawMinimap();
     this.input.lateUpdate();
   }
 
@@ -644,4 +644,5 @@ export class Game {
   resize(){ this.canvas.width=window.innerWidth; this.canvas.height=window.innerHeight;
     this.ctx.imageSmoothingEnabled=false; if(this.cam) this.cam.resize(this.canvas.width,this.canvas.height); }
 }
+
 
