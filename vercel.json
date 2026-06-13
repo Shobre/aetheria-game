@@ -3,12 +3,6 @@
   "version": 2,
   "buildCommand": "node build.cjs",
   "outputDirectory": ".",
-  "functions": {
-    "api/**/*.cjs": {
-      "memory": 128,
-      "maxDuration": 10
-    }
-  },
   "headers": [
     {
       "source": "/api/(.*)",
