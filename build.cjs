@@ -1,3 +1,6 @@
 const fs=require('fs');
-console.log('[build] API proxy mode - DB credentials stay server-side');
-console.log('[build] TURSO_DB_URL set:', !!process.env['TURSO_DB_URL']);
+const url=process.env['TURSO_DB_URL']||'';
+const token=process.env['TURSO_TOKEN']||'';
+const out='window.__TURSO_CONFIG={url:'+JSON.stringify(url)+',token:'+JSON.stringify(token)+'};';
+fs.writeFileSync('config.js',out);
+console.log('[build] config.js generated, url len:',url.length,'token len:',token.length);

@@ -1,1 +1,1 @@
-window.__TURSO_CONFIG={url:'',token:''};
+window.__TURSO_CONFIG={url:"libsql://aetheria-shobre.aws-us-east-1.turso.io",token:"eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODEyODYyODksImlkIjoiMDE5ZWJjZWYtNDMwMS03Mzk0LTljZmUtMzc1ZjhjMWI0Nzc5IiwicmlkIjoiZmE1YjdlYzItY2NlOS00NzNiLTk4MTktZjcyY2M3NGE3Mjc5In0.bvHKlAxBVtMKALRbSX0StcEfGaXX7KVzDEiw6nM6-PYPLaSGQ_t8ArIV1K6zaEnFyd3m4LF1ZcL1Tw3SY4OcAQ"};

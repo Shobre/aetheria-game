@@ -18,3 +18,5 @@ npm-debug.log*
 # helper scripts (never commit - may contain tokens)
 _*.bat
 .fallow/
+
+config.js
