@@ -35,7 +35,7 @@ export class HUD {
       stashBag:$('stash-bag'),stashStore:$('stash-store'),stashBagCount:$('stash-bag-count'),stashStoreCount:$('stash-store-count'),
       craftGear:$('craft-gear'),craftDetail:$('craft-detail'),craftGold:$('craft-gold'),
     };
-    // minimap removed — use M key for full map
+    // minimap removed - use M key for full map
     this.activeSlot=0;
     this._buildHotbar(); this._buildInventory();
   }
@@ -153,13 +153,13 @@ export class HUD {
         this._enableSwapDrag(d,i,'spell');
         const sid=p.spellSlots[i]; const r=sid?spellRank(sid):null; const rk=r&&r.rank>1?`<span class="spell-rank">${r.rank}</span>`:''; d.querySelector('.rank').innerHTML=rk;
         this._bindTooltip(d, ()=>{ const sid=this.game.player.spellSlots[i];
-          return sid?this._buildSpellTooltip(sid,{hint:'Drag to swap · click to change'}):'<div class="tt-name">Empty slot</div><div class="tt-hint">Click to assign a spell</div>'; });
+          return sid?this._buildSpellTooltip(sid,{hint:'Drag to swap ? click to change'}):'<div class="tt-name">Empty slot</div><div class="tt-hint">Click to assign a spell</div>'; });
         d.onclick=()=>this._openSpellPicker(i);
         el.appendChild(d); }
     }
     [...el.children].forEach((d,i)=>{
       const id=p.spellSlots[i], sp=id?SPELLS[id]:null;
-      d.querySelector('.ico').textContent=sp?sp.icon:'·';
+      d.querySelector('.ico').textContent=sp?sp.icon:'?';
       const maxCd=sp?sp.cd:1;
       d.querySelector('.cd').style.height=(p.spellCd[keys[i]]/maxCd*100)+'%';
       d.title='';
@@ -194,17 +194,17 @@ export class HUD {
       else {
         tr.classList.remove('hidden');
         tr.innerHTML=list.slice(0,3).map(q=>{
-          const lines=q.lines.map(l=>`<div class="qt-obj${l.done?' done':''}">${l.done?'✓':'•'} ${l.text} ${l.need>1?'('+l.have+'/'+l.need+')':''}</div>`).join('');
-          return `<div class="qt-quest"><div class="qt-name">${q.complete?'★ ':''}${q.name}</div>${lines}</div>`;
+          const lines=q.lines.map(l=>`<div class="qt-obj${l.done?' done':''}">${l.done?'V':''} ${l.text} ${l.need>1?'('+l.have+'/'+l.need+')':''}</div>`).join('');
+          return `<div class="qt-quest"><div class="qt-name">${q.complete?'? ':''}${q.name}</div>${lines}</div>`;
         }).join('');
       }
     }
     const log=this.el.questLog;
     if(log){
-      if(!list.length){ log.innerHTML='<p class="text-[9px] text-gray-500">No active quests. Seek out NPCs (look for ❗).</p>'; }
+      if(!list.length){ log.innerHTML='<p class="text-[9px] text-gray-500">No active quests. Seek out NPCs (look for ?).</p>'; }
       else log.innerHTML=list.map(q=>{
-        const lines=q.lines.map(l=>`<div class="qt-obj${l.done?' done':''}">${l.done?'✓':'•'} ${l.text} ${l.need>1?'('+l.have+'/'+l.need+')':''}</div>`).join('');
-        return `<div class="quest-entry"><div class="qe-name">${q.complete?'★ ':''}${q.name}</div><div class="qe-desc">${q.desc}</div>${lines}</div>`;
+        const lines=q.lines.map(l=>`<div class="qt-obj${l.done?' done':''}">${l.done?'V':''} ${l.text} ${l.need>1?'('+l.have+'/'+l.need+')':''}</div>`).join('');
+        return `<div class="quest-entry"><div class="qe-name">${q.complete?'? ':''}${q.name}</div><div class="qe-desc">${q.desc}</div>${lines}</div>`;
       }).join('');
     }
   }
@@ -264,36 +264,52 @@ export class HUD {
   _statVal(k,v){ return (k==='crit'||k==='cdr')?('+'+v+'%'):('+'+v); }
 
   // Build rich HTML for an item (catalog id, or full item object with rolled affixes).
-  _buildItemTooltip(item, opts){
-    opts=opts||{};
+  _itemMeta(item){
     const isObj = typeof item==='object';
     const cat = isObj ? (CATALOG[item.id]||{}) : (CATALOG[item]||{});
     const it = isObj ? item : resolveEquip(item);
-    if(!it) return '';
+    if(!it) return null;
     const consumable = (it.type==='consumable')||(cat.type==='consumable');
+    return { it, cat, consumable };
+  }
+  _buildItemHeader(meta){
+    const {it, cat, consumable} = meta;
     const col = consumable ? '#cdd3df' : rarityColor(it);
     const rname = consumable ? '' : rarityName(it);
     let html = `<div class="tt-name" style="color:${col}">${it.icon||cat.icon||''} ${it.name||cat.name||''}</div>`;
     html += `<div class="tt-type">${rname?rname+' ':''}${(it.type||cat.type||'').toUpperCase()}`;
     if(it.ranged) html+=' \u00b7 RANGED';
-    html += `</div>`;
-    // stats
+    html += '</div>';
+    return html;
+  }
+  _buildStatLines(meta){
+    const {it, cat} = meta; let html = '';
     const stats = it.stats || cat.stats;
     if(stats){ for(const k in stats){ if(!stats[k]) continue;
       html += `<div class="tt-stat"><span>${this._statLabel(k)}</span><span class="v">${this._statVal(k,stats[k])}</span></div>`; } }
-    // weapon behaviour
     if((it.atkSpeed||cat.atkSpeed)){ const a=it.atkSpeed||cat.atkSpeed;
       html += `<div class="tt-stat"><span>Atk Speed</span><span class="v">${a.toFixed(2)}s</span></div>`; }
     if((it.reach||cat.reach)){ html += `<div class="tt-stat"><span>Reach</span><span class="v">${it.reach||cat.reach}</span></div>`; }
-    // affixes (rolled bonuses)
     const ax = affixText(it);
     if(ax) html += `<div class="tt-affix">${ax}</div>`;
-    // consumable price/effect hint
+    return html;
+  }
+  _buildItemComparison(meta){
+    const {it, cat, consumable} = meta; if(consumable) return '';
+    const cmp=compareItem(it, this.game.player.equipment);
+    if(!cmp) return '';
+    const word=cmp.dir==='better'?'Upgrade':cmp.dir==='worse'?'Downgrade':'Sidegrade';
+    return `<div class="tt-cmp"><span class="${cmp.dir}">${cmp.text} vs equipped - ${word}</span></div>`;
+  }
+  _buildItemTooltip(item, opts){
+    opts=opts||{};
+    const meta = this._itemMeta(item);
+    if(!meta) return '';
+    const {it, cat, consumable} = meta;
+    let html = this._buildItemHeader(meta);
+    html += this._buildStatLines(meta);
     if(consumable && cat.price!=null) html += `<div class="tt-stat"><span>Value</span><span class="v">${cat.sell||Math.floor(cat.price/2)}g</span></div>`;
-    // comparison vs equipped
-    if(!consumable){ const cmp=compareItem(it, this.game.player.equipment);
-      if(cmp){ const word=cmp.dir==='better'?'Upgrade':cmp.dir==='worse'?'Downgrade':'Sidegrade';
-        html += `<div class="tt-cmp"><span class="${cmp.dir}">${cmp.text} vs equipped — ${word}</span></div>`; } }
+    html += this._buildItemComparison(meta);
     if(opts.hint) html += `<div class="tt-hint">${opts.hint}</div>`;
     return html;
   }
@@ -349,13 +365,13 @@ export class HUD {
     setTimeout(()=>d.remove(),900);
   }
 
-  drawMinimap(){} // minimap removed — use M key for full map
+  drawMinimap(){} // minimap removed - use M key for full map
 
   // ===== FULL MAP (M) =====
   showFullMap(){
     const w=this.game.world, cv=document.getElementById('fullmap-canvas');
     const title=document.getElementById('fullmap-title');
-    if(title) title.textContent='MAP — '+w.def.name;
+    if(title) title.textContent='MAP - '+w.def.name;
     if(!cv) return;
     // size canvas to map aspect, capped
     const maxW=640, maxH=460;
@@ -399,7 +415,7 @@ export class HUD {
       const col=it?rarityColor(it):'#cdd';
       const ax=it?affixText(it):'';
       d.innerHTML=`<span class="slot-label">${slot.toUpperCase()}</span>
-        <span class="slot-icon">${it?it.icon:'—'}</span>
+        <span class="slot-icon">${it?it.icon:'-'}</span>
         <span class="slot-name" style="color:${col}">${it?it.name:''}${ax?'<br><span class=\'affix-line\'>'+ax+'</span>':''}</span>`;
       d.onclick=()=>{ if(it) this.game.unequip(slot); this.refreshChar(); };
       if(it) this._bindTooltip(d, ()=>this._buildItemTooltip(it,{hint:'Click to unequip'}));
@@ -459,62 +475,67 @@ export class HUD {
 
   // ===== SHOP =====
   openShop(){ this.game.paused=true; const m=document.getElementById('shop-modal'); m.classList.remove('hidden'); m.classList.add('flex'); this.refreshShop(); }
+  _renderShopBuyList(stock, eq){
+    const buy=this.el.shopBuy; if(!buy) return;
+    buy.innerHTML='';
+    for(const id of stock){
+      const c=CATALOG[id], row=document.createElement('div'); row.className='shop-row';
+      const cmp=compareItem(c,eq);
+      row.innerHTML=`<span>${c.icon} ${c.name}${cmp?'<span class="cmp cmp-'+cmp.dir+'">'+cmp.text+'</span>':''}</span><span class="shop-price">${c.price}g</span>
+        <button class="menu-btn shop-buy-btn" data-id="${id}">Buy</button>`;
+      row.querySelector('.shop-buy-btn').onclick=()=>{ this.game.buyItem(id); this.refreshShop(); this.refreshBag(); };
+      this._bindTooltip(row, ()=>this._buildItemTooltip(id,{hint:c.price+'g to buy'}));
+      buy.appendChild(row);
+    }
+  }
+  _renderShopSellList(){
+    const sell=this.el.shopSell; if(!sell) return;
+    sell.innerHTML='';
+    this.game.inventory.forEach(item=>{
+      if(item.type==='consumable'&&(!item.qty||item.qty<=0)) return;
+      const c=CATALOG[item.id]||{}; const val=c.sell||Math.floor((c.price||0)/2);
+      const row=document.createElement('div'); row.className='shop-row';
+      row.innerHTML=`<span>${item.icon} ${item.name}${item.type==='consumable'&&item.qty>1?' x'+item.qty:''}</span>
+        <span class="shop-price">${val}g</span><button class="menu-btn shop-sell-btn">Sell</button>`;
+      row.querySelector('.shop-sell-btn').onclick=()=>{ this.game.sellItem(item); this.refreshShop(); this.refreshBag(); };
+      this._bindTooltip(row, ()=>this._buildItemTooltip(item,{hint:val+'g to sell'}));
+      sell.appendChild(row);
+    });
+  }
+  _renderSpellShop(){
+    const spDiv=this.el.shopSpells; if(!spDiv) return;
+    const g=this.game, p=g.player, kn=new Set([...knownSpells(p.skills),...Object.keys(g._boughtSpells||{})]);
+    spDiv.innerHTML='';
+    const shown=new Set();
+    for(const id in SPELLS){
+      const sp=SPELLS[id], r=spellRank(id);
+      if(shown.has(r.base)) continue;
+      const known=kn.has(id), canBuy=(sp.learnCost||0)>0&&!known;
+      const upSp=sp.upgrade?SPELLS[sp.upgrade]:null;
+      const canUp=known&&upSp&&(sp.upgradeCost||0)>0;
+      if(!canBuy&&!canUp) continue;
+      shown.add(r.base);
+      const cost=canBuy?(sp.learnCost||0):(sp.upgradeCost||0);
+      const row=document.createElement('div'); row.className='shop-row';
+      row.innerHTML=`<span>${sp.icon} ${sp.name}${known?' \u2713':''}</span><span class="shop-price">${cost}g</span>
+        <button class="menu-btn shop-buy-btn" data-spell="${id}" data-action="${canBuy?'buy':'upgrade'}">${canBuy?'Learn':'Upgrade'}</button>`;
+      spDiv.appendChild(row);
+    }
+    spDiv.querySelectorAll('.shop-buy-btn').forEach(btn=>{
+      btn.onclick=()=>{
+        const sid=btn.dataset.spell, act=btn.dataset.action;
+        if(act==='buy') g.buySpell(sid); else g.upgradeSpell(sid);
+        this.refreshShop(); this.hud&&this.hud._updateSpellLoadout();
+      };
+    });
+    if(!shown.size) spDiv.innerHTML='<p class="text-[9px] text-gray-500">No spells available.</p>';
+  }
   refreshShop(){
     const p=this.game.player; const g=this.el.shopGold; if(g) g.textContent=p.gold;
-    const buy=this.el.shopBuy; const sell=this.el.shopSell;
     const stock=this.game.shopStock||SHOP_STOCK;
-    if(buy){ buy.innerHTML='';
-      const eq=p.equipment;
-      for(const id of stock){
-        const c=CATALOG[id], row=document.createElement('div'); row.className='shop-row';
-        const cmp=compareItem(c,eq);
-        row.innerHTML=`<span>${c.icon} ${c.name}${cmp?'<span class="cmp cmp-'+cmp.dir+'">'+cmp.text+'</span>':''}</span><span class="shop-price">${c.price}g</span>
-          <button class="menu-btn shop-buy-btn" data-id="${id}">Buy</button>`;
-        row.querySelector('.shop-buy-btn').onclick=()=>{ this.game.buyItem(id); this.refreshShop(); this.refreshBag(); };
-        this._bindTooltip(row, ()=>this._buildItemTooltip(id,{hint:c.price+'g to buy'}));
-        buy.appendChild(row);
-      }
-    }
-    if(sell){ sell.innerHTML='';
-      this.game.inventory.forEach(item=>{
-        if(item.type==='consumable'&&(!item.qty||item.qty<=0)) return;
-        const c=CATALOG[item.id]||{}; const val=c.sell||Math.floor((c.price||0)/2);
-        const row=document.createElement('div'); row.className='shop-row';
-        row.innerHTML=`<span>${item.icon} ${item.name}${item.type==='consumable'&&item.qty>1?' x'+item.qty:''}</span>
-          <span class="shop-price">${val}g</span><button class="menu-btn shop-sell-btn">Sell</button>`;
-        row.querySelector('.shop-sell-btn').onclick=()=>{ this.game.sellItem(item); this.refreshShop(); this.refreshBag(); };
-        this._bindTooltip(row, ()=>this._buildItemTooltip(item,{hint:val+'g to sell'}));
-        sell.appendChild(row);
-      });
-    }
-    // spell buy + upgrade section
-    const spDiv=this.el.shopSpells; if(spDiv){
-      const g=this.game, p=g.player, kn=new Set([...knownSpells(p.skills),...Object.keys(g._boughtSpells||{})]);
-      spDiv.innerHTML='';
-      const shown=new Set();
-      for(const id in SPELLS){
-        const sp=SPELLS[id], r=spellRank(id);
-        if(shown.has(r.base)) continue;
-        const known=kn.has(id), canBuy=(sp.learnCost||0)>0&&!known;
-        const upSp=sp.upgrade?SPELLS[sp.upgrade]:null;
-        const canUp=known&&upSp&&(sp.upgradeCost||0)>0;
-        if(!canBuy&&!canUp) continue;
-        shown.add(r.base);
-        const cost=canBuy?(sp.learnCost||0):(sp.upgradeCost||0);
-        const row=document.createElement('div'); row.className='shop-row';
-        row.innerHTML=`<span>${sp.icon} ${sp.name}${known?' \u2713':''}</span><span class="shop-price">${cost}g</span>
-          <button class="menu-btn shop-buy-btn" data-spell="${id}" data-action="${canBuy?'buy':'upgrade'}">${canBuy?'Learn':'Upgrade'}</button>`;
-        spDiv.appendChild(row);
-      }
-      spDiv.querySelectorAll('.shop-buy-btn').forEach(btn=>{
-        btn.onclick=()=>{
-          const sid=btn.dataset.spell, act=btn.dataset.action;
-          if(act==='buy') g.buySpell(sid); else g.upgradeSpell(sid);
-          this.refreshShop(); this.hud&&this.hud._updateSpellLoadout();
-        };
-      });
-      if(!shown.size) spDiv.innerHTML='<p class="text-[9px] text-gray-500">No spells available.</p>';
-    }
+    this._renderShopBuyList(stock, p.equipment);
+    this._renderShopSellList();
+    this._renderSpellShop();
   }
 
   // ===== STASH (city bank) =====
@@ -572,3 +593,5 @@ export class HUD {
 
   setFps(v,show){ this.el.fps.classList.toggle('hidden',!show); this.el.fps.textContent='FPS '+v; }
 }
+
+

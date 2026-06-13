@@ -2,7 +2,7 @@
 import { MAPS } from '../data/maps.js';
 export const TILE = 32;
 
-// tile ids (internal — no external consumers, so not exported)
+// tile ids (internal - no external consumers, so not exported)
 const T = { FLOOR:0, PATH:1, WATER:2, WALL:7, HOLE:8, LAVA:9, FLOORALT:10 };
 
 // Per-biome palettes: [floorA, floorB, pathA, pathB, wallDark, wallLite, accent]
@@ -232,7 +232,7 @@ export class World {
     const came=new Map(), gScore=new Map(); gScore.set(key(sX,sY),0);
     let nodes=0;
     while(open.length){
-      // pop lowest f (linear scan — grids are small)
+      // pop lowest f (linear scan - grids are small)
       let bi=0; for(let i=1;i<open.length;i++) if(open[i].f<open[bi].f) bi=i;
       const cur=open.splice(bi,1)[0];
       if(cur.x===gX && cur.y===gY){
@@ -255,63 +255,69 @@ export class World {
     return null;
   }
 
+  _tileColor(t, x, y){
+    const P=this.pal;
+    if(t===T.PATH) return (x+y)%2?P.pa:P.pb;
+    if(t===T.WATER) return (x+y)%2?P.liquid:P.liquid2;
+    return (x+y)%2?P.fa:P.fb;
+  }
+  _drawTile(ctx, t, x, y, sx, sy){
+    ctx.fillStyle=this._tileColor(t,x,y);
+    ctx.fillRect(sx,sy,TILE,TILE);
+    if(t===T.WALL){
+      ctx.fillStyle=this.pal.wd; ctx.fillRect(sx,sy,TILE,TILE);
+      ctx.fillStyle=this.pal.wl; ctx.fillRect(sx+2,sy+2,TILE-4,TILE-4);
+    }
+    if(t===T.WATER){
+      ctx.fillStyle='rgba(255,255,255,.08)';
+      ctx.fillRect(sx+4, sy+(Math.sin(x+performance.now()/600)*3+6), TILE-8, 3);
+    }
+  }
+  _drawPortal(ctx, p, cam){
+    const sx=p.x*TILE-cam.x, sy=p.y*TILE-cam.y;
+    const pulse=0.5+0.5*Math.sin(performance.now()/300);
+    if(p.door){
+      if(this.def.town){
+        ctx.fillStyle='#6a5240'; ctx.fillRect(sx-12,sy-34,TILE+24,38);
+        ctx.fillStyle='#8a3030'; ctx.beginPath(); ctx.moveTo(sx-16,sy-34);
+        ctx.lineTo(sx+16,sy-50); ctx.lineTo(sx+TILE+12,sy-34); ctx.closePath(); ctx.fill();
+        ctx.fillStyle='#caa'; ctx.fillRect(sx-6,sy-26,8,8); ctx.fillRect(sx+TILE-2,sy-26,8,8);
+      }
+      ctx.fillStyle='#5a3a1a'; ctx.fillRect(sx+4,sy+2,TILE-8,TILE-2);
+      ctx.fillStyle='#2a1a0a'; ctx.fillRect(sx+9,sy+6,TILE-18,TILE-6);
+      if(this.def.town && p.label){ ctx.fillStyle='#ffe6a0'; ctx.font='8px monospace'; ctx.textAlign='center';
+        ctx.fillText(p.label, sx+16, sy-40); }
+    } else {
+      ctx.fillStyle=`rgba(164,92,255,${0.4+pulse*0.4})`;
+      ctx.beginPath(); ctx.arc(sx+16,sy+16,11,0,7); ctx.fill();
+      ctx.fillStyle=`rgba(255,255,255,${pulse*0.6})`; ctx.beginPath(); ctx.arc(sx+16,sy+16,5,0,7); ctx.fill();
+    }
+  }
   draw(ctx, cam){
     const P=this.pal;
     const x0=Math.max(0,Math.floor(cam.x/TILE)), y0=Math.max(0,Math.floor(cam.y/TILE));
     const x1=Math.min(this.cols,Math.ceil((cam.x+cam.w)/TILE));
     const y1=Math.min(this.rows,Math.ceil((cam.y+cam.h)/TILE));
     for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){
-      const t=this.map[y][x];
-      const sx=x*TILE-cam.x, sy=y*TILE-cam.y;
-      let col;
-      if(t===T.PATH) col=(x+y)%2?P.pa:P.pb;
-      else if(t===T.WATER) col=(x+y)%2?P.liquid:P.liquid2;
-      else col=(x+y)%2?P.fa:P.fb;
-      ctx.fillStyle=col; ctx.fillRect(sx,sy,TILE,TILE);
-      if(t===T.WALL){ ctx.fillStyle=P.wd; ctx.fillRect(sx,sy,TILE,TILE);
-        ctx.fillStyle=P.wl; ctx.fillRect(sx+2,sy+2,TILE-4,TILE-4); }
-      if(t===T.WATER){ ctx.fillStyle='rgba(255,255,255,.08)';
-        ctx.fillRect(sx+4, sy+(Math.sin(x+performance.now()/600)*3+6), TILE-8, 3); }
+      const t=this.map[y][x]; const sx=x*TILE-cam.x, sy=y*TILE-cam.y;
+      this._drawTile(ctx,t,x,y,sx,sy);
     }
-    // portals (glowing pads)
-    for(const p of this.portals){
-      const sx=p.x*TILE-cam.x, sy=p.y*TILE-cam.y;
-      const pulse=0.5+0.5*Math.sin(performance.now()/300);
-      if(p.door){
-        if(this.def.town){
-          // building facade above the door
-          ctx.fillStyle='#6a5240'; ctx.fillRect(sx-12,sy-34,TILE+24,38);
-          ctx.fillStyle='#8a3030'; ctx.beginPath(); ctx.moveTo(sx-16,sy-34);
-          ctx.lineTo(sx+16,sy-50); ctx.lineTo(sx+TILE+12,sy-34); ctx.closePath(); ctx.fill();
-          ctx.fillStyle='#caa'; ctx.fillRect(sx-6,sy-26,8,8); ctx.fillRect(sx+TILE-2,sy-26,8,8); // windows
-        }
-        ctx.fillStyle='#5a3a1a'; ctx.fillRect(sx+4,sy+2,TILE-8,TILE-2);
-        ctx.fillStyle='#2a1a0a'; ctx.fillRect(sx+9,sy+6,TILE-18,TILE-6);
-        if(this.def.town && p.label){ ctx.fillStyle='#ffe6a0'; ctx.font='8px monospace'; ctx.textAlign='center';
-          ctx.fillText(p.label, sx+16, sy-40); }
-      }
-      else { ctx.fillStyle=`rgba(164,92,255,${0.4+pulse*0.4})`;
-        ctx.beginPath(); ctx.arc(sx+16,sy+16,11,0,7); ctx.fill();
-        ctx.fillStyle=`rgba(255,255,255,${pulse*0.6})`; ctx.beginPath(); ctx.arc(sx+16,sy+16,5,0,7); ctx.fill(); }
-    }
-    // decor
+    for(const p of this.portals) this._drawPortal(ctx,p,cam);
     for(const d of this.decor){
       const sx=d.x*TILE-cam.x, sy=d.y*TILE-cam.y;
       if(sx<-TILE||sy<-TILE||sx>cam.w+TILE||sy>cam.h+TILE) continue;
       this._drawDecor(ctx,d.type,sx,sy);
     }
-    // chests
     for(const c of this.chests){
       const sx=c.x*TILE-cam.x, sy=c.y*TILE-cam.y;
       ctx.fillStyle=c.opened?'#5a4a2a':'#8a6a2a'; ctx.fillRect(sx+6,sy+10,20,16);
       ctx.fillStyle=c.opened?'#3a2e1a':'#ffcf4d'; ctx.fillRect(sx+14,sy+16,4,4);
     }
-    // npcs
     for(const n of this.npcs){
       const sx=n.x*TILE-cam.x, sy=n.y*TILE-cam.y;
       ctx.font='24px serif'; ctx.textAlign='center';
       ctx.fillText(n.icon, sx+16, sy+26);
-      if(n.shop){ ctx.font='10px serif'; ctx.fillText('🛒', sx+24, sy+6); }
+      if(n.shop){ ctx.font='10px serif'; ctx.fillText('??', sx+24, sy+6); }
     }
   }
 
@@ -372,3 +378,4 @@ export class Camera {
       this.shake*=0.85; if(this.shake<0.3) this.shake=0; }
   }
 }
+

@@ -1,6 +1,6 @@
 // Spell catalog. Each spell defines cost/cooldown/visuals + a projectile profile.
 // `unlock` null = available from the start; otherwise the skill id that grants it.
-// `learnCost` = gold to learn at rank 1; `upgradeCost` = gold  to rank up (×rank).
+// `learnCost` = gold to learn at rank 1; `upgradeCost` = gold  to rank up (�rank).
 // `upgrade` = next-tier spell id (learned automatically when upgraded).
 // The player has 3 cast slots (q/e/r) holding spell ids, rearrangeable in the UI.
 export const SPELLS = {
@@ -148,12 +148,4 @@ export function spellRank(id){
 }
 
 // Best known version of a spell base (highest rank the player has unlocked).
-export function bestSpellRank(baseId, knownSet){
-  let best = baseId;
-  let bestR = 1;
-  for(const id of knownSet){
-    const r = spellRank(id);
-    if(r.base === baseId && r.rank > bestR){ best = id; bestR = r.rank; }
-  }
-  return best;
-}
+

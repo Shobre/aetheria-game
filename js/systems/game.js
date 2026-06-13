@@ -301,46 +301,37 @@ export class Game {
   }
 
   // ---- combat hooks ----
+  _hitTargetInArc(e, p, reach, arc){
+    const dx=e.x-p.x, dy=e.y-p.y, d=Math.hypot(dx,dy);
+    if(d>=reach+e.r) return;
+    const ang=Math.atan2(dy,dx);
+    let diff=Math.abs(((ang-p._aim+Math.PI)%(2*Math.PI))-Math.PI);
+    if(diff>=arc) return;
+    let dmg=p.atk*p.dmgMul;
+    const crit=Math.random()*100<p.crit;
+    if(crit) dmg*=2;
+    dmg=Math.round(dmg);
+    e.hit(dmg,ang,this,6);
+    if(crit) this.floater('CRIT '+dmg,e.x,e.y-26,'#ffcf4d');
+    if(p.lifesteal>0){ const heal=dmg*p.lifesteal; p.heal(heal,this); }
+    this.cam.shake=Math.min(this.cam.shake+3,8);
+  }
+  _fireRangedShot(p){
+    if(p._overheatCd>0) return;
+    const heatCost=12*(p._heatReduction||1);
+    p.heat=Math.min(p.heatCap,p.heat+heatCost);
+    if(p.heat>=p.heatCap){ p._overheatCd=3; this.floater('OVERHEAT!',p.x,p.y-30,'#f44'); }
+    let dmg=Math.round(p.atk*p.dmgMul*(p._rangedAtkMul||1)*0.85);
+    const crit=Math.random()*100<p.crit; if(crit) dmg*=2;
+    this.projectiles.push(new Projectile(p.x,p.y,p._aim,
+      {speed:p.shotSpeed,dmg,r:5,color:'#ffe6a0',kind:'phys',life:1.3,
+       crit, lifesteal:p.lifesteal||0}));
+  }
   doMeleeAttack(p){
-    // ranged weapon: fire a physical bolt toward the aim instead of a melee swing
-    if(p.ranged){
-      if(p._overheatCd>0) return; // can't shoot while overheated
-      const heatCost=12*(p._heatReduction||1);
-      p.heat=Math.min(p.heatCap,p.heat+heatCost);
-      if(p.heat>=p.heatCap){ p._overheatCd=3; this.floater('OVERHEAT!',p.x,p.y-30,'#f44'); }
-      let dmg=Math.round(p.atk*p.dmgMul*(p._rangedAtkMul||1)*0.85);
-      const crit=Math.random()*100<p.crit; if(crit) dmg*=2;
-      this.projectiles.push(new Projectile(p.x,p.y,p._aim,
-        {speed:p.shotSpeed,dmg,r:5,color:'#ffe6a0',kind:'phys',life:1.3,
-         crit, lifesteal:p.lifesteal||0}));
-      return;
-    }
+    if(p.ranged){ this._fireRangedShot(p); return; }
     const reach=p.reach||44, arc=1.15;
-    for(const e of this.enemies){ if(e.dead) continue;
-      const dx=e.x-p.x, dy=e.y-p.y, d=Math.hypot(dx,dy);
-      if(d<reach+e.r){
-        const ang=Math.atan2(dy,dx);
-        let diff=Math.abs(((ang-p._aim+Math.PI)%(2*Math.PI))-Math.PI);
-        if(diff<arc){
-          let dmg=p.atk*p.dmgMul;
-          const crit=Math.random()*100<p.crit;
-          if(crit) dmg*=2;
-          dmg=Math.round(dmg);
-          e.hit(dmg,ang,this,6);
-          if(crit) this.floater('CRIT '+dmg,e.x,e.y-26,'#ffcf4d');
-          if(p.lifesteal>0){ const heal=dmg*p.lifesteal; p.heal(heal,this); }
-          this.cam.shake=Math.min(this.cam.shake+3,8);
-        }
-      }
-    }
-    // also hit the boss with melee
-    if(this.boss && !this.boss.dead){
-      const e=this.boss, dx=e.x-p.x, dy=e.y-p.y, d=Math.hypot(dx,dy);
-      if(d<reach+e.r){ const ang=Math.atan2(dy,dx);
-        let diff=Math.abs(((ang-p._aim+Math.PI)%(2*Math.PI))-Math.PI);
-        if(diff<arc){ let dmg=Math.round(p.atk*p.dmgMul*(Math.random()*100<p.crit?2:1));
-          e.hit(dmg,ang,this,4); if(p.lifesteal>0) p.heal(dmg*p.lifesteal,this); } }
-    }
+    for(const e of this.enemies){ if(e.dead) continue; this._hitTargetInArc(e,p,reach,arc); }
+    if(this.boss && !this.boss.dead) this._hitTargetInArc(this.boss,p,reach,arc);
   }
   castSpell(p, id){
     const sp=SPELLS[id]; if(!sp) return;
@@ -644,5 +635,6 @@ export class Game {
   resize(){ this.canvas.width=window.innerWidth; this.canvas.height=window.innerHeight;
     this.ctx.imageSmoothingEnabled=false; if(this.cam) this.cam.resize(this.canvas.width,this.canvas.height); }
 }
+
 
 
