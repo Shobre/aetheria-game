@@ -113,7 +113,7 @@ export class Companion {
 
 // Companion registry — recruitable companions
 export const COMPANIONS = {
-  kira: { name:'Kira', icon:'??', desc:'A skilled ranger with a healing aura.', color:'#88ffaa' },
-  thorin: { name:'Thorin', icon:'??', desc:'A sturdy dwarf warrior.', color:'#ffaa44' },
-  luna: { name:'Luna', icon:'??', desc:'A mage who blasts enemies with arcane bolts.', color:'#bb88ff' },
+  kira: { name:'Kira', icon:'🏹', desc:'A skilled ranger with a healing aura.', color:'#88ffaa' },
+  thorin: { name:'Thorin', icon:'⚔', desc:'A sturdy dwarf warrior.', color:'#ffaa44' },
+  luna: { name:'Luna', icon:'🧙', desc:'A mage who blasts enemies with arcane bolts.', color:'#bb88ff' },
 };

@@ -233,11 +233,11 @@ export class HUD {
     const heatBar=document.getElementById('heat-bar');
     const heatFill=document.getElementById('heat-fill');
     if(heatBar && heatFill){
-      const isRanged=p.ranged;
+      const isRanged=this.game.player.ranged;
       heatBar.classList.toggle('hidden',!isRanged);
       if(isRanged){
-        heatFill.style.width=Math.min(100,p.heat/p.heatCap*100)+'%';
-        heatFill.className='heat-fill'+(p.heat>=p.heatCap?' overheat':'')+(p._overheatCd>0?' cooldown':'');
+        heatFill.style.width=Math.min(100,p.heat/this.game.player.heatCap*100)+'%';
+        heatFill.className='heat-fill'+(p.heat>=p.heatCap?' overheat':'')+(this.game.player._overheatCd>0?' cooldown':'');
       }
     }
   }

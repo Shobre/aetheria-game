@@ -319,7 +319,7 @@ export class World {
       const sx=n.x*TILE-cam.x, sy=n.y*TILE-cam.y;
       ctx.font='24px serif'; ctx.textAlign='center';
       ctx.fillText(n.icon, sx+16, sy+26);
-      if(n.shop){ ctx.font='10px serif'; ctx.fillText('??', sx+24, sy+6); }
+      if(n.shop){ ctx.font='10px serif'; ctx.fillText('⚔', sx+24, sy+6); }
     }
   }
 

@@ -153,12 +153,13 @@ export class Player {
     this.flash=Math.max(0,this.flash-dt);
     for(const k of ['q','e','r']) this.spellCd[k]=Math.max(0,this.spellCd[k]-dt);
     if(this.attacking>0) this.attacking-=dt;
+    this.dodging=Math.max(0,this.dodging);
   }
 
   _handleMovement(dt, input, world, game){
     if(this._stunned){ return; }
     if(this.dodging>0){
-      this.dodging-=dt; const ds=7.0*(this.dodging/0.22);
+      const ds=7.0*(this.dodging/0.22);
       this._move(this.dodgeDir.x*ds,this.dodgeDir.y*ds,world);
       return;
     }
