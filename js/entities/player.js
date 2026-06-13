@@ -130,6 +130,17 @@ export class Player {
     this._handleMovement(dt, input, world, game);
     this.blocking = input.mouseDown.right && !this.dodging && !this._stunned;
     if(!this._stunned) this._handleCombat(input, game);
+
+    // heat system: decay heat when not shooting, overheat cooldown
+    if(this._overheatCd>0){ this._overheatCd-=dt; this.heat=this.heatCap; }
+    else if(this.heat>0){ this.heat=Math.max(0,this.heat-15*dt); }
+
+    // parry window: opens when block is first raised
+    if(this.blocking && this._parryWindow<=0 && !this._parried){
+      this._parryWindow=0.2; // 200ms perfect-block window
+    }
+    if(!this.blocking){ this._parryWindow=0; this._parried=false; }
+    if(this._parryWindow>0){ this._parryWindow-=dt; }
   }
 
   _tickTimers(dt){

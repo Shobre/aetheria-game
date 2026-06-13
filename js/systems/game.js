@@ -193,6 +193,42 @@ export class Game {
       if(this.input.wasPressed('f')) this._doInteract(near); }
     else this.hud.hideInteract();
   }
+  _updateQuestTimers(){
+    if(!this.quests) return;
+    const map=this.currentMap;
+    for(const id in this.quests.active){
+      const q=QUESTS[id]; const st=this.quests.active[id];
+      for(let i=0;i<q.objectives.length;i++){
+        const o=q.objectives[i];
+        if(st.prog[i]>=1) continue;
+        if(o.kind==='timed_clear' && o.map===map){
+          if(!this._questTimers[map]) this._questTimers[map]={kind:'timed_clear',deadline:performance.now()+o.seconds*1000};
+          if(this.enemies.length===0 && !this.boss){ this.quests.onTimedClear(map); this._questTimers[map]=null; }
+          else if(this._questTimers[map] && performance.now()>this._questTimers[map].deadline){ this._questTimers[map]=null; }
+        }
+        if(o.kind==='survive' && o.map===map){
+          if(!this._questTimers[map]) this._questTimers[map]={kind:'survive',deadline:performance.now()+o.seconds*1000};
+          if(this._questTimers[map] && performance.now()>=this._questTimers[map].deadline){ this.quests.onSurvive(map); this._questTimers[map]=null; }
+        }
+      }
+    }
+  }
+
+  _updateEscort(){
+    if(!this.quests || !this._escortNpc) return;
+    const map=this.currentMap;
+    for(const id in this.quests.active){
+      const q=QUESTS[id]; const st=this.quests.active[id];
+      for(let i=0;i<q.objectives.length;i++){
+        const o=q.objectives[i];
+        if(o.kind==='escort' && o.to===map && st.prog[i]<1 && this._escortNpc && this._escortNpc.alive){
+          this.quests.onEscort(map);
+          this._escortNpc=null;
+        }
+      }
+    }
+  }
+
   _usePortal(p){
     if(this.transition>0) return; // debounce during fade
     this.loadMap(p.to, p.tx, p.ty, false);
@@ -267,7 +303,11 @@ export class Game {
   doMeleeAttack(p){
     // ranged weapon: fire a physical bolt toward the aim instead of a melee swing
     if(p.ranged){
-      let dmg=Math.round(p.atk*p.dmgMul*0.85);  // slightly less per-hit, but safe range
+      if(p._overheatCd>0) return; // can't shoot while overheated
+      const heatCost=12*(p._heatReduction||1);
+      p.heat=Math.min(p.heatCap,p.heat+heatCost);
+      if(p.heat>=p.heatCap){ p._overheatCd=3; this.floater('OVERHEAT!',p.x,p.y-30,'#f44'); }
+      let dmg=Math.round(p.atk*p.dmgMul*(p._rangedAtkMul||1)*0.85);
       const crit=Math.random()*100<p.crit; if(crit) dmg*=2;
       this.projectiles.push(new Projectile(p.x,p.y,p._aim,
         {speed:p.shotSpeed,dmg,r:5,color:'#ffe6a0',kind:'phys',life:1.3,
@@ -574,7 +614,8 @@ export class Game {
       bossesDead:this.bossesDead, checkpoint:this.checkpoint,
       quests:this.quests?this.quests.serialize():undefined,
       boughtSpells:this._boughtSpells,
-      username:this._username };
+      username:this._username,
+      heat:this.player.heat, _overheatCd:this.player._overheatCd };
   }
   save(){
     const u=this._username; if(u) SaveSystem.saveUser(u,this.slot,this._buildState()); else SaveSystem.save(this.slot,this._buildState());
