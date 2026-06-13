@@ -11,12 +11,12 @@ export class Input {
   }
   _bind(){
     window.addEventListener('keydown', e=>{
-      const k = e.key.toLowerCase();
+      const k = (e.key || '').toLowerCase();
       if(!this.keys[k]) this.pressed[k] = true;
       this.keys[k] = true;
       if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
     });
-    window.addEventListener('keyup', e=>{ this.keys[e.key.toLowerCase()] = false; });
+    window.addEventListener('keyup', e=>{ const k=(e.key||'').toLowerCase(); if(k) this.keys[k]=false; });
 
     this.canvas.addEventListener('mousemove', e=>{
       const r = this.canvas.getBoundingClientRect();

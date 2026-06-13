@@ -227,7 +227,7 @@ function openQuests(){ game.hud.refreshQuests(); openModal(questsModal); }
 
 document.getElementById('settings-btn').onclick=()=>openModal(settingsModal);
 document.getElementById('bag-btn').onclick=openBag;
-document.getElementById('map-btn').onclick=()=>{ const fm=document.getElementById('fullmap-modal'); if(fm.classList.contains('hidden')){ game.hud.showFullMap(); openModal(fm); } else closeModal(fm); };
+document.getElementById('map-btn').onclick=()=>{ if(!game.hud) return; const fm=document.getElementById('fullmap-modal'); if(fm.classList.contains('hidden')){ game.hud.showFullMap(); openModal(fm); } else closeModal(fm); };
 document.getElementById('char-btn').onclick=openChar;
 document.getElementById('skills-btn').onclick=openSkills;
 document.getElementById('quests-btn').onclick=openQuests;
@@ -254,14 +254,14 @@ document.getElementById('town-btn').onclick=()=>{ if(game.canTeleportTown && gam
 // ---- global keys ----
 window.addEventListener('keydown', e=>{
   if(game.running===false) return;
-  const k=e.key.toLowerCase();
+  const k=(e.key||'').toLowerCase();
   if(k==='escape'){ if(anyModalOpen()) closeAll(); else openModal(settingsModal); if(game.hud) game.hud._hideTooltip(); return; }
   // toggle modals
   if(k==='b'){ bagModal.classList.contains('hidden')?openBag():closeModal(bagModal); }
   if(k==='c'){ charModal.classList.contains('hidden')?openChar():closeModal(charModal); }
   if(k==='k'){ skillsModal.classList.contains('hidden')?openSkills():closeModal(skillsModal); }
   if(k==='j'){ questsModal.classList.contains('hidden')?openQuests():closeModal(questsModal); }
-  if(k==='m'){ const fm=document.getElementById('fullmap-modal');
+  if(k==='m'){ if(!game.hud) return; const fm=document.getElementById('fullmap-modal');
     if(fm.classList.contains('hidden')){ game.hud.showFullMap(); openModal(fm); } else closeModal(fm); }
   // hotbar 1-9 (only when not in a menu)
   if(k==='t' && game.canTeleportTown && game.canTeleportTown()) game.teleportToTown();
