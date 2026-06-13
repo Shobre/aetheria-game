@@ -35,7 +35,7 @@ export class HUD {
       stashBag:$('stash-bag'),stashStore:$('stash-store'),stashBagCount:$('stash-bag-count'),stashStoreCount:$('stash-store-count'),
       craftGear:$('craft-gear'),craftDetail:$('craft-detail'),craftGold:$('craft-gold'),
     };
-    this.mmCtx=this.el.minimap.getContext('2d');
+    // minimap removed — use M key for full map
     this.activeSlot=0;
     this._buildHotbar(); this._buildInventory();
   }

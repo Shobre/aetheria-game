@@ -200,7 +200,7 @@ const stashModal=document.getElementById('stash-modal');
 const craftModal=document.getElementById('craft-modal');
 function applySettings(){
   game.settings.shake=document.getElementById('set-shake').checked;
-  game.settings.minimap=document.getElementById('set-minimap').checked;
+  const sm=document.getElementById('set-minimap'); if(sm) game.settings.minimap=sm.checked;
   game.settings.fps=document.getElementById('set-fps').checked;
   game.audio.musicVol=document.getElementById('set-music').value/100;
   game.audio.sfxVol=document.getElementById('set-sfx').value/100;
