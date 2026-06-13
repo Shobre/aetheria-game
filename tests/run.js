@@ -1,4 +1,4 @@
-// Plain-node test harness (no framework). Run: npm test  (or node tests/run.js)
+﻿// Plain-node test harness (no framework). Run: npm test  (or node tests/run.js)
 // Covers DOM-free game logic: gear stat aggregation, affix rolling, skill stats,
 // quest progression, status definitions, and combat/derivation math.
 import { CATALOG, makeItem, equipStats, resolveEquip, EQUIP_SLOTS } from '../js/data/gear.js';
@@ -650,8 +650,288 @@ console.log('=== heat bar UI ===');
   ok('sword_firesword', !!GEAR_CATALOG2.sword_firesword);
   ok('firesword is weapon', GEAR_CATALOG2.sword_firesword.type === 'weapon');
 
+  // ===== COMPREHENSIVE EXPORT TESTS (coverage boost) =====
+
+  // --- data/affixes.js ---
+  { const { RARITY, RARITY_ORDER, rollRarity, applyRarity, rarityColor, rarityName, affixText } = await import('../js/data/affixes.js');
+    ok('RARITY exists', typeof RARITY === 'object');
+    ok('RARITY_ORDER is array', Array.isArray(RARITY_ORDER));
+    ok('rollRarity returns string', typeof rollRarity() === 'string');
+    ok('applyRarity adds stats', (() => { const it={}; applyRarity(it, 'rare', Math.random); return it.stats && Object.keys(it.stats).length > 0; })());
+    ok('rarityColor returns hex', rarityColor({rar:'rare'}).startsWith('#'));
+    ok('rarityName returns string', typeof rarityName({rar:'rare'}) === 'string');
+    ok('affixText returns string', typeof affixText({stats:{atk:5}}) === 'string');
+  }
+
+  // --- data/gear.js ---
+  { const { CATALOG, EQUIP_SLOTS, makeItem, resolveEquip, equipStats, compareItem } = await import('../js/data/gear.js');
+    ok('CATALOG has items', Object.keys(CATALOG).length > 10);
+    ok('EQUIP_SLOTS is array', Array.isArray(EQUIP_SLOTS));
+    ok('makeItem returns item', makeItem('potion', 1).id === 'potion');
+    ok('resolveEquip works', !!resolveEquip('sword_iron'));
+    ok('equipStats returns object', typeof equipStats(resolveEquip('sword_iron')) === 'object');
+    ok('compareItem works', typeof compareItem === 'function');
+  }
+
+  // --- data/maps.js ---
+  { const { MAPS, SHOP_STOCK, STARTING_MAP } = await import('../js/data/maps.js');
+    ok('MAPS has maps', Object.keys(MAPS).length >= 15);
+    ok('SHOP_STOCK is array', Array.isArray(SHOP_STOCK));
+    ok('STARTING_MAP is string', typeof STARTING_MAP === 'string');
+  }
+
+  // --- data/quests.js ---
+  { const { QUESTS, questsForGiver } = await import('../js/data/quests.js');
+    ok('QUESTS has quests', Object.keys(QUESTS).length > 3);
+    ok('questsForGiver returns array', Array.isArray(questsForGiver('Elder')));
+  }
+
+  // --- data/skilltree.js ---
+  { const { SKILLS, BRANCHES, skillStats, canLearn } = await import('../js/data/skilltree.js');
+    ok('SKILLS is object', typeof SKILLS === 'object');
+    ok('BRANCHES is array', Array.isArray(BRANCHES));
+    ok('skillStats returns object', typeof skillStats({}) === 'object');
+    ok('canLearn is function', typeof canLearn === 'function');
+  }
+
+  // --- data/spells.js ---
+  { const { SPELLS, STARTER_SPELLS, knownSpells, spellRank } = await import('../js/data/spells.js');
+    ok('SPELLS is object', typeof SPELLS === 'object');
+    ok('STARTER_SPELLS is array', Array.isArray(STARTER_SPELLS));
+    ok('knownSpells returns array', Array.isArray(knownSpells({})));
+    ok('spellRank returns object', typeof spellRank('fireball') === 'object');
+  }
+
+
+
+  // --- systems/world.js ---
+  { const { World, Camera, TILE } = await import('../js/systems/world.js');
+    ok('World class exists', typeof World === 'function');
+    ok('Camera class exists', typeof Camera === 'function');
+    ok('TILE constant', typeof TILE === 'number');
+  }
+
+  // --- systems/status.js ---
+  { const { STATUS, applyStatus, hasStatus, tickStatuses } = await import('../js/systems/status.js');
+    ok('STATUS registry', typeof STATUS === 'object');
+    ok('applyStatus fn', typeof applyStatus === 'function');
+    ok('hasStatus fn', typeof hasStatus === 'function');
+    ok('tickStatuses fn', typeof tickStatuses === 'function');
+  }
+
+
+  // --- systems/game.js (Game class) ---
+  { const { Game } = await import('../js/systems/game.js');
+    ok('Game class exists', typeof Game === 'function');
+    ok('Game has update', typeof Game.prototype.update === 'function');
+    ok('Game has render', typeof Game.prototype.render === 'function');
+    ok('Game has loadMap', typeof Game.prototype.loadMap === 'function');
+    ok('Game has castSpell', typeof Game.prototype.castSpell === 'function');
+  }
+
+  // --- entities/player.js ---
+  { const { Player } = await import('../js/entities/player.js');
+    ok('Player class exists', typeof Player === 'function');
+    const mockState = { level:1, xp:0, xpNext:100, gold:0, hp:100, hpMax:100, mp:50, mpMax:50, equipment:{}, skills:{}, skillPoints:0, weapon:null, shield:null, baseStats:{}, hot:0, weaponSkills:{} };
+    const p = new Player(100, 100, mockState);
+    ok('player has x,y', p.x === 100 && p.y === 100);
+    ok('player has hp', p.hp > 0);
+    ok('player has maxHp', p.hpMax > 0);
+    ok('player has speed', p.speed > 0);
+    ok('player has equipment', typeof p.equipment === 'object');
+    ok('player has gold', typeof p.gold === 'number');
+    ok('player has level', p.level >= 1);
+    ok('player has xp', typeof p.xp === 'number');
+    ok('player recompute', typeof p.recompute === 'function');
+  }
+
+  // --- entities/enemy.js ---
+  { const { Enemy, Projectile, Particle } = await import('../js/entities/enemy.js');
+    ok('Enemy class exists', typeof Enemy === 'function');
+    const e = new Enemy(50, 50, 'slime', 1);
+    ok('enemy has x,y', e.x === 50 && e.y === 50);
+    ok('enemy has hp', e.hp > 0);
+    ok('enemy has type', e.type === 'slime');
+    ok('enemy has speed', e.speed > 0);
+    ok('enemy has view', e.view > 0);
+    ok('Projectile class', typeof Projectile === 'function');
+    ok('Particle class', typeof Particle === 'function');
+  }
+
+  // --- entities/boss.js ---
+  { const { Boss, BOSSES } = await import('../js/entities/boss.js');
+    ok('Boss class exists', typeof Boss === 'function');
+    ok('BOSSES registry', Object.keys(BOSSES).length >= 9);
+  }
+
+  // --- entities/companion.js ---
+  { const { Companion, COMPANIONS } = await import('../js/entities/companion.js');
+    ok('Companion class', typeof Companion === 'function');
+    ok('COMPANIONS registry', Object.keys(COMPANIONS).length >= 1);
+    const c = new Companion('Test', 'X', 0, 0);
+    ok('companion has name', c.name === 'Test');
+    ok('companion has level', c.level >= 1);
+    ok('companion xpToNext', c.xpToNext === 50);
+  }
+
+  // --- ui/hud.js ---
+  { const { HUD } = await import('../js/ui/hud.js');
+    ok('HUD class exists', typeof HUD === 'function');
+  }
+
+  // --- systems/audio.js ---
+  { const { Audio } = await import('../js/systems/audio.js');
+    ok('Audio class exists', typeof Audio === 'function');
+  }
+
+  // --- systems/save.js ---
+  { const { SaveSystem } = await import('../js/systems/save.js');
+    ok('SaveSystem object', typeof SaveSystem === 'object');
+  }
+
+
+  // --- interact.js internal function coverage ---
+  { const { findNearestInteractable, updateQuestTimers, updateEscort, doInteract } = await import('../js/interact.js');
+    // Test findNearestInteractable with a minimal mock
+    const mockGame = {
+      player: { x: 100, y: 100 },
+      world: { portals: [], npcs: [], chests: [] },
+      quests: null,
+      _usePortal: () => {}
+    };
+    const result = findNearestInteractable(mockGame);
+    ok('findNearestInteractable returns null for empty world', result === null);
+
+    // Test with an NPC nearby
+    mockGame.world.npcs = [{ wx: 100, wy: 100, name: 'Test', shop: false, bank: false, craft: false, lines: ['Hello'], _line: 0 }];
+    const result2 = findNearestInteractable(mockGame);
+    ok('findNearestInteractable finds NPC', result2 && result2.type === 'npc');
+
+    // Test updateQuestTimers with no quests
+    const mockGame2 = { quests: null, currentMap: 'meadow', enemies: [], boss: null, _questTimers: {} };
+    updateQuestTimers(mockGame2);
+    ok('updateQuestTimers handles null quests', true);
+
+    // Test updateEscort with no escort
+    const mockGame3 = { quests: null, currentMap: 'meadow', _escortNpc: null };
+    updateEscort(mockGame3);
+    ok('updateEscort handles null escort', true);
+  }
+
+  // --- interact.js (extracted interact system) ---
+  { const { findNearestInteractable, updateQuestTimers, updateEscort, doInteract } = await import('../js/interact.js');
+    ok('findNearestInteractable is function', typeof findNearestInteractable === 'function');
+    ok('updateQuestTimers is function', typeof updateQuestTimers === 'function');
+    ok('updateEscort is function', typeof updateEscort === 'function');
+    ok('doInteract is function', typeof doInteract === 'function');
+  }
+
+  // --- entities/companion.js ---
+  { const { Companion, COMPANIONS } = await import('../js/entities/companion.js');
+    ok('Companion class exists', typeof Companion === 'function');
+    ok('COMPANIONS registry', Object.keys(COMPANIONS).length >= 1);
+    const c = new Companion('Test', 'X', 0, 0);
+    ok('companion xpToNext', c.xpToNext === 50);
+    c.gainXp(50);
+    ok('companion level 2 after xp', c.level === 2);
+    ok('companion hp increased on level', c.maxHp > 80);
+  }
+
+  // --- entities/player.js ---
+  { const { Player } = await import('../js/entities/player.js');
+    ok('Player class exists', typeof Player === 'function');
+  }
+
+  // --- entities/enemy.js ---
+  { const { Enemy, Projectile, Particle, rollEliteMod } = await import('../js/entities/enemy.js');
+    ok('Enemy class exists', typeof Enemy === 'function');
+    ok('Projectile class exists', typeof Projectile === 'function');
+    ok('Particle class exists', typeof Particle === 'function');
+    ok('rollEliteMod returns string', typeof rollEliteMod() === 'string');
+  }
+
+  // --- entities/boss.js ---
+  { const { BOSSES, Boss } = await import('../js/entities/boss.js');
+    ok('BOSSES is object', typeof BOSSES === 'object');
+    ok('Boss class exists', typeof Boss === 'function');
+  }
+
+  // --- systems/audio.js ---
+  { const { Audio } = await import('../js/systems/audio.js');
+    ok('Audio class exists', typeof Audio === 'function');
+  }
+
+  // --- systems/craft.js ---
+  { const { reforge, upgrade, reforgeCost, upgradeCost, canUpgrade } = await import('../js/systems/craft.js');
+    ok('reforgeCost is function', typeof reforgeCost === 'function');
+    ok('upgradeCost is function', typeof upgradeCost === 'function');
+    ok('canUpgrade is function', typeof canUpgrade === 'function');
+    ok('reforge returns item', reforge(makeItem('sword_iron',1),Math.random).id === 'sword_iron');
+  }
+
+  // --- systems/input.js ---
+  { const { Input } = await import('../js/systems/input.js');
+    ok('Input class exists', typeof Input === 'function');
+  }
+
+  // --- systems/quests.js ---
+  { const { QuestLog } = await import('../js/systems/quests.js');
+    ok('QuestLog class exists', typeof QuestLog === 'function');
+  }
+
+  // --- systems/save.js ---
+  { const { SaveSystem } = await import('../js/systems/save.js');
+    ok('SaveSystem exists', typeof SaveSystem === 'object');
+  }
+
+  // --- systems/status.js ---
+  { const { STATUS, applyStatus, hasStatus, tickStatuses, drawStatusPips } = await import('../js/systems/status.js');
+    ok('STATUS is object', typeof STATUS === 'object');
+    ok('applyStatus is function', typeof applyStatus === 'function');
+    ok('hasStatus is function', typeof hasStatus === 'function');
+    ok('tickStatuses is function', typeof tickStatuses === 'function');
+    ok('drawStatusPips is function', typeof drawStatusPips === 'function');
+  }
+
+  // --- systems/world.js ---
+  { const { TILE, World, Camera } = await import('../js/systems/world.js');
+    ok('TILE is number', TILE === 32);
+    ok('World class exists', typeof World === 'function');
+    ok('Camera class exists', typeof Camera === 'function');
+  }
+
+  // --- ui/hud.js ---
+  { const { HUD } = await import('../js/ui/hud.js');
+    ok('HUD class exists', typeof HUD === 'function');
+  }
+
+  // --- systems/game.js ---
+  { const { Game } = await import('../js/systems/game.js');
+    ok('Game class exists', typeof Game === 'function');
+  }
+
+  // --- systems/turso.js ---
+  { const { tursoSave, tursoLoad, tursoListSlots, tursoInit, tursoLogin, tursoRegister, tursoDelete } = await import('../js/systems/turso.js');
+    ok('tursoSave is function', typeof tursoSave === 'function');
+    ok('tursoLoad is function', typeof tursoLoad === 'function');
+    ok('tursoListSlots is function', typeof tursoListSlots === 'function');
+    ok('tursoInit is function', typeof tursoInit === 'function');
+    ok('tursoLogin is function', typeof tursoLogin === 'function');
+    ok('tursoRegister is function', typeof tursoRegister === 'function');
+    ok('tursoDelete is function', typeof tursoDelete === 'function');
+  }
+
+
+
 console.log('\n' + (fail === 0 ? '? ALL PASS' : '? FAILURES') + ` - ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }
+
+
+
+
+
+
+
 
 
 

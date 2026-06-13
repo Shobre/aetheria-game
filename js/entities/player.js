@@ -70,16 +70,19 @@ export class Player {
   }
   _applySkillBonuses(){
     const s=skillStats(this.skills);
+    // direct stat additions
     this.hpMax += s.hp||0;
     this.mpMax += s.mp||0;
     this.atk   += s.atk||0;
     this.def   += s.def||0;
     this.crit  += s.crit||0;
     this.cdr    = Math.min(60, this.cdr + (s.cdr||0));
+    // multiplicative stats
     this.mpRegenMul = 1 + (s.mpregen||0);
     this.spellMul   = 1 + (s.spelldmg||0);
     this.speed = this.baseSpeed * (1 + (s.speed||0));
     this.stamMax = 100 + (s.stam||0);
+    // special bonuses
     this.iframeBonus = (s.iframe||0);
     this.greed = (s.greed||0);
     this.hasBerserk = (s.berserk||0)>0;
@@ -177,7 +180,7 @@ export class Player {
 
   _handleCombat(input, game){
     const cdMul=1-this.cdr/100;
-    // melee (ranged weapons fire a bolt instead — handled in game.doMeleeAttack)
+    // melee (ranged weapons fire a bolt instead - handled in game.doMeleeAttack)
     if(input.mousePressed.left && this.attackCd<=0 && !this.blocking && !this.dodging){
       this.attacking=0.18; this.attackCd=this.attackSpeed*cdMul;
       game.sfx(this.ranged?'fire':'swing'); game.doMeleeAttack(this);
@@ -242,14 +245,7 @@ export class Player {
   }
   die(game){ this.dead=true; game.onPlayerDeath(); }
 
-  draw(ctx, cam){
-    const sx=this.x-cam.x, sy=this.y-cam.y;
-    if(this.dodging>0){ ctx.globalAlpha=0.35; ctx.fillStyle='#9cf';
-      ctx.beginPath(); ctx.arc(sx,sy,this.r,0,7); ctx.fill(); ctx.globalAlpha=1; }
-    const flash=this.flash>0 && Math.floor(this.flash*20)%2===0;
-    // berserk aura
-    if(this.hasBerserk && this.hp<this.hpMax*0.3){ ctx.globalAlpha=0.3+0.2*Math.sin(performance.now()/120);
-      ctx.fillStyle='#e8413c'; ctx.beginPath(); ctx.arc(sx,sy,this.r+6,0,7); ctx.fill(); ctx.globalAlpha=1; }
+  _drawBody(ctx, sx, sy, flash){
     ctx.fillStyle = flash?'#fff':(this.invuln>0?'#fbb':'#e8623d');
     ctx.fillRect(sx-9,sy-12,18,22);
     ctx.fillStyle=flash?'#fff':'#f1c39a'; ctx.fillRect(sx-7,sy-20,14,11);
@@ -257,107 +253,90 @@ export class Player {
     ctx.fillStyle='#11131c';
     const ex=this.facing==='left'?-4:this.facing==='right'?2:-2;
     ctx.fillRect(sx+ex,sy-17,2,2); ctx.fillRect(sx+ex+5,sy-17,2,2);
-    // ---- per-weapon slash animation ----
-    if(this.attacking>0){
-      const a=this._aim, prog=1-(this.attacking/0.18);
-      ctx.save(); ctx.translate(sx,sy);
-      const wk=this.weaponKind||'sword';
-      if(wk==='ranged'){
-        // ranged: draw the bow/staff aim line
-        ctx.rotate(a); ctx.strokeStyle='rgba(200,180,140,0.5)'; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(36,0); ctx.stroke();
-      } else if(wk==='dagger'){
-        // dagger: fast short stab, quick flash
-        const sweep=-1.3+prog*2.6;
-        ctx.rotate(a+sweep);
-        ctx.strokeStyle=`rgba(255,255,255,${0.9-prog*0.9})`; ctx.lineWidth=3;
-        ctx.beginPath(); ctx.moveTo(8,0); ctx.lineTo(26,0); ctx.stroke();
-        // small arc
-        ctx.beginPath(); ctx.arc(0,0,18,-0.3,0.3); ctx.stroke();
-        ctx.fillStyle=`rgba(220,220,255,${0.7-prog*0.7})`;
-        ctx.fillRect(22,-1.5,10,3);
-      } else if(wk==='spear'){
-        // spear: long thrust line, narrow arc
-        const sweep=-0.5+prog*1.0;
-        ctx.rotate(a+sweep);
-        ctx.strokeStyle=`rgba(255,255,240,${0.85-prog*0.85})`; ctx.lineWidth=3;
-        ctx.beginPath(); ctx.moveTo(12,0); ctx.lineTo(50,0); ctx.stroke();
-        ctx.beginPath(); ctx.arc(0,0,40,-0.2,0.2); ctx.stroke();
-        ctx.fillStyle='#c8bfa0';
-        ctx.fillRect(44,-2,18,4);
-        // spear tip
-        ctx.fillStyle='#e8e0c0';
-        ctx.beginPath(); ctx.arc(62,0,3,0,7); ctx.fill();
-      } else if(wk==='greatsword'){
-        // greatswide: wide slow arc, heavy trail
-        const sweep=-1.2+prog*2.4;
-        ctx.rotate(a+sweep);
-        ctx.strokeStyle=`rgba(255,255,255,${0.8-prog*0.8})`; ctx.lineWidth=6;
-        ctx.beginPath(); ctx.arc(0,0,38,-0.7,0.7); ctx.stroke();
-        // inner trail
-        ctx.strokeStyle=`rgba(200,200,255,${0.4-prog*0.4})`; ctx.lineWidth=3;
-        ctx.beginPath(); ctx.arc(0,0,32,-0.6,0.6); ctx.stroke();
-        ctx.fillStyle='#ccc';
-        ctx.fillRect(30,-3,20,6);
-        // impact dust at peak
-        if(prog>0.3&&prog<0.7){
-          ctx.globalAlpha=(0.5-Math.abs(prog-0.5))*2;
-          ctx.fillStyle='#ddd';
-          ctx.beginPath(); ctx.arc(Math.cos(a+sweep)*38,Math.sin(a+sweep)*38,8,0,7); ctx.fill();
-          ctx.globalAlpha=1;
-        }
-      } else if(wk==='warhammer'){
-        // warhammer: overhead slam arc + shockwave
-        const sweep=-1.5+prog*3.0;
-        ctx.rotate(a+sweep);
-        ctx.strokeStyle=`rgba(255,240,200,${0.85-prog*0.85})`; ctx.lineWidth=7;
-        ctx.beginPath(); ctx.arc(0,0,34,-0.8,0.8); ctx.stroke();
-        ctx.fillStyle='#b8a080';
-        ctx.fillRect(28,-4,22,8);
-        // slam shockwave at peak
-        if(prog>0.4&&prog<0.65){
-          ctx.globalAlpha=1-prog;
-          ctx.strokeStyle='#ffcf4d'; ctx.lineWidth=2;
-          ctx.beginPath(); ctx.arc(0,0,44+(prog*30),-0.4,0.4); ctx.stroke();
-          ctx.globalAlpha=1;
-        }
-      } else {
-        // default sword: classic arc slash + trail
-        const sweep=-0.9+prog*1.8;
-        ctx.rotate(a+sweep);
-        ctx.strokeStyle=`rgba(255,255,255,${0.85-prog*0.85})`; ctx.lineWidth=4;
-        ctx.beginPath(); ctx.arc(0,0,30,-0.5,0.5); ctx.stroke();
-        // glow trail
-        ctx.strokeStyle=`rgba(200,220,255,${0.3-prog*0.3})`; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.arc(0,0,26,-0.4,0.4); ctx.stroke();
-        ctx.fillStyle='#ddd'; ctx.fillRect(24,-2,16,4);
+  }
+  _drawSlashEffect(ctx, sx, sy){
+    const a=this._aim, prog=1-(this.attacking/0.18);
+    ctx.save(); ctx.translate(sx,sy);
+    const wk=this.weaponKind||'sword';
+    if(wk==='ranged'){
+      ctx.rotate(a); ctx.strokeStyle='rgba(200,180,140,0.5)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(36,0); ctx.stroke();
+    } else if(wk==='dagger'){
+      this._drawSlashArc(ctx,a,prog,-1.3,2.6,8,26,3,18,0.3,'rgba(255,255,255,${0.9})','rgba(220,220,255,${0.7})');
+    } else if(wk==='spear'){
+      this._drawSlashArc(ctx,a,prog,-0.5,1.0,12,50,3,40,0.2,'rgba(255,255,240,${0.85})',null,true);
+    } else if(wk==='greatsword'){
+      this._drawSlashArc(ctx,a,prog,-1.2,2.4,38,null,6,null,0.7,'rgba(255,255,255,${0.8})','rgba(200,200,255,${0.4})');
+      if(prog>0.3&&prog<0.7){
+        ctx.globalAlpha=(0.5-Math.abs(prog-0.5))*2;
+        ctx.fillStyle='#ddd';
+        ctx.beginPath(); ctx.arc(Math.cos(a+(-1.2+prog*2.4))*38,Math.sin(a+(-1.2+prog*2.4))*38,8,0,7); ctx.fill();
+        ctx.globalAlpha=1;
       }
-      ctx.restore();
+    } else if(wk==='warhammer'){
+      this._drawSlashArc(ctx,a,prog,-1.5,3.0,34,null,7,null,0.8,'rgba(255,240,200,${0.85})',null,false,true,prog);
+    } else {
+      this._drawSlashArc(ctx,a,prog,-0.9,1.8,30,null,4,null,0.5,'rgba(255,255,255,${0.85})','rgba(200,220,255,${0.3})');
     }
-    // ---- shield block visual ----
-    if(this.blocking){
-      const a=this._aim!=null?this._aim:0;
-      ctx.save(); ctx.translate(sx,sy); ctx.rotate(a);
-      // shield body (larger)
-      ctx.fillStyle='#7a8090';
-      ctx.beginPath();
-      ctx.moveTo(12,-11); ctx.lineTo(20,-11); ctx.lineTo(22,0); ctx.lineTo(20,11); ctx.lineTo(12,11);
-      ctx.closePath(); ctx.fill();
-      // shield face highlight
-      ctx.fillStyle='#a0a8b8';
-      ctx.beginPath();
-      ctx.moveTo(14,-8); ctx.lineTo(18,-8); ctx.lineTo(19,0); ctx.lineTo(18,8); ctx.lineTo(14,8);
-      ctx.closePath(); ctx.fill();
-      // shield rim
-      ctx.strokeStyle='#c0c8d8'; ctx.lineWidth=1.5;
-      ctx.beginPath();
-      ctx.moveTo(12,-11); ctx.lineTo(20,-11); ctx.lineTo(22,0); ctx.lineTo(20,11); ctx.lineTo(12,11);
-      ctx.closePath(); ctx.stroke();
-      // block sparkle (subtle animation)
-      ctx.fillStyle=`rgba(100,200,255,${0.3+0.2*Math.sin(performance.now()/150)})`;
-      ctx.beginPath(); ctx.arc(18,0,2,0,7); ctx.fill();
-      ctx.restore();
+    ctx.restore();
+  }
+  _drawSlashArc(ctx, a, prog, sweepStart, sweepRange, radius1, radius2, lineWidth, arcRadius, arcRange, color1, color2, isSpear, isWarhammer, prog2){
+    const sweep=sweepStart+prog*sweepRange;
+    ctx.rotate(a+sweep);
+    const alpha1=1-prog;
+    ctx.strokeStyle=color1.replace('${0.9}',(0.9*alpha1).toFixed(2)).replace('${0.85}',(0.85*alpha1).toFixed(2)).replace('${0.8}',(0.8*alpha1).toFixed(2)).replace('${0.7}',(0.7*alpha1).toFixed(2)).replace('${0.4}',(0.4*alpha1).toFixed(2)).replace('${0.3}',(0.3*alpha1).toFixed(2));
+    ctx.lineWidth=lineWidth;
+    ctx.beginPath(); ctx.arc(0,0,radius1,-arcRange||0.5,arcRange||0.5); ctx.stroke();
+    if(radius2&&color2){
+      ctx.strokeStyle=color2.replace('${0.4}',(0.4*alpha1).toFixed(2)).replace('${0.3}',(0.3*alpha1).toFixed(2));
+      ctx.lineWidth=lineWidth-1;
+      ctx.beginPath(); ctx.arc(0,0,radius2,-(arcRange||0.5)*0.8,(arcRange||0.5)*0.8); ctx.stroke();
     }
+    if(isSpear){
+      ctx.fillStyle='#c8bfa0'; ctx.fillRect(radius1-6,-2,18,4);
+      ctx.fillStyle='#e8e0c0'; ctx.beginPath(); ctx.arc(radius1+12,0,3,0,7); ctx.fill();
+    } else if(isWarhammer){
+      ctx.fillStyle='#b8a080'; ctx.fillRect(radius1-6,-4,22,8);
+      if(prog2>0.4&&prog2<0.65){
+        ctx.globalAlpha=1-prog2;
+        ctx.strokeStyle='#ffcf4d'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(0,0,44+(prog2*30),-0.4,0.4); ctx.stroke();
+        ctx.globalAlpha=1;
+      }
+    } else {
+      ctx.fillStyle='#ddd'; ctx.fillRect(radius1-6,-2,16,4);
+    }
+  }
+  _drawShield(ctx, sx, sy){
+    const a=this._aim!=null?this._aim:0;
+    ctx.save(); ctx.translate(sx,sy); ctx.rotate(a);
+    ctx.fillStyle='#7a8090';
+    ctx.beginPath();
+    ctx.moveTo(12,-11); ctx.lineTo(20,-11); ctx.lineTo(22,0); ctx.lineTo(20,11); ctx.lineTo(12,11);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#a0a8b8';
+    ctx.beginPath();
+    ctx.moveTo(14,-8); ctx.lineTo(18,-8); ctx.lineTo(19,0); ctx.lineTo(18,8); ctx.lineTo(14,8);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#c0c8d8'; ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.moveTo(12,-11); ctx.lineTo(20,-11); ctx.lineTo(22,0); ctx.lineTo(20,11); ctx.lineTo(12,11);
+    ctx.closePath(); ctx.stroke();
+    // block sparkle (subtle animation)
+    ctx.fillStyle='rgba(100,200,255,'+(0.3+0.2*Math.sin(performance.now()/150)).toFixed(2)+')';
+    ctx.beginPath(); ctx.arc(18,0,2,0,7); ctx.fill();
+    ctx.restore();
+  }
+  draw(ctx, cam){
+    const sx=this.x-cam.x, sy=this.y-cam.y;
+    if(this.dodging>0){ ctx.globalAlpha=0.35; ctx.fillStyle='#9cf';
+      ctx.beginPath(); ctx.arc(sx,sy,this.r,0,7); ctx.fill(); ctx.globalAlpha=1; }
+    const flash=this.flash>0 && Math.floor(this.flash*20)%2===0;
+    if(this.hasBerserk && this.hp<this.hpMax*0.3){ ctx.globalAlpha=0.3+0.2*Math.sin(performance.now()/120);
+      ctx.fillStyle='#e8413c'; ctx.beginPath(); ctx.arc(sx,sy,this.r+6,0,7); ctx.fill(); ctx.globalAlpha=1; }
+    this._drawBody(ctx,sx,sy,flash);
+    if(this.attacking>0) this._drawSlashEffect(ctx,sx,sy);
+    if(this.blocking) this._drawShield(ctx,sx,sy);
     drawStatusPips(this,ctx,sx,sy-8);
   }
 
@@ -370,3 +349,5 @@ export class Player {
       pos:{x:this.x,y:this.y} };
   }
 }
+
+

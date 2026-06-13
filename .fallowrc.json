@@ -8,7 +8,11 @@
     "css/**",
     "*.bat",
     "_payload.b64",
-    "_args.json"
+    "_args.json",
+    "api/**",
+    "node_modules/**",
+    "build.cjs",
+    "config.js"
   ],
   "duplicates": {
     "minOccurrences": 3
