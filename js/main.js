@@ -34,16 +34,9 @@ document.getElementById('login-btn').addEventListener('click', async ()=>{
   const hash = btoa(u+':'+p);
   // Try to register first, then login
   const reg = await tursoRegister(u, hash);
-  if(reg && reg.error) {
-    if(reg.corsError) {
-      err.textContent='Connection error - please try again';
-    } else {
-      err.textContent='DB error: '+reg.error;
-    }
-    return;
-  }
+  if(reg && reg.error) { err.textContent='DB error: '+reg.error; return; }
   const ok = await tursoLogin(u, hash);
-  if(!ok){ err.textContent='Login failed - check your credentials'; err.classList.remove('hidden'); return; }
+  if(!ok){ err.textContent='Login failed'; err.classList.remove('hidden'); return; }
   setAuth({username:u, hash});
   err.classList.add('hidden');
   renderSlotsWithAuth(u);
@@ -81,10 +74,6 @@ document.getElementById('signup-btn').addEventListener('click', async () => {
   // Try to register
   const reg = await tursoRegister(u, hash);
   if (reg && reg.error) {
-    if (reg.corsError) {
-      err.textContent = 'Connection error - please check your internet and try again';
-      return;
-    }
     // If user already exists, try login
     const ok = await tursoLogin(u, hash);
     if (!ok) { err.textContent = 'Account already exists with different password'; return; }
