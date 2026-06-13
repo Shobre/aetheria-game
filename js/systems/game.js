@@ -9,6 +9,7 @@ import { CATALOG, makeItem, EQUIP_SLOTS } from '../data/gear.js';
 import { SKILLS, canLearn } from '../data/skilltree.js';
 import { Boss, BOSSES } from '../entities/boss.js';
 import { QuestLog } from './quests.js';
+import { QUESTS } from '../data/quests.js';
 import { rollRarity, applyRarity, rarityName } from '../data/affixes.js';
 import { SPELLS, STARTER_SPELLS, knownSpells, spellRank } from '../data/spells.js';
 import { reforge, upgrade, reforgeCost, upgradeCost, canUpgrade } from './craft.js';
@@ -16,7 +17,7 @@ import { reforge, upgrade, reforgeCost, upgradeCost, canUpgrade } from './craft.
 // difficulty scale per map (deeper = tougher enemies)
 const MAP_SCALE = { meadow:1, forest:1.25, desert:1.45, cave:1.6, dungeon1:1.9, house1:1,
   snow:1.7, swamp:1.8, dungeon2:2.3,
-  // biome sub-areas hold that biome's boss — scaled a notch above the parent zone
+  // biome sub-areas hold that biome's boss - scaled a notch above the parent zone
   meadow_glade:1.15, forest_deep:1.4, desert_ruins:1.6, snow_glacier:1.85, swamp_depths:2.0 };
 
 export class Game {
@@ -102,7 +103,7 @@ export class Game {
           const bp=this.world.nearestOpen(this.boss.x,this.boss.y);
           this.boss.x=bp.x; this.boss.y=bp.y;
         }
-        setTimeout(()=>{ if(this.boss && !this.boss.dead) this.toast('⚠ '+this.boss.def.name+' awakens!'); }, 400);
+        setTimeout(()=>{ if(this.boss && !this.boss.dead) this.toast('? '+this.boss.def.name+' awakens!'); }, 400);
       }
     }
     this.cam.follow(this.player, this.world);
@@ -281,7 +282,7 @@ export class Game {
       ctx.fillRect(0,0,this.canvas.width,this.canvas.height); }
   }
 
-  // draw ❗/❓/★ markers above quest-giver NPCs
+  // draw ?/?/? markers above quest-giver NPCs
   _drawQuestMarkers(ctx){
     if(!this.quests || !this.world) return;
     const bob=Math.sin(performance.now()/250)*3;
@@ -290,9 +291,9 @@ export class Game {
       if(n.shop||n.bank||n.craft) continue;
       const gs=this.quests.giverState(n.name);
       let m=null,col='#ffcf4d';
-      if(gs.turnIn.length){ m='★'; col='#ffcf4d'; }
-      else if(gs.available.length){ m='❗'; col='#ffe24d'; }
-      else if(gs.inProgress.length){ m='❓'; col='#9aa'; }
+      if(gs.turnIn.length){ m='?'; col='#ffcf4d'; }
+      else if(gs.available.length){ m='?'; col='#ffe24d'; }
+      else if(gs.inProgress.length){ m='?'; col='#9aa'; }
       if(m){ const sx=n.wx+16-this.cam.x, sy=n.wy-6-this.cam.y+bob;
         ctx.font='16px serif'; ctx.fillStyle=col;
         ctx.fillText(m, sx, sy); }
@@ -398,7 +399,7 @@ export class Game {
     // guaranteed rare+ gear drop
     const item=makeItem(boss.def.drop,1);
     if(item){ const rar=rollRarity(Math.random,0.9); applyRarity(item,rar==='common'?'rare':rar);
-      this.addItem(item); this.toast('★ '+rarityName(item)+' '+item.name+' obtained!'); }
+      this.addItem(item); this.toast('? '+rarityName(item)+' '+item.name+' obtained!'); }
     this.bossesDead[boss.id]=true;
     this.audio.setMusic(MAPS[this.currentMap].music,false);
     if(this.quests) this.quests.onKill(null,true,boss.id);
@@ -424,7 +425,7 @@ export class Game {
     this.drops.push({x,y,id,item,dead:false});
   }
   // enemy death bookkeeping: quest progress + gear drop chance
-  // (regular enemies respawn on re-entry so the player can farm — no kill persistence)
+  // (regular enemies respawn on re-entry so the player can farm - no kill persistence)
   onEnemyKilled(e){
     if(this.quests) this.quests.onKill(e.type,false,null);
     // tougher foes can drop rolled gear
@@ -502,7 +503,7 @@ export class Game {
 
   // ---- spell shop (arcane vendor) ----
   // Track which spell ranks the player has bought (persisted in knownSpells + skill unlocks).
-  // spellRanks: {spellId: true} — persisted via serialize() so bought ranks survive save/load.
+  // spellRanks: {spellId: true} - persisted via serialize() so bought ranks survive save/load.
 
   buySpell(id){
     const sp=SPELLS[id]; if(!sp) return;
@@ -643,3 +644,4 @@ export class Game {
   resize(){ this.canvas.width=window.innerWidth; this.canvas.height=window.innerHeight;
     this.ctx.imageSmoothingEnabled=false; if(this.cam) this.cam.resize(this.canvas.width,this.canvas.height); }
 }
+
