@@ -86,7 +86,7 @@ export const BOSSES = {
     ],
   },
   magma_tyrant: {
-    name:'Magma Tyrant', icon:'🌋', color:'#ff4400',
+    name:'Magma Tyrant', icon:'◆', color:'#ff4400',
     map:'volcano_depths',
     hp:1800, atk:28, def:12, xp:800, gold:600,
     drop:'sword_firesword',

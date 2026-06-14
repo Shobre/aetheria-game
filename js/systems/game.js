@@ -285,7 +285,7 @@ export class Game {
       ctx.fillStyle='#c79a2a'; ctx.beginPath(); ctx.arc(g.x-this.cam.x,g.y-this.cam.y,2,0,7); ctx.fill(); }
     // item drops (sparkle)
     for(const it of this.drops){ const sx=it.x-this.cam.x, sy=it.y-this.cam.y;
-      ctx.font='18px serif'; ctx.textAlign='center';
+      ctx.font='18px "Segoe UI Symbol","Arial Unicode MS",serif'; ctx.textAlign='center';
       ctx.fillText(CATALOG[it.id].icon, sx, sy+6+Math.sin(performance.now()/300)*2); }
     // depth sort
     const ents=[this.player,...this.enemies]; if(this.boss) ents.push(this.boss);
@@ -328,7 +328,7 @@ export class Game {
       else if(gs.available.length){ m='?'; col='#ffe24d'; }
       else if(gs.inProgress.length){ m='?'; col='#9aa'; }
       if(m){ const sx=n.wx+16-this.cam.x, sy=n.wy-6-this.cam.y+bob;
-        ctx.font='16px serif'; ctx.fillStyle=col;
+        ctx.font='16px "Segoe UI Symbol","Arial Unicode MS",serif'; ctx.fillStyle=col;
         ctx.fillText(m, sx, sy); }
     }
   }

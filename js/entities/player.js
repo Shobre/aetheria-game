@@ -153,7 +153,7 @@ export class Player {
     this.flash=Math.max(0,this.flash-dt);
     for(const k of ['q','e','r']) this.spellCd[k]=Math.max(0,this.spellCd[k]-dt);
     if(this.attacking>0) this.attacking-=dt;
-    this.dodging=Math.max(0,this.dodging);
+    this.dodging=Math.max(0,this.dodging-dt);
   }
 
   _handleMovement(dt, input, world, game){

@@ -235,7 +235,7 @@ document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeModal(do
 document.getElementById('shop-close').onclick=()=>closeModal(shopModal);
 document.getElementById('save-game-btn').onclick=()=>{
   const uname=game._username;
-  if(uname){ cloudSave(uname, game._slot, game._buildState()); }
+  if(uname){ cloudSave(uname, game.slot, game._buildState()); }
   else game.save();
 };
 document.getElementById('quit-btn').addEventListener('click', ()=>{ if(confirm('Quit to menu?')){ game.quitToMenu(); show('start-screen'); } });

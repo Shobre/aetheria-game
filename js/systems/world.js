@@ -287,7 +287,7 @@ export class World {
       }
       ctx.fillStyle='#5a3a1a'; ctx.fillRect(sx+4,sy+2,TILE-8,TILE-2);
       ctx.fillStyle='#2a1a0a'; ctx.fillRect(sx+9,sy+6,TILE-18,TILE-6);
-      if(this.def.town && p.label){ ctx.fillStyle='#ffe6a0'; ctx.font='8px monospace'; ctx.textAlign='center';
+      if(this.def.town && p.label){ ctx.fillStyle='#ffe6a0'; ctx.font='8px "Segoe UI Symbol","Arial Unicode MS",sans-serif'; ctx.textAlign='center';
         ctx.fillText(p.label, sx+16, sy-40); }
     } else {
       ctx.fillStyle=`rgba(164,92,255,${0.4+pulse*0.4})`;
@@ -317,9 +317,9 @@ export class World {
     }
     for(const n of this.npcs){
       const sx=n.x*TILE-cam.x, sy=n.y*TILE-cam.y;
-      ctx.font='24px serif'; ctx.textAlign='center';
+      ctx.font='24px "Segoe UI Symbol","Arial Unicode MS",sans-serif'; ctx.textAlign='center';
       ctx.fillText(n.icon, sx+16, sy+26);
-      if(n.shop){ ctx.font='10px serif'; ctx.fillText('⚔', sx+24, sy+6); }
+      if(n.shop){ ctx.font='10px "Segoe UI Symbol","Arial Unicode MS",sans-serif'; ctx.fillText('◆', sx+24, sy+6); }
     }
   }
 
