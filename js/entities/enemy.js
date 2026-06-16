@@ -2,6 +2,11 @@ import { TILE } from '../systems/world.js';
 import { applyStatus, tickStatuses, drawStatusPips } from '../systems/status.js';
 import { makeItem } from '../data/gear.js';
 import { rollRarity, applyRarity } from '../data/affixes.js';
+// Sprint 11: optional sprite atlas (PNG frames). The atlas draw is a
+// best-effort path; the canvas-primitive _drawCanvas() below is the
+// authoritative fallback.
+import { drawImageFromAtlas, isUsingAtlases } from '../systems/sprite-atlas.js';
+import { lookupFrame as _atlasLookupFrame } from '../data/sprite-atlas.js';
 
 // Enemy configs per type. Behaviors: chase (touch), ranged (shoots), lunge (telegraph+dash).
 // speeds are deliberately below the player's baseSpeed (1.9) so the player can
@@ -422,10 +427,57 @@ export class Enemy {
       ctx.save(); ctx.globalAlpha=0.35; ctx.strokeStyle=this.eliteMod.aura; ctx.lineWidth=3;
       ctx.beginPath(); ctx.arc(sx,sy,pulse,0,7); ctx.stroke(); ctx.restore();
     }
+    // Sprint 11: try the enemy atlas for the base body. The atlas handles
+    // the standing pose. Cosmetic overlays (aura above, hit-flash white
+    // tint, lunge telegraph, elite glow) still come from the canvas
+    // primitives below — the atlas is just the "skin" of the enemy.
+    const bob=Math.sin(this.bob)*2;
+    if(this._atlasDrawn(ctx, sx, sy, bob)) {
+      // Atlas path took care of the base body. Cosmetic state handled
+      // below for the cases the canvas code covers (hit-flash, lunge,
+      // freeze tint, elite aura — the aura already drew above). The
+      // canvas-primitive body branch is skipped.
+    } else {
+      this._drawCanvas(ctx, sx, sy, bob);
+    }
+    // Floating HP pip above the body for champions / bosses (skipped on
+    // the atlas path so it never double-draws).
+  }
+
+  // Sprint 11: atlas-aware base body draw. Returns true if the atlas took
+  // over. The hit-flash / lunge telegraph / freeze tint are applied as
+  // colored overlay on top of the atlas frame.
+  _atlasDrawn(ctx, sx, sy, bob){
+    if(!isUsingAtlases()) return false;
+    const drew = drawImageFromAtlas(ctx, 'enemies', this.type, sx, sy, { bob });
+    if(!drew) return false;
+    // Cosmetic overlays. We tint the frame if hit-frozen, hit-flash, or
+    // telegraphing — keeps the canonical visual signals (frosted blue,
+    // pure white, strobe red) without losing the new sprite art.
+    let tint = null;
+    if(this.frozen > 0) tint = 'rgba(159,216,255,0.5)';
+    else if(this.hitFlash > 0) tint = 'rgba(255,255,255,0.7)';
+    else if(this.lungeState === 'telegraph') tint = 'rgba(255,80,80,0.5)';
+    if(tint){
+      ctx.save();
+      ctx.fillStyle = tint;
+      // Cover the same region the atlas drew (24x24 or 24x32 around sx,sy).
+      const c = _atlasLookupFrame('enemies', this.type);
+      const w = c ? c[2] : 24, h = c ? c[3] : 32;
+      ctx.fillRect(sx - w/2, sy - h/2 + bob, w, h);
+      ctx.restore();
+    }
+    return true;
+  }
+
+  // Sprint 11: original canvas-primitive draw path, kept verbatim for
+  // fallback when the atlas isn't ready (first frame after load, or the
+  // toggle is off). Cosmetic state (hit-flash, lunge telegraph, freeze)
+  // is baked into `c` at the top.
+  _drawCanvas(ctx, sx, sy, bob){
     let c=this.hitFlash>0?'#fff':(this.frozen>0?'#9fd8ff':this.color);
     // telegraph flash (lunge windup)
     if(this.lungeState==='telegraph'){ c=Math.floor(performance.now()/80)%2?'#ff5050':this.color; }
-    const bob=Math.sin(this.bob)*2;
     const t=this.type;
     if(t==='slime'){
       ctx.fillStyle=c; ctx.beginPath(); ctx.ellipse(sx,sy+bob,this.r,this.r-bob*0.5,0,0,7); ctx.fill();

@@ -2,6 +2,10 @@ import { Input } from './systems/input.js';
 import { Game } from './systems/game.js';
 import { SaveSystem } from './systems/save.js';
 import { KeybindUI } from './ui/keybinds.js';
+// Sprint 11: kick off the sprite-atlas loads once on boot. Decoding is
+// async; the draw helper falls through to canvas primitives when the
+// atlas isn't ready yet, so the first frame is just as fast as before.
+import { loadAllAtlases, setUseAtlases } from './systems/sprite-atlas.js';
 
 
 import { tursoInit, tursoListSlots, tursoLoad, tursoSave, tursoDelete, tursoRegister, tursoLogin } from './systems/turso.js';
@@ -117,6 +121,13 @@ const canvas=document.getElementById('game-canvas');
 const input=new Input(canvas);
 const game=new Game(canvas,input);
 window.GAME=game;
+// Sprint 11: restore the user's atlas-toggle preference (default ON), then
+// start loading both atlases. The loader is async, so this is fire-and-forget.
+try{
+  const pref = localStorage.getItem('aetheria_atlases_v1');
+  setUseAtlases(pref == null ? true : pref === '1');
+}catch(e){ setUseAtlases(true); }
+loadAllAtlases();
 
 // Sprint 7: mount the keybind rebind UI inside the Settings modal.
 // Reads localStorage on mount, writes whenever a user rebinds anything.
@@ -223,6 +234,17 @@ function launchUser(state,username){
       if(cb) cb.checked = (hbPref === '1');
     }
   }catch(e){}
+  // Sprint 11: also restore the atlas-toggle preference on every load.
+  // The localStorage value was already read at module-init time (before
+  // launchUser), so setUseAtlases() is already correct. We just sync
+  // the checkbox so the user can see it on the next Settings open.
+  try{
+    const atPref = localStorage.getItem('aetheria_atlases_v1');
+    if(atPref != null){
+      const cb=document.getElementById('set-atlases');
+      if(cb) cb.checked = (atPref === '1');
+    }
+  }catch(e){}
 }
 function launch(state){ show('game-container'); game.resize(); game.start(state); applySettings(); }
 
@@ -250,8 +272,14 @@ function applySettings(){
     game.audio.setHeartbeatEnabled(hb.checked);
     try{ localStorage.setItem('aetheria_heartbeat_v1', hb.checked ? '1' : '0'); }catch(e){}
   }
+  // Sprint 11: atlas toggle
+  const at=document.getElementById('set-atlases');
+  if(at){
+    setUseAtlases(at.checked);
+    try{ localStorage.setItem('aetheria_atlases_v1', at.checked ? '1' : '0'); }catch(e){}
+  }
 }
-['set-shake','set-fps','set-music','set-sfx','set-heartbeat'].forEach(id=>{
+['set-shake','set-fps','set-music','set-sfx','set-heartbeat','set-atlases'].forEach(id=>{
   const el=document.getElementById(id); if(el) el.addEventListener('input',applySettings); });
 
 function anyModalOpen(){ return [settingsModal,bagModal,charModal,skillsModal,questsModal,achievementsModal,shopModal,stashModal,craftModal,enchantModal,document.getElementById('fullmap-modal'),document.getElementById('combat-log-modal')]

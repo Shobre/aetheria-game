@@ -9,6 +9,11 @@
 // All draw functions must be self-contained — they may save/restore ctx state
 // only when they need to translate/rotate. They never mutate global state.
 
+// Sprint 11: try the atlas first; if the PNG isn't ready yet (or the
+// toggle is off) we fall through to the canvas-primitive path. The
+// first frame after a fresh load will use primitives; subsequent frames
+// use the atlas. No flicker, no per-entity code change.
+import { drawImageFromAtlas, isUsingAtlases } from './systems/sprite-atlas.js';
 import { ENCHANTMENTS } from './data/enchantments.js';
 
 const SW = 24;            // sprite virtual width
@@ -451,7 +456,18 @@ const NPC_SPRITES = {
 };
 
 // Dispatch an NPC sprite by name. Unknown names fall through to default.
+// Sprint 11: try the atlas first; if the PNG isn't ready yet (or the
+// toggle is off) we fall through to the canvas-primitive path. The
+// first frame after a fresh load will use primitives; subsequent frames
+// use the atlas. No flicker, no per-entity code change.
+
 export function drawNPCSprite(ctx, name, sx, sy, bob = 0) {
+  // Try the atlas path. drawImageFromAtlas returns true on success, false
+  // when the atlas isn't ready (or the toggle is off). We also let the
+  // atlas handle 'default' — a player who enabled the toggle explicitly
+  // asked for atlases; an unknown name should render the default atlas
+  // frame, not silently fall back to the canvas default.
+  if(isUsingAtlases() && drawImageFromAtlas(ctx, 'npc', name, sx, sy, { bob })) return;
   const fn = NPC_SPRITES[name] || NPC_SPRITES.default;
   fn(ctx, sx, sy, bob);
 }

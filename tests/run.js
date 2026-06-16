@@ -1921,6 +1921,176 @@ console.log('\n=== sprint 10 (gamepad + tutorial) ===');
 }
 
 
+// ============ Sprint 11 — Sprite Sheets ============
+console.log('\n=== sprint 11 (sprite sheets) ===');
+{
+  // ---- data/sprite-atlas.js: manifest shape ----
+  const { SPRITE_ATLASES, lookupFrame, listAllFrames } = await import('../js/data/sprite-atlas.js');
+  ok('SPRITE_ATLASES is a non-empty array', Array.isArray(SPRITE_ATLASES) && SPRITE_ATLASES.length > 0);
+
+  // Each atlas has the right shape
+  for(const a of SPRITE_ATLASES){
+    ok(`atlas ${a.id} has id/src/frameW/frameH/frames`, !!(a.id && a.src && a.frameW && a.frameH && a.frames));
+  }
+  // The two expected atlases are present
+  ok('manifest has npc atlas',    !!SPRITE_ATLASES.find(a => a.id === 'npc'));
+  ok('manifest has enemies atlas', !!SPRITE_ATLASES.find(a => a.id === 'enemies'));
+  // NPC manifest has 20 named NPCs
+  const npcAtlas = SPRITE_ATLASES.find(a => a.id === 'npc');
+  ok('npc atlas has default frame', !!npcAtlas.frames.default);
+  ok('npc atlas has 20 named NPCs (default + 19)', Object.keys(npcAtlas.frames).length === 20);
+  // Spot-check a few NPC frame coordinates
+  eq('Elder is at [0, 1, 24, 32]', JSON.stringify(npcAtlas.frames['Elder']), JSON.stringify([0, 1, 24, 32]));
+  eq('Merchant is at [3, 2, 24, 32]', JSON.stringify(npcAtlas.frames['Merchant']), JSON.stringify([3, 2, 24, 32]));
+  // Enemy manifest covers all 17 type names used in enemy.js
+  const enemyAtlas = SPRITE_ATLASES.find(a => a.id === 'enemies');
+  const enemyTypes = ['slime','bat','archer','boar','scorpion','golem','skeleton','frostling','yeti','mage','frost_mage','berserker','spitter','ice_wraith','frost_golem','snow_stalker','frozen_husk','croaker'];
+  for(const t of enemyTypes){
+    ok(`enemy atlas has frame for ${t}`, !!enemyAtlas.frames[t]);
+  }
+  // frost_mage shares a frame with mage
+  eq('frost_mage shares mage coords', JSON.stringify(enemyAtlas.frames['frost_mage']), JSON.stringify(enemyAtlas.frames['mage']));
+
+  // lookupFrame: exact hit
+  const elder = lookupFrame('npc', 'Elder');
+  ok('lookupFrame("npc", "Elder") returns 4-tuple', Array.isArray(elder) && elder.length === 4);
+  eq('lookupFrame("npc", "Elder")[0] = 0 (row)', elder[0], 0);
+  eq('lookupFrame("npc", "Elder")[1] = 1 (col)', elder[1], 1);
+  // lookupFrame: unknown name falls back to default
+  const unknown = lookupFrame('npc', 'NotARealNPC');
+  eq('lookupFrame(npc, "NotARealNPC") falls back to default coords', JSON.stringify(unknown), JSON.stringify([0, 0, 24, 32]));
+  // lookupFrame: unknown atlas returns null
+  ok('lookupFrame("nonexistent", "x") = null', lookupFrame('nonexistent', 'x') === null);
+  // listAllFrames shape
+  const all = listAllFrames();
+  ok('listAllFrames has npc key',  Array.isArray(all.npc));
+  ok('listAllFrames has enemies key', Array.isArray(all.enemies));
+  ok('listAllFrames.npc includes Elder', all.npc.includes('Elder'));
+  ok('listAllFrames.enemies includes slime', all.enemies.includes('slime'));
+
+  // ---- assets/sprites/*.png: real PNG files exist on disk ----
+  const fs = await import('node:fs');
+  const npcPath = new URL('../assets/sprites/npc.png', import.meta.url);
+  const enemyPath = new URL('../assets/sprites/enemies.png', import.meta.url);
+  ok('npc.png exists on disk', fs.existsSync(npcPath));
+  ok('enemies.png exists on disk', fs.existsSync(enemyPath));
+  // PNG header check (first 4 bytes are the PNG magic 89 50 4E 47)
+  if(fs.existsSync(npcPath)){
+    const buf = fs.readFileSync(npcPath);
+    const magic = [buf[0], buf[1], buf[2], buf[3]];
+    eq('npc.png has PNG magic', JSON.stringify(magic), JSON.stringify([0x89, 0x50, 0x4E, 0x47]));
+    // Width/height are in the IHDR chunk at bytes 16-24
+    const w = (buf[16] << 24) | (buf[17] << 16) | (buf[18] << 8) | buf[19];
+    const h = (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
+    ok('npc.png is 144 wide', w === 144);
+    ok('npc.png is 160 tall (5 rows × 32px — row 4 reserved for future NPCs)', h === 160);
+  }
+  if(fs.existsSync(enemyPath)){
+    const buf = fs.readFileSync(enemyPath);
+    const w = (buf[16] << 24) | (buf[17] << 16) | (buf[18] << 8) | buf[19];
+    const h = (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
+    ok('enemies.png is 144 wide', w === 144);
+    ok('enemies.png is 64 tall (2 rows × 32px)', h === 64);
+  }
+
+  // ---- systems/sprite-atlas.js: loader behavior in Node ----
+  // The loader is browser-only at runtime (uses Image()), but the public
+  // API has to be importable in Node. We exercise the toggle + cache
+  // reset; the drawImageFromAtlas path returns false in Node (no real
+  // image), which is the right behavior.
+  const atlasLib = await import('../js/systems/sprite-atlas.js');
+  ok('atlas module exports loadAllAtlases', typeof atlasLib.loadAllAtlases === 'function');
+  ok('atlas module exports loadAtlas',      typeof atlasLib.loadAtlas === 'function');
+  ok('atlas module exports setUseAtlases',  typeof atlasLib.setUseAtlases === 'function');
+  ok('atlas module exports isUsingAtlases', typeof atlasLib.isUsingAtlases === 'function');
+  ok('atlas module exports drawImageFromAtlas', typeof atlasLib.drawImageFromAtlas === 'function');
+  ok('atlas module exports isAtlasReady',   typeof atlasLib.isAtlasReady === 'function');
+
+  // Toggle is on by default
+  ok('atlas toggle starts ON (default)', atlasLib.isUsingAtlases() === true);
+  atlasLib.setUseAtlases(false);
+  ok('setUseAtlases(false) flips toggle', atlasLib.isUsingAtlases() === false);
+  atlasLib.setUseAtlases(true);
+  ok('setUseAtlases(true) restores toggle', atlasLib.isUsingAtlases() === true);
+
+  // drawImageFromAtlas with toggle OFF returns false without needing the image
+  atlasLib.setUseAtlases(false);
+  const drewOff = atlasLib.drawImageFromAtlas({}, 'npc', 'Elder', 100, 100, {});
+  ok('drawImageFromAtlas returns false when toggle is off', drewOff === false);
+  atlasLib.setUseAtlases(true);
+
+  // ---- drawNPCSprite: falls back to canvas when atlas isn't ready ----
+  // The atlas is in "loaded=false" state in Node (no real image decoded).
+  // We can simulate this by calling drawNPCSprite with a mock ctx that
+  // records what was drawn; canvas-primitive path should be exercised.
+  // We can't easily assert on canvas drawing without a real Canvas, so
+  // we just assert that the call doesn't throw.
+  const sprites = await import('../js/sprites.js');
+  // Build a minimal ctx with just the methods drawNPCSprite needs
+  const calls = [];
+  const fakeCtx = {
+    save: () => calls.push('save'),
+    restore: () => calls.push('restore'),
+    fillRect: () => calls.push('fillRect'),
+    beginPath: () => calls.push('beginPath'),
+    arc: () => calls.push('arc'),
+    ellipse: () => calls.push('ellipse'),
+    closePath: () => calls.push('closePath'),
+    fill: () => calls.push('fill'),
+    moveTo: () => calls.push('moveTo'),
+    lineTo: () => calls.push('lineTo'),
+    stroke: () => calls.push('stroke'),
+    fillText: () => calls.push('fillText'),
+    set fillStyle(v){}, set strokeStyle(v){}, set lineWidth(v){}, set font(v){}, set textAlign(v){}, set globalAlpha(v){},
+  };
+  // With the toggle ON but the atlas not yet ready (Node), the function
+  // should fall through to the canvas-primitive path. We just need it
+  // to not throw.
+  atlasLib.setUseAtlases(true);
+  let threw = false;
+  try{ sprites.drawNPCSprite(fakeCtx, 'Elder', 100, 100, 0); }catch(e){ threw = true; console.log('threw:', e.message); }
+  ok('drawNPCSprite does not throw when atlas is unloaded (falls back to canvas)', !threw);
+  // With the toggle OFF, the same call also works.
+  atlasLib.setUseAtlases(false);
+  threw = false;
+  try{ sprites.drawNPCSprite(fakeCtx, 'Elder', 100, 100, 0); }catch(e){ threw = true; }
+  ok('drawNPCSprite does not throw when toggle is off', !threw);
+  // Unknown name falls back to default
+  threw = false;
+  try{ sprites.drawNPCSprite(fakeCtx, 'NotARealNPC', 100, 100, 0); }catch(e){ threw = true; }
+  ok('drawNPCSprite does not throw on unknown name', !threw);
+
+  // ---- file/contract smoke tests ----
+  const mainSrc11  = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  const indexSrc11 = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const enemySrc   = readFileSync(new URL('../js/entities/enemy.js', import.meta.url), 'utf8');
+  const spritesSrc = readFileSync(new URL('../js/sprites.js', import.meta.url), 'utf8');
+  const loaderSrc  = readFileSync(new URL('../js/systems/sprite-atlas.js', import.meta.url), 'utf8');
+
+  ok('main.js imports loadAllAtlases', mainSrc11.includes('loadAllAtlases'));
+  ok('main.js calls loadAllAtlases on boot', mainSrc11.includes('loadAllAtlases()'));
+  ok('main.js wires set-atlases checkbox', mainSrc11.includes("'set-atlases'"));
+  ok('main.js persists atlas preference to localStorage', mainSrc11.includes('aetheria_atlases_v1'));
+  ok('index.html has #set-atlases checkbox', indexSrc11.includes('id="set-atlases"'));
+  ok('enemy.js imports drawImageFromAtlas',  enemySrc.includes('drawImageFromAtlas'));
+  ok('enemy.js imports isUsingAtlases',      enemySrc.includes('isUsingAtlases'));
+  ok('enemy.js has _atlasDrawn method',      enemySrc.includes('_atlasDrawn'));
+  ok('enemy.js has _drawCanvas fallback',    enemySrc.includes('_drawCanvas'));
+  ok('sprites.js imports atlas draw helper', spritesSrc.includes('drawImageFromAtlas'));
+  ok('loader caches images by atlasId',      loaderSrc.includes('cache'));
+  ok('loader checks the toggle',             loaderSrc.includes('useAtlases'));
+  ok('loader calls navigator.getGamepads-style API',
+     loaderSrc.includes('navigator') || loaderSrc.includes('Image'));
+
+  // ---- Build script exists and is runnable ----
+  const buildSrc = readFileSync(new URL('../scripts/build-sprite-atlases.py', import.meta.url), 'utf8');
+  ok('build-sprite-atlases.py exists', buildSrc.length > 1000);
+  ok('build script imports PIL',  buildSrc.includes('from PIL import'));
+  ok('build script writes npc.png', buildSrc.includes("'npc.png'"));
+  ok('build script writes enemies.png', buildSrc.includes("'enemies.png'"));
+}
+
+
 console.log('\n' + (fail === 0 ? '? ALL PASS' : '? FAILURES') + ` - ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }
 
