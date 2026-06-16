@@ -87,7 +87,25 @@ body{image-rendering:pixelated}
 @keyframes toastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1}}
 .floater{position:absolute;font-size:11px;font-weight:bold;pointer-events:none;
   text-shadow:1px 1px 0 #000;animation:floatUp 0.9s ease-out forwards}
+.floater-hit{font-size:13px;text-shadow:0 0 4px rgba(255,90,77,0.6),1px 1px 0 #000}
 @keyframes floatUp{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-40px)}}
+
+/* ===== combat log ===== */
+.log-list{display:flex;flex-direction:column;gap:2px;padding:6px;
+  background:rgba(0,0,0,0.4);border:1px solid var(--gpanel2);border-radius:4px;
+  font-family:'Consolas','Menlo',monospace;font-size:10px;line-height:1.4;
+  overflow-y:auto;scrollbar-width:thin}
+.log-row{padding:2px 4px;border-bottom:1px solid rgba(255,255,255,0.04);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-row:last-child{border-bottom:0}
+.log-hit{color:#ff8888}
+.log-crit{color:#ffcf4d;font-weight:bold}
+.log-kill{color:#a0ffa0}
+.log-heal{color:#88ff88}
+.log-gold{color:#ffd86a}
+.log-portal{color:#88ccff}
+.log-info{color:#aab}
+.log-enchant{color:#b06bff}
 
 .hidden{display:none!important}
 /* ===== map name ===== */

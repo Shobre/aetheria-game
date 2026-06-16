@@ -204,6 +204,64 @@ export class World {
     return {x:this.w/2,y:this.h/2};
   }
 
+  // Smart enemy spawn picker: avoids the player, every other enemy already
+  // placed, and any "reserved" world points (chests, portals, NPCs). Up to
+  // 120 attempts before falling back to a random walkable tile. `exclusions`
+  // is an array of {x,y} tile-centre points the enemy must stay at least
+  // `exclusionR` pixels away from; `others` is an array of {x,y} for
+  // previously-spawned enemies (uses `otherR` as the spacing radius).
+  findSpawnPoint(rand, opts={}){
+    const exR=opts.exclusionR||28;
+    const otherR=opts.otherR||26;
+    const tries=opts.tries||120;
+    const exclusions=opts.exclusions||[];
+    const others=opts.others||[];
+    const player=opts.player||null;
+    const playerR=opts.playerR||80;
+    for(let i=0;i<tries;i++){
+      const x=1+Math.floor(rand()*(this.cols-2));
+      const y=1+Math.floor(rand()*(this.rows-2));
+      if(this.map[y][x]!==T.FLOOR) continue;
+      const wx=x*TILE+16, wy=y*TILE+16;
+      // reserved zones (chests/portals/NPCs)
+      let bad=false;
+      for(const e of exclusions){
+        if(Math.hypot(e.x-wx,e.y-wy)<exR){ bad=true; break; }
+      }
+      if(bad) continue;
+      // other enemies already on the map
+      for(const o of others){
+        if(Math.hypot(o.x-wx,o.y-wy)<otherR){ bad=true; break; }
+      }
+      if(bad) continue;
+      // don't drop enemies on top of the player
+      if(player && Math.hypot(player.x-wx,player.y-wy)<playerR) continue;
+      return {x:wx,y:wy};
+    }
+    // last-ditch: any walkable tile (player zone still avoided)
+    for(let i=0;i<60;i++){
+      const x=1+Math.floor(rand()*(this.cols-2));
+      const y=1+Math.floor(rand()*(this.rows-2));
+      if(this.map[y][x]!==T.FLOOR) continue;
+      const wx=x*TILE+16, wy=y*TILE+16;
+      if(player && Math.hypot(player.x-wx,player.y-wy)<60) continue;
+      return {x:wx,y:wy};
+    }
+    return {x:this.w/2,y:this.h/2};
+  }
+
+  // Collect reserved spawn zones (chests + portals + NPCs) for a map def.
+  // Returns an array of {x,y} world points. Used by findSpawnPoint exclusions.
+  reservedZones(def){
+    const out=[];
+    if(!def) return out;
+    const t=TILE;
+    if(def.chests) for(const c of def.chests) out.push({x:c.x*t+t/2, y:c.y*t+t/2});
+    if(def.portals) for(const p of def.portals) out.push({x:p.x*t+t/2, y:p.y*t+t/2});
+    if(def.npcs) for(const n of def.npcs) out.push({x:n.x*t+t/2, y:n.y*t+t/2});
+    return out;
+  }
+
   // ---- pathfinding helpers (used by enemy AI to navigate around walls) ----
   _blockedTile(x,y){
     if(x<0||y<0||x>=this.cols||y>=this.rows) return true;

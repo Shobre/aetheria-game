@@ -121,6 +121,37 @@ Each has: sprite, stats, AI behaviors, drop table, spawn in appropriate biomes.
 
 ---
 
+## ✅ Sprint 4 — Complete (commit 834575b → next)
+
+### ✅ 1. Spawn Placement Improvements
+Enemies used to spawn on chests, NPCs, portals, or stack on each other. New `World.findSpawnPoint()` keeps every enemy at least:
+- 30px away from chests, portals, and NPCs (`reservedZones()`)
+- 26px away from every other enemy already placed
+- 80px away from the player
+
+### ✅ 2. Damage Number Batching
+- Pure-numeric floaters of the same color landing within 30px of each other inside 350ms get merged into "x2 / x3 / x4" stack
+- Batched hits use the new `.floater-hit` class (slightly larger + red glow)
+- CRIT / PARRY / OVERHEAT / CHAIN labels never collapse into damage numbers
+- Resets the floatUp animation on each merge so the player sees the jump
+
+### ✅ 3. Combat Log Panel (L key)
+- `Hud.logCombat()` keeps a 20-entry ring buffer
+- Auto-logs: enemy kills, boss defeats, crits, damage taken, heals, gold gains, area entries, item pickups, blocks
+- L-key toggle (and a 📋 HUD button next to the trophy)
+- Color-coded rows: hit (red), crit (gold), kill (green), heal (green), gold (yellow), portal (blue), enchant (purple)
+- Scrollable, monospace, semi-transparent
+
+### ✅ 4. Balance Pass
+- New `MAP_LEVEL` table in `js/data/maps.js` covering every map
+- Map entry shows a warning toast if the player's level is below the recommendation
+- Levels scale monotonically: meadow(1) → forest(3) → desert(5) → cave(7) → dungeon1(9) → snow(9) → swamp(10) → dungeon2(12) → tundra_edge(13) → tundra_heart(15) → frost_spire(17)
+- Sub-areas sit 1 tier above their parent biome
+
+**Sprint 4 results:** 613/613 tests passing (was 600), 0 dead exports, fallow health 86.2 (good)
+
+---
+
 ## ⬜ Backlog — Future Sprints
 
 ### 🟡 Ammo / Quiver System
@@ -129,18 +160,6 @@ Ranged weapons require arrows/bolts (limited stack). Craftable purchasable ammo 
 ### 🟡 Pathfinding Polish
 - Path smoothing / funnel so enemies cut corners
 - Flow-field caching for groups of enemies chasing one target
-
-### 🟡 Spawn Placement Improvements
-Enemy spawns use walkability + spacing checks (player spawn already fixed)
-
-### 🟡 Balance Pass
-XP/gold curves tuned per-map with level recommendations displayed on area entry
-
-### ⚪ Damage Number Batching
-Batch nearby same-type hits: show "x3 45" instead of three separate 45s
-
-### ⚪ Combat Log Panel
-Toggle with L key, last 20 combat events, scrollable semi-transparent overlay
 
 ### ⚪ Rebindable Keys
 Settings panel with click-to-rebind for all actions, stored in localStorage
@@ -192,7 +211,7 @@ Repurpose Merchants Hut as player home with expanded storage
 
 ## Test Coverage
 
-- **Total:** 600 tests across all modules (547 → 600 after Sprint 3)
+- **Total:** 613 tests across all modules (547 → 600 → 613 after Sprints 3+4)
 - **Run:** npm test (plain Node, no framework dependency)
 
 ---

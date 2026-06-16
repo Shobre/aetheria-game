@@ -220,15 +220,21 @@ export class Player {
       // so it's blocked when its travel direction is ~opposite our guard direction
       const fa=this._aim!=null?this._aim:0;
       const facingDiff=Math.abs(((fromAngle-(fa+Math.PI)+Math.PI)%(2*Math.PI))-Math.PI);
-      if(facingDiff<1.8){ amt*=0.15; game.sfx('block'); game.floater('BLOCK',this.x,this.y-20,'#4dd28a'); game.cam.shake=4; }
+      if(facingDiff<1.8){ amt*=0.15; game.sfx('block'); game.floater('BLOCK',this.x,this.y-20,'#4dd28a'); game.cam.shake=4;
+        if(game.logCombat) game.logCombat('BLOCKED ' + Math.round(amt) + ' dmg', 'info'); }
     }
     amt=Math.max(1,Math.round(amt));
     this.hp=Math.max(0,this.hp-amt);
     this.invuln=0.5; this.flash=0.3; game.cam.shake=Math.min(12,this.blocking?4:8);
     game.floater('-'+amt,this.x,this.y-16,'#e8413c'); game.sfx('hurt');
+    if(game.logCombat) game.logCombat('Took -' + amt + ' HP', 'hit');
     if(this.hp<=0) this.die(game);
   }
-  heal(amt,game){ this.hp=Math.min(this.hpMax,this.hp+amt); game.floater('+'+Math.round(amt),this.x,this.y-16,'#4dd28a'); }
+  heal(amt,game){
+    this.hp=Math.min(this.hpMax,this.hp+amt);
+    game.floater('+'+Math.round(amt),this.x,this.y-16,'#4dd28a');
+    if(game.logCombat) game.logCombat('Healed +' + Math.round(amt) + ' HP', 'heal');
+  }
   restoreMp(amt){ this.mp=Math.min(this.mpMax,this.mp+amt); }
 
   gainGold(base,game){

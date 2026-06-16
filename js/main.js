@@ -211,13 +211,13 @@ function applySettings(){
 ['set-shake','set-fps','set-music','set-sfx'].forEach(id=>{
   const el=document.getElementById(id); if(el) el.addEventListener('input',applySettings); });
 
-function anyModalOpen(){ return [settingsModal,bagModal,charModal,skillsModal,questsModal,achievementsModal,shopModal,stashModal,craftModal,enchantModal,document.getElementById('fullmap-modal')]
+function anyModalOpen(){ return [settingsModal,bagModal,charModal,skillsModal,questsModal,achievementsModal,shopModal,stashModal,craftModal,enchantModal,document.getElementById('fullmap-modal'),document.getElementById('combat-log-modal')]
   .some(m=>!m.classList.contains('hidden')); }
 function openModal(m){ game.paused=true; m.classList.remove('hidden'); m.classList.add('flex'); }
 function closeModal(m){ m.classList.add('hidden'); m.classList.remove('flex');
   if(game.hud) game.hud._hideTooltip();
   if(!anyModalOpen() && !document.getElementById('death-screen').classList.contains('flex')) game.paused=false; }
-function closeAll(){ [settingsModal,bagModal,charModal,skillsModal,questsModal,achievementsModal,shopModal,stashModal,craftModal,enchantModal,document.getElementById('fullmap-modal')].forEach(m=>{
+function closeAll(){ [settingsModal,bagModal,charModal,skillsModal,questsModal,achievementsModal,shopModal,stashModal,craftModal,enchantModal,document.getElementById('fullmap-modal'),document.getElementById('combat-log-modal')].forEach(m=>{
   m.classList.add('hidden'); m.classList.remove('flex'); });
   if(game.hud) game.hud._hideTooltip();
   if(!document.getElementById('death-screen').classList.contains('flex')) game.paused=false; }
@@ -235,6 +235,8 @@ document.getElementById('char-btn').onclick=openChar;
 document.getElementById('skills-btn').onclick=openSkills;
 document.getElementById('quests-btn').onclick=openQuests;
 document.getElementById('achieve-btn').onclick=openAchievements;
+document.getElementById('log-btn').onclick=()=>{ const cl=document.getElementById('combat-log-modal');
+  if(cl.classList.contains('hidden')) openModal(cl); else closeModal(cl); };
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeModal(document.getElementById(b.dataset.close)));
 document.getElementById('shop-close').onclick=()=>closeModal(shopModal);
 document.getElementById('save-game-btn').onclick=()=>{
@@ -266,6 +268,11 @@ window.addEventListener('keydown', e=>{
   if(k==='k'){ skillsModal.classList.contains('hidden')?openSkills():closeModal(skillsModal); }
   if(k==='j'){ questsModal.classList.contains('hidden')?openQuests():closeModal(questsModal); }
   if(k==='y'){ achievementsModal.classList.contains('hidden')?openAchievements():closeModal(achievementsModal); }
+  if(k==='l'){
+    const cl=document.getElementById('combat-log-modal');
+    if(cl.classList.contains('hidden')) openModal(cl);
+    else closeModal(cl);
+  }
   if(k==='g' && !game.paused){ if(game.triggerCompanionAbility) game.triggerCompanionAbility(); }
   if(k==='m'){ if(!game.hud) return; const fm=document.getElementById('fullmap-modal');
     if(fm.classList.contains('hidden')){ game.hud.showFullMap(); openModal(fm); } else closeModal(fm); }

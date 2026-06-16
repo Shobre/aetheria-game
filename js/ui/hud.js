@@ -301,8 +301,9 @@ export class HUD {
   showInteract(label){ this.el.interactLabel.textContent=label; this.el.interact.classList.remove('hidden'); }
   hideInteract(){ this.el.interact.classList.add('hidden'); }
 
-  toast(msg){
+  toast(msg, color){
     const d=document.createElement('div'); d.className='toast-msg'; d.textContent=msg;
+    if(color) d.style.color=color;
     const wrap=document.createElement('div'); wrap.appendChild(d); this.el.toast.appendChild(wrap);
     setTimeout(()=>{ wrap.style.transition='opacity .4s'; wrap.style.opacity='0'; setTimeout(()=>wrap.remove(),400); },1800);
   }
@@ -416,6 +417,34 @@ export class HUD {
     const cam=this.game.cam;
     const sx=(wx-cam.x)/this.game.canvas.width*window.innerWidth;
     const sy=(wy-cam.y)/this.game.canvas.height*window.innerHeight;
+    // Damage batching: if a pure-numeric floater of the same color landed
+    // within the last 350ms and ~30px of this position, increment its count
+    // instead of spawning a new one. CRIT/CHAIN/HEAL/PARRY have their own
+    // types so they never collapse into a damage number.
+    const numMatch = text.match(/^-?\d+$/);
+    if(numMatch){
+      if(!this._floaterBatch) this._floaterBatch=[];
+      const now=performance.now();
+      // expire old entries
+      this._floaterBatch = this._floaterBatch.filter(b => now-b.ts<350);
+      for(const b of this._floaterBatch){
+        if(b.color===color && Math.hypot(b.wx-wx, b.wy-wy)<30 && b.text===text){
+          b.count++; b.ts=now;
+          b.el.textContent = text + ' x' + b.count;
+          // re-bump the visual by toggling the class so the animation restarts
+          b.el.style.animation='none'; void b.el.offsetWidth; b.el.style.animation='';
+          return;
+        }
+      }
+      const d=document.createElement('div');
+      d.className='floater'+(text.startsWith('-')?' floater-hit':'');
+      d.textContent=text; d.style.color=color;
+      d.style.left=sx+'px'; d.style.top=sy+'px'; this.el.floaters.appendChild(d);
+      this._floaterBatch.push({text, color, wx, wy, ts:now, count:1, el:d});
+      setTimeout(()=>{ d.remove(); }, 900);
+      return;
+    }
+    // Non-numeric (CRIT, PARRY, OVERHEAT, etc) — never batch.
     const d=document.createElement('div'); d.className='floater'; d.textContent=text; d.style.color=color;
     d.style.left=sx+'px'; d.style.top=sy+'px'; this.el.floaters.appendChild(d);
     setTimeout(()=>d.remove(),900);
@@ -866,6 +895,42 @@ export class HUD {
     if(a.stat === 'maps') return Object.keys(tracker.stats.maps || {}).filter(k => tracker.stats.maps[k] > 0).length;
     if(a.stat === 'topAffixCount') return tracker.stats.topAffixCount || 0;
     return tracker.stats[a.stat] || 0;
+  }
+
+  // ===== COMBAT LOG (L key) =====
+  // A scrollable, semi-transparent overlay that records the last 20 combat
+  // events (damage taken/dealt, kills, heals, gold gains, portal entries).
+  // Logged at most once per frame to keep tight combat loops from spamming.
+  logCombat(text, kind='info'){
+    if(!this._combatLog) this._combatLog=[];
+    this._combatLog.push({ text, kind, t: Date.now() });
+    if(this._combatLog.length > 20) this._combatLog.shift();
+    this.refreshCombatLog();
+  }
+  refreshCombatLog(){
+    const list = document.getElementById('combat-log-list');
+    if(!list) return;
+    list.innerHTML='';
+    if(!this._combatLog) this._combatLog=[];
+    for(const e of this._combatLog){
+      const d=document.createElement('div');
+      d.className='log-row log-'+e.kind;
+      d.textContent=e.text;
+      list.appendChild(d);
+    }
+    // scroll to bottom so the freshest line is always visible
+    list.scrollTop = list.scrollHeight;
+  }
+  openCombatLog(){
+    const m=document.getElementById('combat-log-modal');
+    if(!m) return;
+    m.classList.remove('hidden'); m.classList.add('flex');
+    this.refreshCombatLog();
+  }
+  closeCombatLog(){
+    const m=document.getElementById('combat-log-modal');
+    if(!m) return;
+    m.classList.add('hidden'); m.classList.remove('flex');
   }
 }
 

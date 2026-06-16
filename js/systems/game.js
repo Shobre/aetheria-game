@@ -4,7 +4,7 @@ import { Enemy, Projectile, Particle, rollEliteMod } from '../entities/enemy.js'
 import { HUD } from '../ui/hud.js';
 import { Audio } from './audio.js';
 import { SaveSystem } from './save.js';
-import { MAPS } from '../data/maps.js';
+import { MAPS, MAP_LEVEL } from '../data/maps.js';
 import { CATALOG, makeItem, EQUIP_SLOTS } from '../data/gear.js';
 import { SKILLS, canLearn } from '../data/skilltree.js';
 import { Boss, BOSSES } from '../entities/boss.js';
@@ -104,9 +104,16 @@ export class Game {
     let seed=(def.seed*7+13) + ((this._visitTick=(this._visitTick||0)+1)*131);
     const rand=()=>{ seed=(seed*9301+49297)%233280; return seed/233280; };
     for(let i=0;i<(def.enemies.count||0);i++){
-      const pos=this.world.randomFloor(rand);
-      // don't spawn on top of player
-      if(Math.hypot(pos.x-this.player.x,pos.y-this.player.y)<220){ i--; continue; }
+      // Smart placement: avoid chests/portals/NPCs and keep enemies spread
+      // out so they don't stack on each other or land on the player.
+      const pos=this.world.findSpawnPoint(rand, {
+        exclusions: this.world.reservedZones(def),
+        others: this.enemies,
+        player: this.player,
+        playerR: 80,
+        otherR: 28,
+        exclusionR: 30,
+      });
       const types=def.enemies.types;
       const t=types[Math.floor(rand()*types.length)];
       // elite chance scales with map difficulty (scale); harder maps breed champions
@@ -134,6 +141,14 @@ export class Game {
     this.transition=0.6; // fade-in
     this.audio.setMusic(def.music, !!this.boss);
     this.toast('Entering '+def.name);
+    this.logCombat('Entered ' + def.name + (this.boss ? ' (boss: ' + this.boss.def.name + ')' : ''), 'portal');
+    // Recommended-level hint: warn the player if they are under-equipped
+    // for this area. Only shown for non-town maps and not on the first
+    // load (the starter meadow shouldn't nag).
+    const recLvl = MAP_LEVEL[mapId];
+    if(recLvl && recLvl>1 && this.player && this.player.level < recLvl){
+      this.toast('? Recommended level '+recLvl+' (you are '+this.player.level+')', '#ff9a6a');
+    }
     if(this.quests) this.quests.onReach(mapId);
     if(this.achievements) this.achievements.onMapEnter(mapId);
     // autosave when entering a new area (but not on the initial load from start())
@@ -183,6 +198,7 @@ export class Game {
       if(d<70){ g.x+=(this.player.x-g.x)*0.18; g.y+=(this.player.y-g.y)*0.18; }
       if(d<16){ g.dead=true; const amt=this.player.gainGold(g.amount,this); this.sfx('pickup');
         this.floater('+'+amt+'g',this.player.x,this.player.y-30,'#ffcf4d');
+        this.logCombat('Picked up +' + amt + ' gold', 'gold');
         if(this.achievements) this.achievements.onGoldHeld(this.player.gold); }
     }
     this.golds=this.golds.filter(g=>!g.dead);
@@ -191,7 +207,8 @@ export class Game {
     for(const it of this.drops){
       const d=Math.hypot(it.x-this.player.x,it.y-this.player.y);
       if(d<22){ it.dead=true; const obj=it.item?it.item:makeItem(it.id,1); this.addItem(obj); this.sfx('pickup');
-        this.toast('Picked up '+(obj.name||CATALOG[it.id].name)); }
+        this.toast('Picked up '+(obj.name||CATALOG[it.id].name));
+        this.logCombat('Picked up ' + (obj.name || CATALOG[it.id].name), 'info'); }
     }
     this.drops=this.drops.filter(it=>!it.dead);
 
@@ -381,7 +398,7 @@ export class Game {
     const ench = w && w.enchant;
     if(ench === 'holy' && this._isUndead(e)) dmg = Math.round(dmg * 1.25);
     e.hit(dmg,ang,this,6);
-    if(crit) this.floater('CRIT '+dmg,e.x,e.y-26,'#ffcf4d');
+    if(crit){ this.floater('CRIT '+dmg,e.x,e.y-26,'#ffcf4d'); this.logCombat('CRIT! -' + dmg + ' on ' + e.type, 'crit'); }
     if(p.lifesteal>0){ const heal=dmg*p.lifesteal; p.heal(heal,this); }
     this.cam.shake=Math.min(this.cam.shake+3,8);
     // Apply enchantment on-hit effects (status DoTs / chill / chain)
@@ -500,6 +517,7 @@ export class Game {
     this.toast(boss.def.name+' defeated!');
     this.sfx('levelup');
     if(this.achievements) this.achievements.onBossDefeated();
+    this.logCombat('Defeated ' + boss.def.name + ' (+' + amt + 'g)', 'kill');
     this.autosave('Progress saved');
   }
 
@@ -527,9 +545,13 @@ export class Game {
     const tough=['brute','golem','yeti','croaker','skeleton'];
     if(tough.includes(e.type) && Math.random()<0.25) this.dropGear(e.x,e.y,0.3);
     if(this.achievements) this.achievements.onEnemyKilled(e);
+    this.logCombat('Slain ' + e.type, 'kill');
   }
   floater(t,x,y,c){ this.hud.floater(t,x,y,c); }
-  toast(m){ this.hud.toast(m); }
+  // Add an entry to the combat log (L-key overlay). No-op until the HUD is
+  // built; safe to call from anywhere (Player, Enemy, Boss, world events).
+  logCombat(text, kind='info'){ if(this.hud && this.hud.logCombat) this.hud.logCombat(text, kind); }
+  toast(m,c){ this.hud.toast(m,c); }
   sfx(n){ this.audio.play(n); }
 
   // ---- inventory / equipment ----

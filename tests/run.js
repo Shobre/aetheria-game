@@ -1000,6 +1000,75 @@ console.log('\n=== sprint 3.5 (achievements, enchant, tundra) ===');
   }
 }
 
+// ============ Sprint 4 — spawn placement, damage batching, combat log, balance ============
+console.log('\n=== sprint 4 (spawn, log, balance) ===');
+{
+  const wm = await import('../js/systems/world.js');
+  const mp = await import('../js/data/maps.js');
+  const GameMod = await import('../js/systems/game.js');
+  const { TILE } = wm;
+
+  // --- Spawn placement ---
+  // Build a minimal world: 10x10 floor map
+  const W = wm.TILE;
+  // A wide enough floor for spacing tests
+  const cols=20, rows=20;
+  const map = [];
+  for(let y=0;y<rows;y++){ const row=[]; for(let x=0;x<cols;x++) row.push(W === undefined ? 0 : 0); map.push(row); }
+  // T.FLOOR = 0 in world.js (we know the floor literal from randomFloor)
+  // Build a world via the constructor: need a map id. Use meadow (real).
+  const world = new wm.World('meadow');
+  // reservedZones on a real map should return entries for chests/portals/NPCs
+  const reserved = world.reservedZones(mp.MAPS.meadow);
+  ok('reservedZones returns array', Array.isArray(reserved));
+  ok('reservedZones non-empty for meadow (has NPC)', reserved.length > 0);
+  // findSpawnPoint returns a walkable point
+  let seed=12345;
+  const rand = ()=>{ seed=(seed*9301+49297)%233280; return seed/233280; };
+  const sp = world.findSpawnPoint(rand, { exclusions: reserved, others: [], player: {x: -1000, y:-1000}, playerR: 80 });
+  ok('findSpawnPoint returns {x,y}', sp && typeof sp.x === 'number' && typeof sp.y === 'number');
+  // make sure the point is walkable
+  ok('findSpawnPoint lands on FLOOR tile', world.map[Math.floor(sp.y/W)][Math.floor(sp.x/W)] === 0);
+  // findSpawnPoint respects exclusion distance: spawn right next to a chest, expect to land > 30px away
+  const chestPos = mp.MAPS.meadow.chests && mp.MAPS.meadow.chests[0];
+  if(chestPos){
+    const r2 = world.findSpawnPoint(rand, { exclusions: [{x:chestPos.x*W+W/2,y:chestPos.y*W+W/2}], others: [], player: null, playerR: 0 });
+    const dist = Math.hypot(r2.x - chestPos.x*W-W/2, r2.y - chestPos.y*W-W/2);
+    ok('findSpawnPoint avoids chest zone (>=28px)', dist >= 28);
+  }
+  // findSpawnPoint respects min-spacing from other enemies
+  const existing = [{x: 100, y: 100}];
+  const r3 = world.findSpawnPoint(rand, { exclusions: [], others: existing, player: null, playerR: 0, otherR: 50 });
+  ok('findSpawnPoint avoids other enemies (>=50px)', Math.hypot(r3.x - 100, r3.y - 100) >= 50);
+
+  // --- MAP_LEVEL balance table ---
+  ok('MAP_LEVEL defined', !!mp.MAP_LEVEL);
+  ok('MAP_LEVEL.meadow = 1', mp.MAP_LEVEL.meadow === 1);
+  ok('MAP_LEVEL.frost_spire = 17 (end-game)', mp.MAP_LEVEL.frost_spire === 17);
+  ok('MAP_LEVEL scales monotonically through biomes',
+     mp.MAP_LEVEL.meadow < mp.MAP_LEVEL.forest &&
+     mp.MAP_LEVEL.forest < mp.MAP_LEVEL.desert &&
+     mp.MAP_LEVEL.desert < mp.MAP_LEVEL.cave &&
+     mp.MAP_LEVEL.cave < mp.MAP_LEVEL.dungeon1);
+  ok('MAP_LEVEL.tundra_edge < tundra_heart < frost_spire',
+     mp.MAP_LEVEL.tundra_edge < mp.MAP_LEVEL.tundra_heart &&
+     mp.MAP_LEVEL.tundra_heart < mp.MAP_LEVEL.frost_spire);
+  // every tundra boss-room map has a level
+  ok('MAP_LEVEL covers all 3 tundra maps',
+     mp.MAP_LEVEL.tundra_edge !== undefined &&
+     mp.MAP_LEVEL.tundra_heart !== undefined &&
+     mp.MAP_LEVEL.frost_spire !== undefined);
+  // All MAPS entries that have enemies have a level (or are safe zones)
+  const safeBiomes = new Set(['city','house1','house2','house3','house4','shop','volcano']);
+  const missing = [];
+  for(const id in mp.MAPS){
+    if(mp.MAPS[id].enemies && (mp.MAPS[id].enemies.count||0) > 0 && !mp.MAP_LEVEL[id] && !safeBiomes.has(id)){
+      missing.push(id);
+    }
+  }
+  ok('all enemy-having maps have MAP_LEVEL entries (or are safe)', missing.length === 0);
+}
+
 
 
 console.log('\n' + (fail === 0 ? '? ALL PASS' : '? FAILURES') + ` - ${pass} passed, ${fail} failed`);

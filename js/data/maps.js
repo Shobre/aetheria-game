@@ -378,6 +378,20 @@ export const SHOP_STOCK = [
   'armor_mage','helm_iron','ring_vigor','ring_focus',
 ];
 
+// Recommended player level for each map. Used by the "Entering X (lvl N+)"
+// hint on map entry. Higher = more dangerous. Tuned to MAP_SCALE so each
+// sub-area falls between its parent's range and the next biome's tier.
+export const MAP_LEVEL = {
+  // safe zones (always 1)
+  city: 1, house1: 1, house2: 1, house3: 1, house4: 1, shop: 1, volcano: 1,
+  // starter biomes
+  meadow: 1, forest: 3, desert: 5, cave: 7, dungeon1: 9, snow: 9, swamp: 10, dungeon2: 12,
+  // sub-areas (1 tier above the parent)
+  meadow_glade: 2, forest_deep: 4, desert_ruins: 6, snow_glacier: 10, swamp_depths: 11,
+  // tundra end-game
+  tundra_edge: 13, tundra_heart: 15, frost_spire: 17,
+};
+
 export const STARTING_MAP = 'meadow';
 
 
