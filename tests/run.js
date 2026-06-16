@@ -2234,6 +2234,15 @@ console.log('\n=== sprint 12 (player home + home chest + fast-travel) ===');
   // We don't require the tutorial to teach fast-travel, but the tutorial
   // system should not crash if H is pressed during a tutorial step.
   ok('game.js fastTravel is callable independently of tutorial', gameSrc.includes('fastTravel()'));
+
+  // ---- regression: main.js must import the keybind helpers it uses ----
+  // The window.__keybinds assignment references getKeybindOverrides and
+  // setKeybindOverrides; if they're not imported, browser ES modules throw
+  // ReferenceError at the top level and break page load.
+  ok('main.js imports getKeybindOverrides', mainSrc.includes('getKeybindOverrides'));
+  ok('main.js imports setKeybindOverrides', mainSrc.includes('setKeybindOverrides'));
+  ok('main.js single combined import from keybinds.js',
+     /import\s*\{[^}]*\bKeybindUI\b[^}]*\bgetKeybindOverrides\b[^}]*\bsetKeybindOverrides\b[^}]*\}\s*from\s*['"]\.\/ui\/keybinds\.js['"]/.test(mainSrc));
 }
 
 

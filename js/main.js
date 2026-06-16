@@ -1,7 +1,7 @@
 import { Input } from './systems/input.js';
 import { Game } from './systems/game.js';
 import { SaveSystem } from './systems/save.js';
-import { KeybindUI } from './ui/keybinds.js';
+import { KeybindUI, getKeybindOverrides, setKeybindOverrides } from './ui/keybinds.js';
 // Sprint 11: kick off the sprite-atlas loads once on boot. Decoding is
 // async; the draw helper falls through to canvas primitives when the
 // atlas isn't ready yet, so the first frame is just as fast as before.
