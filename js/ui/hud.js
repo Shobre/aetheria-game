@@ -287,7 +287,8 @@ export class HUD {
   }
 
   refreshBag(){
-    const inv=this.game.inventory; const cells=[...this.el.invGrid.children];
+    const p=this.game.player, inv=this.game.inventory;
+    const cells=[...this.el.invGrid.children];
     const eq=this.game.player.equipment;
     cells.forEach((c,i)=>{
       const item=inv[i];
