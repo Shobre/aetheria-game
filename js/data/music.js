@@ -48,6 +48,7 @@ export const MOODS = {
   city_tense:   { scale: [220.0, 261.6, 311.1, 349.2, 392.0], chords: [[0,2],[1,3],[2,4],[0,3]], tempo: 0.30, type: 'sawtooth', feel: 0.5 },
   city_boss:    { scale: [164.8, 196.0, 220.0, 261.6, 311.1, 349.2], chords: [[0,2,5],[1,3,0],[2,4,1],[0,3,5]], tempo: 0.20, type: 'sawtooth', feel: 0.3 },
   house_calm:   { scale: [261.6, 293.7, 329.6, 392.0, 440.0], chords: [[0,2,4],[1,3,0],[2,4,1],[3,0,2]], tempo: 0.40, type: 'triangle', feel: 0.85 },
+  home_calm:    { scale: [293.7, 349.2, 392.0, 440.0, 493.9], chords: [[0,2,4],[1,3,0],[2,4,1],[3,0,2]], tempo: 0.45, type: 'sine', feel: 0.95 }, // player's home: D major pentatonic, very sustained
   house_tense:  { scale: [220.0, 246.9, 261.6, 311.1, 349.2], chords: [[0,2],[1,3],[2,4],[0,3]], tempo: 0.30, type: 'sawtooth', feel: 0.5 },
   house_boss:   { scale: [196.0, 233.1, 261.6, 277.2, 311.1, 349.2], chords: [[0,2,5],[1,3,0],[2,4,1],[0,3,5]], tempo: 0.20, type: 'sawtooth', feel: 0.3 },
   // Boss variants per biome — derived from the tense mood but darker

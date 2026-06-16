@@ -73,6 +73,22 @@ export class Game {
     this._companions=(state.companions||[]).map(c=>Companion.deserialize(c));
     this.openedChests=state.openedChests||{};
     this.stash=(state.stash||[]).map(i=>({...i}));
+    // Sprint 12: home chest is a global, no-cap storage. Migrated for old
+    // saves (pre-Sprint 12) that don't have a `home` block — they get an
+    // empty chest array so the rest of the code can always read it.
+    this.homeChest = (state.home && Array.isArray(state.home.chest))
+      ? state.home.chest.map(i=>({...i}))
+      : [];
+    // Sprint 12: fast-travel state. _lastLocation remembers where the
+    // player was before fast-travelling home, so pressing H again returns
+    // them. _fastTravelCD is the cooldown ticker (seconds remaining).
+    this._lastLocation = null;
+    this._fastTravelCD = 0;
+    // Restore the last fast-travel location from save (so a save/load roundtrip
+    // preserves the ability to H-back to where the player was before).
+    if(state.lastLocation && state.lastLocation.map){
+      this._lastLocation = { ...state.lastLocation };
+    }
     // Sprint 7: restore the player's keybind overrides from the save so rebinds
     // follow the account across devices. We re-publish them through the public
     // setKeybindOverrides() helper so the rebind UI picks them up on next mount.
@@ -198,6 +214,8 @@ export class Game {
     if(this.transition>0) this.transition=Math.max(0,this.transition-dt);
     this._autoT+=dt;
     if(this._autoT>=this.autosaveInterval) this.autosave('Autosaved');
+    // Sprint 12: tick the fast-travel cooldown down.
+    if(this._fastTravelCD>0) this._fastTravelCD=Math.max(0, this._fastTravelCD-dt);
     this.player.update(dt,this.input,this.world,this.cam,this);
     this.cam.follow(this.player,this.world);
     if(!this.settings.shake) this.cam.shake=0;
@@ -293,6 +311,14 @@ export class Game {
     for(const c of this.world.chests){ if(c.opened) continue;
       const d=Math.hypot(c.wx+16-this.player.x,c.wy+16-this.player.y);
       if(d<nd){ near={type:'chest',ref:c,label:'Open Chest'}; nd=d; } }
+    // Sprint 12: home chest interactable. Only present in the home map
+    // (world.homeChest is null elsewhere). Always prompt — the chest has
+    // no open/closed state.
+    if(this.world.homeChest){
+      const hc = this.world.homeChest;
+      const d = Math.hypot(hc.wx+16-this.player.x, hc.wy+16-this.player.y);
+      if(d<nd){ near={type:'home_chest',ref:hc,label:'Open '+hc.name}; nd=d; }
+    }
     this.nearInteract=near;
     if(near){ this.hud.showInteract(near.label);
       if(this.input.wasPressed('interact')) this._doInteract(near); }
@@ -374,6 +400,9 @@ export class Game {
         if(this.achievements) this.achievements.onGoldHeld(this.player.gold); }
       else { this.addItem(makeItem(loot.id,loot.qty||1)); this.toast('Found '+CATALOG[loot.id].name+'!'); }
     } else if(near.type==='portal'){ this._usePortal(near.ref); }
+    // Sprint 12: home chest opens the home-chest modal (no loot, no
+    // open/close state — the chest is always available in the home map).
+    else if(near.type==='home_chest'){ this.openHomeChest(); }
   }
 
   render(){
@@ -804,6 +833,71 @@ export class Game {
     this.sfx('open'); this.hud.refreshStash();
   }
 
+  // ---- home chest (Sprint 12): global, no cap, accessible from home map and the bank ----
+  // HOME_CHEST_MAX is high but finite to defend against runaway item spawns.
+  HOME_CHEST_MAX=999;
+  openHomeChest(){ this.paused=true; this.hud.openHomeChest(); }
+  toHomeChest(item){
+    if(!item) return;
+    const i=this.inventory.indexOf(item); if(i<0) return;
+    if(item.type==='consumable' || item.type==='ammo'){
+      // Stack by id+type for stackables
+      const ex=this.homeChest.find(s=>s.id===item.id && s.type===item.type);
+      if(ex){ ex.qty=(ex.qty||1)+(item.qty||1); }
+      else { if(this.homeChest.length>=this.HOME_CHEST_MAX){ this.toast('Home chest is full!'); return; } this.homeChest.push({...item}); }
+    } else {
+      if(this.homeChest.length>=this.HOME_CHEST_MAX){ this.toast('Home chest is full!'); return; }
+      this.homeChest.push({...item});
+    }
+    this.inventory.splice(i,1);
+    const hi=this.hotbar.indexOf(item.id); if(hi>=0 && !this.inventory.find(x=>x.id===item.id)) this.hotbar[hi]=null;
+    this.sfx('open'); this.hud.refreshHomeChest();
+  }
+  fromHomeChest(item){
+    if(!item) return;
+    const i=this.homeChest.indexOf(item); if(i<0) return;
+    this.homeChest.splice(i,1); this.addItem(item);
+    this.sfx('open'); this.hud.refreshHomeChest();
+  }
+
+  // ---- fast-travel (Sprint 12): H toggles between home and lastLocation ----
+  // 10s cooldown prevents combat / farming abuse. Can only be triggered
+  // outside combat (no enemies on screen). Sets _lastLocation before
+  // teleporting away from a non-home map, so pressing H again returns
+  // to that exact spot. If pressed while already in home, returns to
+  // _lastLocation (if any). If pressed outside home with no prior
+  // _lastLocation (e.g. first H ever from a non-home map), it just sets
+  // _lastLocation and goes home — no return-trip possible that first time.
+  FAST_TRAVEL_CD=10;
+  fastTravel(){
+    if(this._fastTravelCD>0){ this.toast('Fast-travel recharging: '+Math.ceil(this._fastTravelCD)+'s'); return; }
+    if(this.paused){ this.toast('Close menus first.'); return; }
+    if(this.player.dead){ return; }
+    if(this.boss){ this.toast("Can't fast-travel during a boss fight."); return; }
+    if(this.enemies && this.enemies.length){ this.toast('Enemies nearby — clear the area first.'); return; }
+    if(this.transition>0) return; // mid-fade debounce
+    const inHome = this.currentMap === 'home';
+    if(inHome){
+      if(this._lastLocation && this._lastLocation.map){
+        const dest = this._lastLocation;
+        this._lastLocation = null; // one-shot recall
+        this._fastTravelCD = this.FAST_TRAVEL_CD;
+        this.loadMap(dest.map, dest.tx, dest.ty, false);
+        this.toast('Returned to '+ (this.world && this.world.def ? this.world.def.name : 'where you were'));
+        this.sfx('open');
+      } else {
+        this.toast('No place to recall to.');
+      }
+      return;
+    }
+    // Going home: snapshot the current location so H-again can return.
+    this._lastLocation = { map:this.currentMap, tx:Math.floor(this.player.x/TILE), ty:Math.floor(this.player.y/TILE) };
+    this._fastTravelCD = this.FAST_TRAVEL_CD;
+    this.loadMap('home', 6, 11, false);
+    this.toast('Teleported to your home');
+    this.sfx('open');
+  }
+
   // ---- crafting (Blacksmith forge): reforge + upgrade gear for gold ----
   openCraft(name){ this.paused=true; this.craftName=name||'Forge'; this.hud.openCraft(); }
   reforgeItem(item){
@@ -961,6 +1055,9 @@ export class Game {
     return { ...this.player.serialize(), slot:this.slot,
       map:this.currentMap, inventory:this.inventory, hotbar:this.hotbar,
       playtime:this.playtime, openedChests:this.openedChests, stash:this.stash,
+      // Sprint 12: persist the home chest and the last-location for fast-travel.
+      home:{ chest:this.homeChest },
+      lastLocation:this._lastLocation,
       bossesDead:this.bossesDead, checkpoint:this.checkpoint,
       quests:this.quests?this.quests.serialize():undefined,
       achievements:this.achievements?this.achievements.serialize():undefined,

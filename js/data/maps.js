@@ -159,6 +159,11 @@ export const MAPS = {
       { x:42, y:10, to:'shop_alch',  tx:6, ty:12, label:'Alchemist', door:true },
       { x:6,  y:30, to:'shop_arcane',tx:6, ty:12, label:'Arcanum', door:true },
       { x:42, y:30, to:'shop_general',tx:6,ty:12, label:'General Store', door:true },
+      // Sprint 12: home door — leads to the player's house.
+      // The matching exit is at (6, 11) in the home map (one tile north of
+      // the home map's exit portal at (6, 10), so the player faces the door
+      // when they arrive).
+      { x:6,  y:38, to:'home',   tx:6, ty:11, label:'Your Home', door:true },
     ],
     npcs:[
       { x:24, y:20, name:'Mayor', icon:'♦', lines:['Welcome to Aldermere!','Our shops ring the plaza. Adventurers are always needed.'] },
@@ -372,6 +377,29 @@ export const MAPS = {
     chests:[],
     boss:'glacius',
   },
+
+  // ===================== PLAYER HOME (Sprint 12) =====================
+  // The player's own house. Reached by the home door in Aldermere City,
+  // or by fast-travel (KeyH) from any map. Holds a Home Chest that bypasses
+  // the per-city stash cap. No enemies, no music transition drama — just
+  // a quiet room to put things in. Door leads back to the home door in city.
+  home: {
+    name:'Your Home', biome:'house', cols:14, rows:12, seed:1313, music:'home_calm',
+    interior:true, town:true, // town=true: no enemies can spawn, no hostile events
+    enemies:{ count:0, types:[] },
+    portals:[
+      // Door to leave home — return to the home door location in city
+      { x:6, y:10, to:'city', tx:6, ty:38, label:'To Aldermere', door:true },
+    ],
+    npcs:[],
+    chests:[],
+    // The Home Chest is not a normal chest — it has no open/close state and
+    // its storage is the global `state.home.chest` array, not a per-map
+    // array. World.renderDecor() reads `map.homeChest` and draws a chest
+    // sprite at the given tile; the interact handler in game.js opens the
+    // shared Home Chest modal bound to `game.homeChest`.
+    homeChest:{ x:9, y:5, w:1, h:1, name:'Home Chest' },
+  },
 };
 
 // Shop stock - what the merchant sells (ids reference gear.js CATALOG)
@@ -386,7 +414,7 @@ export const SHOP_STOCK = [
 // sub-area falls between its parent's range and the next biome's tier.
 export const MAP_LEVEL = {
   // safe zones (always 1)
-  city: 1, house1: 1, house2: 1, house3: 1, house4: 1, shop: 1, volcano: 1,
+  city: 1, house1: 1, house2: 1, house3: 1, house4: 1, shop: 1, volcano: 1, home: 1,
   // starter biomes
   meadow: 1, forest: 3, desert: 5, cave: 7, dungeon1: 9, snow: 9, swamp: 10, dungeon2: 12,
   // sub-areas (1 tier above the parent)

@@ -59,6 +59,13 @@ export const ACTIONS = [
   { id: 'toggle_combat_log',   label: 'Combat Log (L)',    defaultKey: 'l', kind: 'modal' },
   { id: 'toggle_map',          label: 'Full Map (M)',      defaultKey: 'm', kind: 'modal' },
   { id: 'settings',            label: 'Settings (Esc)',    defaultKey: 'escape', kind: 'modal' },
+
+  // ---- Sprint 12: fast-travel to/from home ----
+  // H is unbound in vanilla keymaps; we use it for "Go Home / Return from Home".
+  // Acts as a toggle: if you're outside home, it teleports you home and remembers
+  // where you were; if you're already in home, it teleports you back to that spot
+  // (one-shot recall). 10s cooldown, blocked during combat / boss fights.
+  { id: 'fast_travel',         label: 'Fast-Travel Home (H)', defaultKey: 'h', kind: 'action' },
 ];
 
 // Build the default binding map {actionId: key} from ACTIONS.

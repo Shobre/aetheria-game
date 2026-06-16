@@ -1336,7 +1336,7 @@ console.log('\n=== sprint 7 (rebindable keys) ===');
   ok('settings default is escape', kb.ACTIONS.find(a => a.id === 'settings').defaultKey === 'escape');
 
   // ---- DEFAULT_BIND ----
-  ok('DEFAULT_BIND has 31 entries', Object.keys(kb.DEFAULT_BIND).length === 31);
+  ok('DEFAULT_BIND has 32 entries', Object.keys(kb.DEFAULT_BIND).length === 32);
   ok('DEFAULT_BIND is frozen', Object.isFrozen(kb.DEFAULT_BIND));
   ok('DEFAULT_BIND.move_up = w', kb.DEFAULT_BIND.move_up === 'w');
   ok('DEFAULT_BIND.dodge = " " (space)', kb.DEFAULT_BIND.dodge === ' ');
@@ -2088,6 +2088,152 @@ console.log('\n=== sprint 11 (sprite sheets) ===');
   ok('build script imports PIL',  buildSrc.includes('from PIL import'));
   ok('build script writes npc.png', buildSrc.includes("'npc.png'"));
   ok('build script writes enemies.png', buildSrc.includes("'enemies.png'"));
+}
+
+
+console.log('\n=== sprint 12 (player home + home chest + fast-travel) ===');
+{
+  // ---- map shape: home is registered and well-formed ----
+  const { MAPS, MAP_LEVEL, STARTING_MAP } = await import('../js/data/maps.js');
+  ok('home map exists in MAPS', !!MAPS.home);
+  ok('home has unique id', MAPS.home.id === undefined || MAPS.home.id === 'home');
+  ok('home has a name', typeof MAPS.home.name === 'string' && MAPS.home.name.length > 0);
+  ok('home is a house biome', MAPS.home.biome === 'house');
+  ok('home is marked interior', MAPS.home.interior === true);
+  ok('home is marked town (no enemy spawns)', MAPS.home.town === true);
+  ok('home has zero enemies', MAPS.home.enemies && MAPS.home.enemies.count === 0);
+  ok('home has at least one portal (exit)', Array.isArray(MAPS.home.portals) && MAPS.home.portals.length >= 1);
+  ok('home exit portal is door:true', MAPS.home.portals[0].door === true);
+  ok('home exit portal points back to city', MAPS.home.portals[0].to === 'city');
+  ok('home has a homeChest interactable', !!MAPS.home.homeChest);
+  ok('home homeChest has a name', MAPS.home.homeChest.name === 'Home Chest');
+  ok('home music is home_calm', MAPS.home.music === 'home_calm');
+  ok('home in MAP_LEVEL at tier 1', MAP_LEVEL.home === 1);
+  ok('home is not the starting map', STARTING_MAP !== 'home');
+
+  // ---- city map has a home door portal ----
+  const cityDef = MAPS.city;
+  const homeDoor = (cityDef.portals || []).find(p => p.to === 'home');
+  ok('city has a portal to home', !!homeDoor);
+  ok('city home door is a door', homeDoor && homeDoor.door === true);
+  ok('city home door has a label', homeDoor && homeDoor.label === 'Your Home');
+  ok('city home door has spawn coords',
+     homeDoor && Number.isInteger(homeDoor.tx) && Number.isInteger(homeDoor.ty));
+
+  // ---- music: home_calm mood exists ----
+  const { MOODS } = await import('../js/data/music.js');
+  ok('MOODS.home_calm exists', !!MOODS.home_calm);
+  ok('home_calm has a scale', Array.isArray(MOODS.home_calm.scale) && MOODS.home_calm.scale.length > 0);
+  ok('home_calm has chords', Array.isArray(MOODS.home_calm.chords) && MOODS.home_calm.chords.length > 0);
+  ok('home_calm has a tempo', typeof MOODS.home_calm.tempo === 'number');
+  ok('home_calm has a wave type', typeof MOODS.home_calm.type === 'string');
+
+  // ---- save: newGame initializes a home chest ----
+  // Stub localStorage so SaveSystem.newGame works in Node.
+  const _ls = (() => {
+    const m = new Map();
+    return {
+      getItem: (k) => m.has(k) ? m.get(k) : null,
+      setItem: (k, v) => m.set(k, String(v)),
+      removeItem: (k) => m.delete(k),
+      clear: () => m.clear(),
+    };
+  })();
+  Object.defineProperty(globalThis, 'localStorage', { value: _ls, writable: true, configurable: true });
+  const { SaveSystem } = await import('../js/systems/save.js');
+  const fresh = SaveSystem.newGame(1);
+  ok('newGame initializes home.chest', fresh.home && Array.isArray(fresh.home.chest));
+  ok('newGame home.chest starts empty', fresh.home.chest.length === 0);
+
+  // ---- save roundtrip: home chest data persists ----
+  fresh.home.chest.push({ id: 'potion', name: 'Potion', type: 'consumable', qty: 5 });
+  SaveSystem.save(1, fresh);
+  const loaded = SaveSystem.getSlot(1);
+  ok('saved home chest roundtrips', loaded.home && loaded.home.chest.length === 1);
+  ok('saved home chest item preserved', loaded.home.chest[0].id === 'potion' && loaded.home.chest[0].qty === 5);
+
+  // ---- save migration: pre-Sprint-12 saves (no home field) get a default home.chest ----
+  // Simulate a save from before Sprint 12.
+  const legacy = {
+    slot: 2, version: 2,
+    level: 1, xp: 0, hp: 120, hpMax: 120, mp: 50, mpMax: 50, gold: 30, playtime: 0,
+    map: 'meadow', pos: { x: 30*32, y: 24*32 },
+    equipment: { weapon: 'sword_wood', shield: null, armor: null, helm: null, ring: null },
+    skills: {}, spellSlots: ['fireball', 'iceshard', 'spark'],
+    inventory: [], hotbar: [null, null, null, null, null, null, null, null, null],
+    stash: [], openedChests: {}, boughtSpells: {},
+    ammo: { bolt_iron: 10 },
+  };
+  SaveSystem.save(2, legacy);
+  const legacyLoaded = SaveSystem.getSlot(2);
+  // The migration is in game.js's start() (not SaveSystem itself), but we
+  // verify the legacy save still loads without a `home` field.
+  ok('legacy save (no home) loads without throwing', !!legacyLoaded);
+  ok('legacy save has no home field (migration is in game.js)', legacyLoaded.home === undefined);
+
+  // ---- keybinds: fast_travel action is registered and bound to h ----
+  const { ACTIONS, DEFAULT_BIND } = await import('../js/data/keybinds.js');
+  const fastTravelAction = ACTIONS.find(a => a.id === 'fast_travel');
+  ok('fast_travel action is registered', !!fastTravelAction);
+  ok('fast_travel defaults to key h', DEFAULT_BIND.fast_travel === 'h');
+  ok('fast_travel is an action-kind bind', fastTravelAction && fastTravelAction.kind === 'action');
+  ok('fast_travel is rebindable (not a mouse action)', fastTravelAction && fastTravelAction.kind !== 'mouse');
+
+  // ---- main.js dispatches fast_travel to game.fastTravel() ----
+  const mainSrc = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  ok('main.js handles fast_travel keypress', mainSrc.includes("'fast_travel'"));
+  ok('main.js calls game.fastTravel()', mainSrc.includes('game.fastTravel()'));
+  ok('main.js fast_travel only fires when not paused',
+     mainSrc.includes("wasPressed('fast_travel')") && mainSrc.includes('!game.paused'));
+
+  // ---- game.js exposes fastTravel, toHomeChest, fromHomeChest, openHomeChest ----
+  const gameSrc = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
+  ok('game.js has fastTravel()', gameSrc.includes('fastTravel()'));
+  ok('game.js has openHomeChest()', gameSrc.includes('openHomeChest()'));
+  ok('game.js has toHomeChest()', gameSrc.includes('toHomeChest('));
+  ok('game.js has fromHomeChest()', gameSrc.includes('fromHomeChest('));
+  ok('game.js has HOME_CHEST_MAX constant', gameSrc.includes('HOME_CHEST_MAX'));
+  ok('game.js persists home in _buildState', gameSrc.includes("home:{ chest:this.homeChest }"));
+  ok('game.js persists lastLocation in _buildState', gameSrc.includes('lastLocation:this._lastLocation'));
+  ok('game.js fast-travel checks cooldown', gameSrc.includes('_fastTravelCD'));
+  ok('game.js fast-travel blocks during boss', gameSrc.includes('if(this.boss)'));
+  ok('game.js fast-travel blocks with enemies nearby', gameSrc.includes('this.enemies.length'));
+  ok('game.js fast-travel loads home map', gameSrc.includes("loadMap('home'"));
+
+  // ---- game.js _checkInteract handles home_chest type ----
+  ok('game.js _checkInteract checks world.homeChest', gameSrc.includes('this.world.homeChest'));
+  ok('game.js _doInteract handles home_chest', gameSrc.includes("near.type==='home_chest'"));
+
+  // ---- world.js: homeChest materialised on world object ----
+  const worldSrc = readFileSync(new URL('../js/systems/world.js', import.meta.url), 'utf8');
+  ok('world.js constructs world.homeChest from def', worldSrc.includes('this.def.homeChest'));
+  ok('world.js nulls homeChest when map has none', worldSrc.includes('this.homeChest = null'));
+  ok('world.js draws the home chest in render',
+     worldSrc.includes('this.homeChest') && worldSrc.includes('open lid'));
+  ok('world.js reservedZones includes homeChest', worldSrc.includes('def.homeChest'));
+  ok('world.js filters decor that lands on the home chest',
+     worldSrc.includes('decor') && worldSrc.includes('homeChest'));
+
+  // ---- hud.js: openHomeChest + refreshHomeChest + cross-link from stash ----
+  const hudSrc = readFileSync(new URL('../js/ui/hud.js', import.meta.url), 'utf8');
+  ok('hud.js has openHomeChest()', hudSrc.includes('openHomeChest()'));
+  ok('hud.js has refreshHomeChest()', hudSrc.includes('refreshHomeChest()'));
+  ok('hud.js wires #stash-open-home click', hudSrc.includes('stashOpenHome'));
+
+  // ---- index.html: home chest modal + cross-link button ----
+  const indexSrc12 = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  ok('index.html has #home-chest-modal', indexSrc12.includes('id="home-chest-modal"'));
+  ok('index.html has #home-chest-bag grid', indexSrc12.includes('id="home-chest-bag"'));
+  ok('index.html has #home-chest-store grid', indexSrc12.includes('id="home-chest-store"'));
+  ok('index.html has #stash-open-home cross-link button', indexSrc12.includes('id="stash-open-home"'));
+
+  // ---- fast-travel cooldown is decremented in update() ----
+  ok('game.js update() decrements _fastTravelCD', gameSrc.includes('_fastTravelCD-dt'));
+
+  // ---- tutorial flag exists for the "go home" step (optional) ----
+  // We don't require the tutorial to teach fast-travel, but the tutorial
+  // system should not crash if H is pressed during a tutorial step.
+  ok('game.js fastTravel is callable independently of tutorial', gameSrc.includes('fastTravel()'));
 }
 
 

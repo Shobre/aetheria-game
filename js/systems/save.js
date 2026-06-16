@@ -50,6 +50,10 @@ export const SaveSystem = {
       hotbar:['potion','ether','bomb',null,null,null,null,null,null],
       // shared stash (city bank) — persists across the run
       stash:[],
+      // Sprint 12: home chest — global, no per-city cap. Reachable from the
+      // Home Chest modal in the home map, or via the bank modal's Home tab.
+      // Persists across the run and across save slots.
+      home:{ chest:[] },
       // chests opened, keyed "map:index" so each map persists independently
       openedChests:{},
       boughtSpells:{},

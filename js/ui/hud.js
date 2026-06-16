@@ -38,11 +38,25 @@ export class HUD {
       autoSave:$('autosave'),
       tooltip:$('tooltip'),
       stashBag:$('stash-bag'),stashStore:$('stash-store'),stashBagCount:$('stash-bag-count'),stashStoreCount:$('stash-store-count'),
+      // Sprint 12: home chest elements (mirrors the stash layout).
+      homeChestBag:$('home-chest-bag'),homeChestStore:$('home-chest-store'),homeChestBagCount:$('home-chest-bag-count'),homeChestStoreCount:$('home-chest-store-count'),
+      // Sprint 12: cross-link from the stash modal to the home chest modal.
+      stashOpenHome:$('stash-open-home'),
       craftGear:$('craft-gear'),craftDetail:$('craft-detail'),craftGold:$('craft-gold'),
     };
     // minimap removed - use M key for full map
     this.activeSlot=0;
     this._buildHotbar(); this._buildInventory();
+    // Sprint 12: stash → home chest cross-link button. Clicking it while
+    // the stash modal is open swaps to the home chest modal (stays paused,
+    // same inventory pool, different storage target).
+    if(this.el.stashOpenHome){
+      this.el.stashOpenHome.onclick = () => {
+        const stash = document.getElementById('stash-modal');
+        if(stash){ stash.classList.add('hidden'); stash.classList.remove('flex'); }
+        this.openHomeChest();
+      };
+    }
   }
 
   _buildHotbar(){
@@ -740,6 +754,26 @@ export class HUD {
     this._fillItemGrid(this.el.stashStore, g.stash, it=>{ g.fromStash(it); }, ()=>'Click to withdraw');
     if(this.el.stashBagCount) this.el.stashBagCount.textContent=`${g.inventory.length}/30`;
     if(this.el.stashStoreCount) this.el.stashStoreCount.textContent=`${g.stash.length}/${g.STASH_MAX}`;
+  }
+
+  // ===== HOME CHEST (Sprint 12) =====
+  // Mirrors the stash modal but bound to game.homeChest. Capacity is much
+  // larger (HOME_CHEST_MAX=999) and the chest is global (not per-city), so
+  // the same items are visible from any city's bank via the "Home Chest"
+  // cross-link button.
+  openHomeChest(){
+    const m = document.getElementById('home-chest-modal');
+    if(!m) return;
+    m.classList.remove('hidden'); m.classList.add('flex');
+    this.refreshHomeChest();
+  }
+  refreshHomeChest(){
+    const g = this.game;
+    if(!g) return;
+    this._fillItemGrid(this.el.homeChestBag, g.inventory, it=>{ g.toHomeChest(it); }, ()=>'Click to store in chest');
+    this._fillItemGrid(this.el.homeChestStore, g.homeChest, it=>{ g.fromHomeChest(it); }, ()=>'Click to take out');
+    if(this.el.homeChestBagCount) this.el.homeChestBagCount.textContent=`${g.inventory.length}/30`;
+    if(this.el.homeChestStoreCount) this.el.homeChestStoreCount.textContent=`${g.homeChest.length}/${g.HOME_CHEST_MAX}`;
   }
 
   // ===== CRAFT (Blacksmith forge) =====

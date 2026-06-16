@@ -380,6 +380,11 @@ window.addEventListener('keydown', e=>{
   if(game.input.wasPressed('teleport_town') && game.canTeleportTown && game.canTeleportTown()){
     game.teleportToTown();
   }
+  // Sprint 12: fast-travel to/from home (H). Always available except during
+  // combat/boss/transition; cooldown handled inside game.fastTravel().
+  if(game.input.wasPressed('fast_travel') && !game.paused){
+    game.fastTravel();
+  }
   // hotbar 1-9 (only when not in a menu)
   const hotbarKeys = ['1','2','3','4','5','6','7','8','9'];
   for(let i=0;i<9;i++){
