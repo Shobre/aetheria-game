@@ -12,14 +12,27 @@ import { QuestLog } from './quests.js';
 import { QUESTS } from '../data/quests.js';
 import { rollRarity, applyRarity, rarityName } from '../data/affixes.js';
 import { SPELLS, STARTER_SPELLS, knownSpells, spellRank } from '../data/spells.js';
-import { reforge, upgrade, reforgeCost, upgradeCost, canUpgrade } from './craft.js';
+import { reforge, upgrade, reforgeCost, upgradeCost, canUpgrade, stripEnchantCost, stripWeaponEnchant } from './craft.js';
 import { Companion, COMPANIONS } from '../entities/companion.js';
+import { ENCHANTMENTS, applyEnchant, enchantCost, enchantInfo } from '../data/enchantments.js';
+import { applyStatus } from './status.js';
+
+// Display names for the toast when a companion joins. Kept in sync with
+// COMPANION_ABILITIES in companion.js (which is private to that module).
+const COMPANION_ABILITY_NAMES = {
+  kira: 'Arrow Volley',
+  thorin: 'Shield Bash',
+  luna: 'Arcane Blast',
+};
+import { AchievementTracker } from './achievements.js';
 
 // difficulty scale per map (deeper = tougher enemies)
 const MAP_SCALE = { meadow:1, forest:1.25, desert:1.45, cave:1.6, dungeon1:1.9, house1:1,
   snow:1.7, swamp:1.8, dungeon2:2.3,
   // biome sub-areas hold that biome's boss - scaled a notch above the parent zone
-  meadow_glade:1.15, forest_deep:1.4, desert_ruins:1.6, snow_glacier:1.85, swamp_depths:2.0 };
+  meadow_glade:1.15, forest_deep:1.4, desert_ruins:1.6, snow_glacier:1.85, swamp_depths:2.0,
+  // Frozen Tundra end-game: each tier is harder
+  tundra_edge:2.1, tundra_heart:2.5, frost_spire:3.0 };
 
 export class Game {
   constructor(canvas, input){
@@ -35,6 +48,7 @@ export class Game {
     this._escortNpc=null;       // {name, x, y, map, alive}
     this._surviveEnemies=0;     // spawned enemies for survive quests
     this.boss=null; this.bossesDead={}; this.checkpoint=null;
+    this._bossClones=null;
     this._autoT=0; this.autosaveInterval=60; // seconds between timed autosaves
     this._dayTime=0; this._dayLen=120; // day/night cycle (seconds)
     this._weaponSkills={}; // {sword:0, axe:0, spear:0, bow:0, staff:0}
@@ -55,6 +69,8 @@ export class Game {
     this._boughtSpells=state.boughtSpells||{};
     this.checkpoint=state.checkpoint||null;
     this.quests=new QuestLog(this, state);
+    this.achievements=new AchievementTracker(this);
+    this.achievements.load(state.achievements);
     this.hud=new HUD(this);
     this.loadMap(state.map, state.pos.x/TILE, state.pos.y/TILE, true);
     this.player.invuln=2.5;
@@ -82,7 +98,7 @@ export class Game {
     this.world.chests.forEach(c=>{ if(this.openedChests[mapId+':'+c.idx]) c.opened=true; });
     // Spawn enemies fresh on EVERY area entry so the player can farm xp/gold.
     // Bosses still persist (handled below). Seed varies per visit so layouts feel alive.
-    this.enemies=[]; this.projectiles=[]; this.golds=[]; this.drops=[]; this.boss=null;
+    this.enemies=[]; this.projectiles=[]; this.golds=[]; this.drops=[]; this.boss=null; this._bossClones=null;
     const def=MAPS[mapId];
     const scale=MAP_SCALE[mapId]||1;
     let seed=(def.seed*7+13) + ((this._visitTick=(this._visitTick||0)+1)*131);
@@ -104,6 +120,8 @@ export class Game {
     for(const bid in BOSSES){
       if(BOSSES[bid].map===mapId && !this.bossesDead[bid]){
         this.boss=new Boss(bid);
+        // start the no-damage tracking
+        if(this.achievements) this.achievements.onBossFightStart();
         // keep the boss off solid tiles (carved-room maps may wall its anchor)
         if(this.world.isSolid(this.boss.x,this.boss.y)){
           const bp=this.world.nearestOpen(this.boss.x,this.boss.y);
@@ -117,6 +135,7 @@ export class Game {
     this.audio.setMusic(def.music, !!this.boss);
     this.toast('Entering '+def.name);
     if(this.quests) this.quests.onReach(mapId);
+    if(this.achievements) this.achievements.onMapEnter(mapId);
     // autosave when entering a new area (but not on the initial load from start())
     if(!keepPos && this.running){ this.autosave('Checkpoint saved'); }
     if(this.hud) this.hud._updateTownBtn();
@@ -145,6 +164,12 @@ export class Game {
     for(const e of this.enemies) e.update(dt,this.player,this.world,this);
     this.enemies=this.enemies.filter(e=>!e.dead);
     if(this.boss){ this.boss.update(dt,this.player,this.world,this); if(this.boss.dead) this.boss=null; }
+    // boss clones (Glacius' "clones" attack): just decay over time, no AI.
+    if(this._bossClones && this._bossClones.length){
+      for(const c of this._bossClones) c.update && c.update(dt, this.player, this.world, this);
+      this._bossClones = this._bossClones.filter(c => !c.dead);
+      if(!this._bossClones.length) this._bossClones = null;
+    }
 
     for(const p of this.projectiles) p.update(dt,this.world,this.enemies,this);
     this.projectiles=this.projectiles.filter(p=>!p.dead);
@@ -157,7 +182,8 @@ export class Game {
       const d=Math.hypot(g.x-this.player.x,g.y-this.player.y);
       if(d<70){ g.x+=(this.player.x-g.x)*0.18; g.y+=(this.player.y-g.y)*0.18; }
       if(d<16){ g.dead=true; const amt=this.player.gainGold(g.amount,this); this.sfx('pickup');
-        this.floater('+'+amt+'g',this.player.x,this.player.y-30,'#ffcf4d'); }
+        this.floater('+'+amt+'g',this.player.x,this.player.y-30,'#ffcf4d');
+        if(this.achievements) this.achievements.onGoldHeld(this.player.gold); }
     }
     this.golds=this.golds.filter(g=>!g.dead);
 
@@ -240,6 +266,7 @@ export class Game {
     if(this.transition>0) return; // debounce during fade
     this.loadMap(p.to, p.tx, p.ty, false);
     this.sfx('open');
+    if(this.achievements) this.achievements.onPortal();
   }
   _doInteract(near){
     if(near.type==='npc'){
@@ -268,8 +295,10 @@ export class Game {
     } else if(near.type==='chest'){
       const c=near.ref; if(c.opened) return;
       c.opened=true; this.openedChests[this.currentMap+':'+c.idx]=true; this.sfx('open');
+      if(this.achievements) this.achievements.onChestOpened();
       const loot=c.loot;
-      if(loot.type==='gold'){ const amt=this.player.gainGold(loot.amount,this); this.toast('Found '+amt+' gold!'); }
+      if(loot.type==='gold'){ const amt=this.player.gainGold(loot.amount,this); this.toast('Found '+amt+' gold!');
+        if(this.achievements) this.achievements.onGoldHeld(this.player.gold); }
       else { this.addItem(makeItem(loot.id,loot.qty||1)); this.toast('Found '+CATALOG[loot.id].name+'!'); }
     } else if(near.type==='portal'){ this._usePortal(near.ref); }
   }
@@ -289,6 +318,7 @@ export class Game {
       ctx.fillText(CATALOG[it.id].icon, sx, sy+6+Math.sin(performance.now()/300)*2); }
     // depth sort
     const ents=[this.player,...this.enemies]; if(this.boss) ents.push(this.boss);
+    if(this._bossClones) for(const c of this._bossClones) ents.push(c);
     ents.sort((a,b)=>a.y-b.y);
     for(const e of ents) e.draw(ctx,this.cam);
     for(const p of this.projectiles) p.draw(ctx,this.cam);
@@ -313,6 +343,8 @@ export class Game {
     // transition fade
     if(this.transition>0){ ctx.fillStyle='rgba(0,0,0,'+(this.transition/0.6)+')';
       ctx.fillRect(0,0,this.canvas.width,this.canvas.height); }
+    // HUD DOM updates that need to run every frame (cooldown overlays)
+    if(this.hud){ this.hud.refreshCompanionAbility(); }
   }
 
   // draw ?/?/? markers above quest-giver NPCs
@@ -344,10 +376,37 @@ export class Game {
     const crit=Math.random()*100<p.crit;
     if(crit) dmg*=2;
     dmg=Math.round(dmg);
+    // Holy enchantment: +25% damage vs undead
+    const w = resolveEquip(p.equipment && p.equipment.weapon);
+    const ench = w && w.enchant;
+    if(ench === 'holy' && this._isUndead(e)) dmg = Math.round(dmg * 1.25);
     e.hit(dmg,ang,this,6);
     if(crit) this.floater('CRIT '+dmg,e.x,e.y-26,'#ffcf4d');
     if(p.lifesteal>0){ const heal=dmg*p.lifesteal; p.heal(heal,this); }
     this.cam.shake=Math.min(this.cam.shake+3,8);
+    // Apply enchantment on-hit effects (status DoTs / chill / chain)
+    if(ench && !e.dead){
+      if(ench === 'fire')       applyStatus(e, 'burn', 2.5);
+      else if(ench === 'ice')   applyStatus(e, 'chill', 2.0);
+      else if(ench === 'poison') applyStatus(e, 'poison', 4.0);
+      else if(ench === 'lightning'){
+        // chain to the next nearest foe within 130px, dealing 50% damage
+        const others = this.enemies.filter(o => o !== e && !o.dead && Math.hypot(o.x-e.x, o.y-e.y) < 130);
+        if(others.length){
+          others.sort((a,b)=>Math.hypot(a.x-e.x,a.y-e.y)-Math.hypot(b.x-e.x,b.y-e.y));
+          const target = others[0];
+          const cDmg = Math.round(dmg*0.5);
+          target.hit(cDmg, Math.atan2(target.y-e.y, target.x-e.x), this, 3);
+          this.floater('CHAIN '+cDmg, target.x, target.y-22, '#fff066');
+          this.spawnParticles(e.x, e.y, '#fff066', 6);
+          this.spawnParticles(target.x, target.y, '#fff066', 6);
+        }
+      }
+    }
+  }
+  // Undead = skeletons, frostlings, frost mages, etc. We classify by type.
+  _isUndead(e){
+    return ['skeleton','frostling','frost_mage','skeleton_archer'].includes(e.type);
   }
   _fireRangedShot(p){
     if(p._overheatCd>0) return;
@@ -408,6 +467,7 @@ export class Game {
       this.floater('PARRY!',p.x,p.y-34,'#88ddff');
       this.sfx('parry');
       this.cam.shake=4;
+      if(this.achievements) this.achievements.onParry();
     }
     this.projectiles.push(proj);
   }
@@ -439,6 +499,7 @@ export class Game {
     if(this.quests) this.quests.onKill(null,true,boss.id);
     this.toast(boss.def.name+' defeated!');
     this.sfx('levelup');
+    if(this.achievements) this.achievements.onBossDefeated();
     this.autosave('Progress saved');
   }
 
@@ -465,6 +526,7 @@ export class Game {
     // tougher foes can drop rolled gear
     const tough=['brute','golem','yeti','croaker','skeleton'];
     if(tough.includes(e.type) && Math.random()<0.25) this.dropGear(e.x,e.y,0.3);
+    if(this.achievements) this.achievements.onEnemyKilled(e);
   }
   floater(t,x,y,c){ this.hud.floater(t,x,y,c); }
   toast(m){ this.hud.toast(m); }
@@ -481,6 +543,11 @@ export class Game {
       this.inventory.push({...item}); // gear stacks individually (keeps rarity/affixes)
     }
     if(this.quests) this.quests.onPickup();
+    // Achievement hooks: affix count + legendary
+    if(this.achievements && item.rarity){
+      if(item.affixes && item.affixes.length) this.achievements.onAffixCount(item.affixes.length);
+      if(item.rarity === 'legendary') this.achievements.onLegendaryFound();
+    }
     this.hud.refresh();
   }
   removeItem(item){
@@ -495,6 +562,7 @@ export class Game {
     item.qty--;
     CATALOG[id].use(this);
     if(item.qty<=0){ this.removeItem(item); const hi=this.hotbar.indexOf(id); if(hi>=0) this.hotbar[hi]=null; }
+    if(this.achievements && (id==='potion' || id==='potion_l' || id==='elixir')) this.achievements.onPotionDrank();
     this.hud.refresh();
   }
   // equip a gear item from inventory
@@ -524,6 +592,7 @@ export class Game {
     const c=CATALOG[id]; if(!c) return;
     if(this.player.gold < c.price){ this.toast('Not enough gold!'); this.sfx('hurt'); return; }
     this.player.gold-=c.price; this.addItem(makeItem(id, c.type==='consumable'?1:1));
+    if(this.achievements) this.achievements.onGoldSpent(c.price);
     this.sfx('pickup'); this.toast('Bought '+c.name); this.hud.refreshShop();
   }
   sellItem(item){
@@ -619,6 +688,55 @@ export class Game {
     this.hud.refresh();
     return this.inventory[i];
   }
+  // Blacksmith can remove an enchant from a weapon and return the matching scroll
+  // to the player's bag. Costs gold (75% of base item price). The same item ref
+  // stays in the bag slot since we mutate in place.
+  stripEnchantFromItem(item){
+    if(!item || item.type==='consumable') return;
+    const cost=stripEnchantCost(item);
+    if(!cost){ this.toast('No enchant to remove.'); return; }
+    if(this.player.gold<cost){ this.toast('Not enough gold ('+cost+'g)'); this.sfx('hurt'); return; }
+    const i=this.inventory.indexOf(item); if(i<0) return;
+    this.player.gold-=cost;
+    const removed=stripWeaponEnchant(item);
+    if(removed){ this.addItem(makeItem(removed, 1)); }
+    this.sfx('open'); this.toast('Removed enchant from '+item.name+(removed?': returned scroll_'+removed:''));
+    this.hud.refresh();
+    return item;
+  }
+
+  // ---- enchantment (arcane anvil) ----
+  // Open the enchant modal. The player picks a weapon from the bag, then a
+  // scroll, then pays the gold cost. The item is mutated in place (so the
+  // equipped weapon keeps its enchant after save/load) and gets a glow tint
+  // on the player sprite.
+  openEnchant(name){ this.paused=true; this.enchantName=name||'Anvil'; this.hud.openEnchant(); }
+  // Bind `scrollId` (a scroll_* consumable) to `weapon` (an inventory item).
+  // Returns the enchanted item on success, null on failure.
+  enchantItemWith(weapon, scrollId){
+    if(!weapon || weapon.type !== 'weapon'){ this.toast('Need a weapon to enchant.'); this.sfx('hurt'); return null; }
+    const sc = CATALOG[scrollId];
+    if(!sc || !sc.enchant){ this.toast('That is not a scroll.'); return null; }
+    const gold = enchantCost(weapon);
+    if(this.player.gold < gold){ this.toast('Not enough gold ('+gold+'g)'); this.sfx('hurt'); return null; }
+    // consume one scroll from the inventory
+    const slot = this.inventory.find(it => it.id === scrollId && it.type === 'consumable' && it.qty > 0);
+    if(!slot){ this.toast('You do not have that scroll.'); this.sfx('hurt'); return null; }
+    slot.qty--;
+    if(slot.qty <= 0){ this.removeItem(slot); const hi = this.hotbar.indexOf(scrollId); if(hi >= 0) this.hotbar[hi] = null; }
+    // pay gold + apply
+    this.player.gold -= gold;
+    const wasAlready = weapon.enchant;
+    applyEnchant(weapon, sc.enchant);
+    // visual: big particle burst in the element color
+    const info = enchantInfo(sc.enchant);
+    if(info){ this.spawnParticles(this.player.x, this.player.y, info.color, 28); }
+    this.sfx('levelup');
+    this.toast(weapon.name + (wasAlready ? ' re-enchanted to ' : ' enchanted: ') + (info ? info.name : sc.enchant));
+    if(this.achievements) this.achievements.onEnchant();
+    this.hud.refresh();
+    return weapon;
+  }
 
   // ---- skills ----
   learnSkill(id){
@@ -629,6 +747,25 @@ export class Game {
     this.player.recompute();
     this.player.hp=Math.min(this.player.hp,this.player.hpMax);
     this.sfx('levelup'); this.toast('Learned '+SKILLS[id].name); this.hud.refreshSkills();
+    // Achievement: count unique branches with at least 1 skill learned
+    if(this.achievements){
+      const branches = new Set();
+      for(const k of Object.keys(this.player.skills)){
+        if(this.player.skills[k] > 0 && SKILLS[k] && SKILLS[k].branch) branches.add(SKILLS[k].branch);
+      }
+      this.achievements.onSkillBranches(branches.size);
+    }
+  }
+
+  // ===== ACHIEVEMENT UNLOCK =====
+  // Called by the tracker after a stat crosses its goal. Shows a Steam-style
+  // toast and queues a celebratory sfx. The toast queue is rendered by the
+  // HUD; the game just hands entries to it.
+  _achievementUnlocked(a){
+    this.sfx('levelup');
+    if(this.hud && this.hud.achievementToast) this.hud.achievementToast(a);
+    // also a regular in-screen toast as a backup
+    this.toast('Achievement: ' + a.name);
   }
 
   // ---- lifecycle ----
@@ -649,9 +786,24 @@ export class Game {
     if(this._companions.length>=1) return; // max 1 companion for now
     const c=new Companion(def.name, def.icon, this.player.x+20, this.player.y+20);
     c.color=def.color;
+    c.kind=id; // remember which companion for ability dispatch
     this._companions.push(c);
-    this.toast(def.name+' joined your party!');
+    this.toast(def.name+' joined your party! Press G for '+this._companionAbilityName(id));
     this.sfx('pickup');
+    if(this.achievements) this.achievements.onRecruited();
+  }
+  // Resolve the ability display name for a companion kind
+  _companionAbilityName(kind){
+    if(!kind) return 'their ability';
+    return COMPANION_ABILITY_NAMES[kind] || 'their ability';
+  }
+  // Player presses G to trigger the active companion's ability
+  triggerCompanionAbility(){
+    if(!this._companions.length){ this.toast('No companion yet.'); return; }
+    const c=this._companions[0];
+    if(!c.alive){ this.toast(c.name+' is downed.'); return; }
+    if(c._abilityCd>0){ this.toast('On cooldown: '+(c._abilityCd|0)+'s'); return; }
+    c.triggerAbility(this, this.player);
   }
   dismissCompanion(){
     if(!this._companions.length) return;
@@ -665,6 +817,7 @@ export class Game {
       playtime:this.playtime, openedChests:this.openedChests, stash:this.stash,
       bossesDead:this.bossesDead, checkpoint:this.checkpoint,
       quests:this.quests?this.quests.serialize():undefined,
+      achievements:this.achievements?this.achievements.serialize():undefined,
       boughtSpells:this._boughtSpells,
       username:this._username,
       heat:this.player.heat, _overheatCd:this.player._overheatCd,

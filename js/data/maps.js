@@ -30,7 +30,7 @@ export const MAPS = {
   forest: {
     name:'Whispering Forest', biome:'forest', cols:55, rows:50, seed:202,
     music:'calm',
-    enemies:{ count:9, types:['boar','archer','bat'] },
+    enemies:{ count:9, types:['boar','archer','mage','bat'] },
     portals:[
       { x:1, y:22, to:'meadow', tx:53, ty:6, label:'Greenwood Meadow' },
       { x:50, y:45, to:'dungeon1', tx:9, ty:2, label:'Forgotten Crypt', door:true },
@@ -68,7 +68,7 @@ export const MAPS = {
   cave: {
     name:'Crystal Cave', biome:'cave', cols:50, rows:48, seed:404,
     music:'tense',
-    enemies:{ count:8, types:['bat','golem','slime'] },
+    enemies:{ count:8, types:['bat','golem','berserker','slime'] },
     portals:[
       { x:8, y:39, to:'meadow', tx:30, ty:4, label:'Greenwood Meadow' },
     ],
@@ -99,7 +99,7 @@ export const MAPS = {
   snow: {
     name:'Frostpeak Tundra', biome:'snow', cols:56, rows:46, seed:707,
     music:'tense',
-    enemies:{ count:11, types:['frostling','yeti','bat'] },
+    enemies:{ count:11, types:['frostling','yeti','frost_mage','bat'] },
     portals:[
       { x:52, y:30, to:'meadow', tx:4, ty:7, label:'Greenwood Meadow' },
       { x:5,  y:5,  to:'dungeon2', tx:23, ty:50, label:'Sunken Catacomb', door:true },
@@ -118,7 +118,7 @@ export const MAPS = {
   swamp: {
     name:'Murkbog Swamp', biome:'swamp', cols:58, rows:48, seed:808,
     music:'tense',
-    enemies:{ count:12, types:['spitter','croaker','bat'] },
+    enemies:{ count:12, types:['spitter','croaker','mage','bat'] },
     portals:[
       { x:52, y:42, to:'desert', tx:5, ty:5, label:'Sunscar Desert' },
       { x:5, y:5, to:'swamp_depths', tx:50, ty:40, label:'Bog Depths' },
@@ -193,8 +193,10 @@ export const MAPS = {
     enemies:{ count:0, types:[] },
     portals:[ { x:6, y:12, to:'city', tx:6, ty:31, label:'Plaza', door:true } ],
     npcs:[ { x:7, y:5, name:'Archmage Vael', icon:'★', shop:true,
-      stock:['staff_arcane','sword_flame','sword_frost','armor_mage','ring_focus','ether'],
-      lines:['The weave bends to the worthy.','Press F to peruse arcane goods.'] } ],
+      stock:['staff_arcane','sword_flame','sword_frost','armor_mage','ring_focus','ether','scroll_fire','scroll_ice','scroll_lightning','scroll_poison','scroll_holy'],
+      lines:['The weave bends to the worthy.','Press F to peruse arcane goods.'] },
+      { x:10, y:8, name:'Anvil of Binding', icon:'◊', enchant:true,
+        lines:['Place a weapon and a scroll on the anvil.','Press F to bind an enchantment.'] } ],
     chests:[],
   },
   shop_general: {
@@ -217,7 +219,7 @@ export const MAPS = {
   },
   forest_deep: {
     name:'Deepwood Thicket', biome:'forest', cols:52, rows:50, seed:132, music:'tense',
-    enemies:{ count:12, types:['boar','archer','bat'] },
+    enemies:{ count:12, types:['boar','archer','mage','bat'] },
     portals:[ { x:2, y:25, to:'forest', tx:50, ty:5, label:'Whispering Forest' } ],
     npcs:[],
     chests:[ { x:46, y:8, loot:{type:'item',id:'bow_short',qty:1} }, { x:10, y:44, loot:{type:'gold',amount:140} } ],
@@ -231,14 +233,17 @@ export const MAPS = {
   },
   snow_glacier: {
     name:'Glacier Hollow', biome:'snow', cols:50, rows:46, seed:134, music:'tense',
-    enemies:{ count:12, types:['frostling','yeti','bat'] },
-    portals:[ { x:2, y:23, to:'snow', tx:50, ty:7, label:'Frostpeak Tundra' } ],
+    enemies:{ count:12, types:['frostling','yeti','frost_mage','bat'] },
+    portals:[
+      { x:2, y:23, to:'snow', tx:50, ty:7, label:'Frostpeak Tundra' },
+      { x:47, y:5, to:'tundra_edge', tx:3, ty:10, label:'Tundra Edge' },
+    ],
     npcs:[],
     chests:[ { x:44, y:8, loot:{type:'item',id:'crossbow',qty:1} }, { x:8, y:40, loot:{type:'gold',amount:200} } ],
   },
   swamp_depths: {
     name:'Bog Depths', biome:'swamp', cols:52, rows:48, seed:135, music:'tense',
-    enemies:{ count:13, types:['spitter','croaker','bat'] },
+    enemies:{ count:13, types:['spitter','croaker','mage','bat'] },
     portals:[ { x:50, y:40, to:'swamp', tx:7, ty:7, label:'Murkbog Swamp' } ],
     npcs:[],
     chests:[ { x:8, y:8, loot:{type:'item',id:'dagger_venom',qty:1} }, { x:44, y:42, loot:{type:'gold',amount:220} } ],
@@ -324,6 +329,45 @@ export const MAPS = {
     decor:[
       { x:5, y:5, type:'rock' }, { x:30, y:30, type:'rock' },
     ],
+  },
+  // ===================== FROZEN TUNDRA (endgame biome, leads to Glacius) =====================
+  tundra_edge: {
+    name:'Tundra Edge', biome:'tundra', cols:50, rows:42, seed:701, music:'tense',
+    enemies:{ count:10, types:['ice_wraith','snow_stalker','frost_mage'] },
+    portals:[
+      { x:2, y:10, to:'snow_glacier', tx:46, ty:7, label:'Glacier Hollow' },
+      { x:48, y:22, to:'tundra_heart', tx:3, ty:22, label:'Tundra Heart' },
+    ],
+    chests:[
+      { x:8, y:36, loot:{type:'gold',amount:180} },
+      { x:42, y:8, loot:{type:'item',id:'potion_l',qty:2} },
+    ],
+  },
+  tundra_heart: {
+    name:'Tundra Heart', biome:'tundra', cols:52, rows:48, seed:702, music:'tense',
+    enemies:{ count:14, types:['frozen_husk','frost_golem','ice_wraith','snow_stalker'] },
+    portals:[
+      { x:2, y:22, to:'tundra_edge', tx:46, ty:22, label:'Tundra Edge' },
+      { x:50, y:24, to:'frost_spire', tx:24, ty:42, label:'Frost Spire' },
+    ],
+    npcs:[
+      { x:26, y:8, name:'Aurora Keeper', icon:'♦', lines:['The Spire awakens when frost thaws.','Hesitation costs lives.'] },
+    ],
+    chests:[
+      { x:12, y:40, loot:{type:'gold',amount:240} },
+      { x:44, y:12, loot:{type:'item',id:'staff_arcane',qty:1} },
+      { x:24, y:30, loot:{type:'item',id:'scroll_ice',qty:1} },
+    ],
+  },
+  frost_spire: {
+    name:'Frost Spire', biome:'tundra', cols:50, rows:48, seed:703, music:'tense',
+    enemies:{ count:0, types:[] },
+    portals:[
+      { x:24, y:46, to:'tundra_heart', tx:50, ty:24, label:'Tundra Heart' },
+    ],
+    npcs:[],
+    chests:[],
+    boss:'glacius',
   },
 };
 

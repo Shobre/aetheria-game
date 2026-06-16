@@ -13,6 +13,16 @@ export const CATALOG = {
   elixir:   { name:'Elixir', icon:'♦', type:'consumable', price:120, sell:50,
               use:(g)=>{ g.player.heal(200,g); g.player.restoreMp(120); g.sfx('levelup'); } },
 
+  // ---- enchantment scrolls (consumables used at the arcane anvil) ----
+  // Selecting one opens the anvil's "apply this enchantment" prompt. Costs
+  // both the scroll and gold. Defined as consumable so they can stack in the
+  // hotbar and the bag.
+  scroll_fire:     { name:'Scroll of Flame',     icon:'♨', type:'consumable', price:120, sell:40, enchant:'fire' },
+  scroll_ice:      { name:'Scroll of Frost',     icon:'❄', type:'consumable', price:120, sell:40, enchant:'ice' },
+  scroll_lightning:{ name:'Scroll of Lightning', icon:'⚡',type:'consumable', price:120, sell:40, enchant:'lightning' },
+  scroll_poison:   { name:'Scroll of Venom',     icon:'☠', type:'consumable', price:120, sell:40, enchant:'poison' },
+  scroll_holy:     { name:'Scroll of Blessing',  icon:'✟', type:'consumable', price:200, sell:80, enchant:'holy' },
+
   // ---- weapons (atk) ----
   sword_wood:  { name:'Wooden Sword', icon:'↑', type:'weapon', price:0,   sell:5,   stats:{atk:2} },
   sword_iron:  { name:'Iron Sword',   icon:'↑', type:'weapon', price:120, sell:50,  stats:{atk:6} },

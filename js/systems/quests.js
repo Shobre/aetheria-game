@@ -119,6 +119,13 @@ export class QuestLog {
     (r.items || []).forEach(it => this.game.addItem(makeItem(it.id, it.qty)));
     this.game.toast('Quest complete: ' + q.name + '!');
     this.game.sfx('levelup');
+    if(this.game.achievements){
+      this.game.achievements.onQuestComplete();
+      const kind = (q.objectives && q.objectives[0] && q.objectives[0].kind) || '';
+      if(kind === 'escort') this.game.achievements.onEscortComplete();
+      else if(kind === 'survive') this.game.achievements.onSurviveComplete();
+      else if(kind === 'timed_clear') this.game.achievements.onTimedClearComplete();
+    }
     this._notify();
     return true;
   }

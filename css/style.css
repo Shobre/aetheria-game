@@ -227,6 +227,39 @@ body{image-rendering:pixelated}
 
 /* ===== craft layout ===== */
 .craft-layout{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+/* ===== achievement panel + Steam-style toast ===== */
+.achieve-tab{ font-size:8px; padding:4px 9px; cursor:pointer; background:#0d1018;
+  border:2px solid #000; color:#889; letter-spacing:.08em; text-transform:uppercase;
+  transition:.12s; }
+.achieve-tab:hover{ color:#cdd; }
+.achieve-tab.active{ color:#0d1018; font-weight:700; }
+.achieve-row{ display:grid; grid-template-columns:32px 1fr 90px; gap:10px;
+  align-items:center; padding:7px 9px; background:rgba(20,24,36,.7);
+  border-left:3px solid #2a3145; margin-bottom:5px; }
+.achieve-row.unlocked{ border-left-color:#ffcf4d; }
+.achieve-row.secret.locked{ opacity:.55; }
+.achieve-row.unlocked.secret{ border-left-color:#5ad8ff; }
+.achieve-icon{ font-size:18px; text-align:center; line-height:32px; width:32px; height:32px;
+  background:#0a0d18; border:1px solid #2a3145; }
+.achieve-name{ font-size:9px; color:#dde; font-weight:700; }
+.achieve-desc{ font-size:7px; color:#9aa; margin-top:2px; line-height:1.4; }
+.achieve-bar{ height:6px; background:#1a2030; border:1px solid #000; position:relative; }
+.achieve-bar > div{ height:100%; }
+.achieve-progress-label{ font-size:7px; color:#889; text-align:right; margin-top:2px; }
+
+.achieve-toast{ background:linear-gradient(135deg,#0d1018,#1a2030);
+  border:2px solid #ffcf4d; border-left:4px solid #ffcf4d;
+  padding:8px 10px; display:flex; gap:10px; align-items:center;
+  box-shadow:0 4px 16px rgba(0,0,0,.6),0 0 10px rgba(255,207,77,.18);
+  font-family:'Press Start 2P',monospace; color:#cdd3df;
+  pointer-events:auto; transform:translateX(120%); transition:transform .35s ease-out; }
+.achieve-toast.in{ transform:translateX(0); }
+.achieve-toast .ico{ font-size:20px; color:#ffcf4d; line-height:32px; width:32px; height:32px;
+  text-align:center; background:rgba(0,0,0,.4); border:1px solid #ffcf4d; flex-shrink:0; }
+.achieve-toast .lbl{ font-size:7px; color:#ffcf4d; letter-spacing:.15em; }
+.achieve-toast .nm{ font-size:9px; color:#fff; margin-top:2px; }
+.achieve-toast .ds{ font-size:7px; color:#9aa; margin-top:2px; line-height:1.4; }
 .craft-detail{ min-height:160px; }
 .craft-sel-name{ font-size:11px; font-weight:700; margin-bottom:4px; }
 .craft-affix{ font-size:9px; color:#5fe06a; margin-bottom:8px; }

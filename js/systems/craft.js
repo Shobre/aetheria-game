@@ -2,6 +2,24 @@
 // Pure functions over item objects so they are unit-testable without the DOM.
 import { CATALOG, makeItem } from '../data/gear.js';
 import { RARITY_ORDER, applyRarity } from '../data/affixes.js';
+import { stripEnchant } from '../data/enchantments.js';
+
+// Gold cost to strip a weapon's current enchantment at the Blacksmith (cheaper than
+// a full reforge — uses the base catalog price for the item, no rarity multiplier).
+export function stripEnchantCost(item){
+  const it=asItem(item); if(!it || it.type==='consumable') return 0;
+  if(!it.enchant) return 0;
+  return Math.round((CATALOG[it.id]?CATALOG[it.id].price||40:40) * 0.75);
+}
+
+// Strip the active enchantment from a weapon and return the scroll id that was
+// bound to it, so the caller can place it back in the player's bag. Returns null
+// if the item has no enchant or the enchant kind is unknown to the catalog.
+export function stripWeaponEnchant(item){
+  const it=asItem(item); if(!it || !it.enchant) return null;
+  const removed=it.enchant;
+  return stripEnchant(it) ? removed : null;
+}
 
 // Resolve any equipment value (id string or item object) to a fresh item object.
 function asItem(v){

@@ -17,6 +17,8 @@ const BIOMES = {
   snow:   { fa:'#dfe9f2', fb:'#eaf2fa', pa:'#b8c6d6', pb:'#c6d2e0', wd:'#6a7c92', wl:'#8a9cb2', liquid:'#7fc8e8', liquid2:'#a0dcf2', deco:['pine','snowrock','pine'] },
   swamp:  { fa:'#3a4a2a', fb:'#445232', pa:'#4a4030', pb:'#564a38', wd:'#1a2410', wl:'#26341a', liquid:'#4a5a2a', liquid2:'#5e7236', deco:['deadtree','reed','rock'] },
   city:   { fa:'#4a6a48', fb:'#547652', pa:'#9a9088', pb:'#a8a096', wd:'#3a3038', wl:'#5a4e58', liquid:'#3a82c8', liquid2:'#52a0d8', deco:['lamp','fountain','crate'] },
+  // Frozen Tundra: white-and-blue icy palette
+  tundra: { fa:'#e0eef5', fb:'#cfe2ec', pa:'#a8c8d8', pb:'#9ab8c8', wd:'#5a7a92', wl:'#7a9ab2', liquid:'#9ecae8', liquid2:'#bfe0f0', deco:['pine','snowrock','pine'] },
 };
 const SOLID = new Set([T.WATER, T.WALL, T.LAVA]);
 

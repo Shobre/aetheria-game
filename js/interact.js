@@ -111,6 +111,7 @@ function _interactNpc(game, n){
   if(n.bank){ game.openStash(n.name); return; }
   if(n.craft){ game.openCraft(n.name); return; }
   if(n.shop){ game.openShop(n.stock, n.name); return; }
+  if(n.enchant){ game.openEnchant(n.name); return; }
   if(n.companion){
     if(game._companions.length>=1){ game.toast('Your party is full. Dismiss your current companion first.'); return; }
     game.recruitCompanion(n.companion); return;

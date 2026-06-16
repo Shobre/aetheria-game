@@ -1,4 +1,5 @@
 import { applyStatus } from '../systems/status.js';
+import { Projectile } from './enemy.js';
 
 // Boss definitions. Each boss has phases (HP fractions) that change its move set.
 // Attacks: 'burst' (radial projectiles), 'charge' (telegraph + dash), 'summon' (adds),
@@ -96,6 +97,22 @@ export const BOSSES = {
       { at:0.25, attacks:['lavaPool','fireball','summon','charge','nova'], interval:0.9, tint:'#ff0000' },
     ],
   },
+  // ============== Frozen Tundra end-boss ==============
+  // Glacius, the Eternal Winter. Special attacks:
+  //  - iceWall:     drops a row of 5 ice projectiles in a line in front of the boss
+  //  - blizzard:    a large radial burst of 24 ice projectiles (chill on hit)
+  //  - clones:      summons 2 frozen decoys that mimic Glacius but die in 1 hit
+  //  - frostBolt:   a single homing ice bolt at the player
+  glacius: {
+    name:'Glacius, the Eternal Winter', map:'frost_spire', x:24, y:8,
+    hp:1500, dmg:24, r:30, color:'#bfe8ff', xp:1200, gold:800,
+    drop:'staff_arcane', adds:['ice_wraith','frost_golem'], onHit:'chill',
+    phases:[
+      { at:1.00, attacks:['frostBolt','blizzard','iceWall'],   interval:2.2, tint:'#bfe8ff' },
+      { at:0.60, attacks:['blizzard','clones','iceWall','frostBolt'], interval:1.7, tint:'#e0f4ff' },
+      { at:0.30, attacks:['blizzard','iceWall','clones','frostBolt'], interval:1.3, tint:'#ffffff' },
+    ],
+  },
 };
 
 export class Boss {
@@ -190,6 +207,66 @@ export class Boss {
         game.spawnAdd(this.x+Math.cos(a)*d, this.y+Math.sin(a)*d, adds[Math.floor(Math.random()*adds.length)]);
       }
       game.toast(this.def.name + ' summons minions!');
+    } else if(pick === 'frostBolt'){
+      // single homing ice bolt
+      const a = Math.atan2(player.y-this.y, player.x-this.x);
+      const proj = new Projectile(this.x, this.y, a, {
+        speed: 4.5, dmg: Math.round(this.dmg*0.8), r: 7, color:'#bfe8ff',
+        kind: 'ice', life: 2.4, hostile: true, homing: 0.08,
+      });
+      if(proj && game.projectiles) game.projectiles.push(proj);
+      game.spawnParticles(this.x, this.y, '#bfe8ff', 6);
+    } else if(pick === 'blizzard'){
+      // 24 radial ice projectiles that chill on hit
+      const n = 18 + this.phaseIdx*6;
+      for(let i=0;i<n;i++){
+        const a = (i/n)*Math.PI*2 + Math.random()*0.1;
+        game.enemyShootStatus(this.x, this.y, a, Math.round(this.dmg*0.4), 'chill');
+      }
+      game.cam.shake = 10;
+      game.spawnParticles(this.x, this.y, '#ffffff', 32);
+      game.toast('BLIZZARD!');
+    } else if(pick === 'iceWall'){
+      // a row of 5 ice projectiles fired in the player's direction
+      const baseA = Math.atan2(player.y-this.y, player.x-this.x);
+      for(let i=-2;i<=2;i++){
+        const a = baseA + i*0.18;
+        game.enemyShootStatus(this.x, this.y, a, Math.round(this.dmg*0.55), 'chill');
+      }
+      game.cam.shake = 4;
+    } else if(pick === 'clones'){
+      // spawn 2 frozen decoys that are weak (1 hit) but mimic Glacius look.
+      // Clones are stored on game.bossClones and ticked/drawn in the main loop.
+      for(let i=0;i<2;i++){
+        const ang = (i===0 ? -1 : 1) * 0.6 + Math.atan2(player.y-this.y, player.x-this.x);
+        const cx = this.x + Math.cos(ang)*70;
+        const cy = this.y + Math.sin(ang)*70;
+        const clone = {
+          x: cx, y: cy, r: 22, hp: 1, maxHp: 1, dead: false,
+          color: '#cfeaff', phaseIdx: this.phaseIdx, isClone: true,
+          def: { name: 'Frozen Clone', tint: '#cfeaff' },
+          hit(dmg, a, g, knock){ this.hp -= dmg; if(this.hp <= 0) this.dead = true; g.spawnParticles(this.x, this.y, '#bfe8ff', 14); g.sfx('kill'); },
+          draw(ctx, cam){
+            const sx=this.x-cam.x, sy=this.y-cam.y;
+            ctx.save(); ctx.globalAlpha=0.7;
+            ctx.fillStyle = this.color;
+            ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, 7); ctx.fill();
+            ctx.fillStyle = '#7fc8e8';
+            ctx.beginPath(); ctx.arc(sx, sy, this.r*0.7, 0, 7); ctx.fill();
+            // icy eyes
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(sx-5, sy-2, 3, 3);
+            ctx.fillRect(sx+2, sy-2, 3, 3);
+            ctx.restore();
+          }
+        };
+        if(game._bossClones) game._bossClones.push(clone);
+        else { game._bossClones = [clone]; }
+      }
+      game.toast('Frozen clones appear!');
+    } else if(pick === 'fireball' || pick === 'lavaPool' || pick === 'nova'){
+      // delegated to game if it has magma boss helpers
+      if(game._magmaAttack) game._magmaAttack(this, pick, player);
     }
     this.state='idle'; this.atkTimer=this.phase.interval;
   }
@@ -216,14 +293,47 @@ export class Boss {
       ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(sx,sy,this.r+10,0,7); ctx.fill(); ctx.globalAlpha=1; }
     let c = this.hitFlash>0 ? '#fff' : (this.frozen>0 ? '#9fd8ff' : this.phase.tint);
     if(this.state==='telegraph'){ c = Math.floor(performance.now()/80)%2 ? '#ff4040' : this.phase.tint; }
-    ctx.fillStyle=c;
-    ctx.beginPath(); ctx.arc(sx, sy+bob, this.r, 0, 7); ctx.fill();
-    ctx.fillStyle='rgba(0,0,0,.35)';
-    ctx.beginPath(); ctx.arc(sx, sy+bob, this.r*0.7, 0, 7); ctx.fill();
-    ctx.fillStyle='#ff2a2a';
-    ctx.fillRect(sx-8, sy-5+bob, 5, 5); ctx.fillRect(sx+3, sy-5+bob, 5, 5);
-    ctx.fillStyle='#ffcf4d';
-    for(let i=-2;i<=2;i++) ctx.fillRect(sx+i*7-1, sy-this.r-4+bob, 3, 7);
+    // Glacius gets a fancier ice-crown shape; everyone else stays a simple boss ball
+    if(this.id === 'glacius'){
+      // layered ice ring
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.arc(sx, sy+bob, this.r, 0, 7); ctx.fill();
+      ctx.fillStyle = '#7fc8e8';
+      ctx.beginPath(); ctx.arc(sx, sy+bob, this.r*0.78, 0, 7); ctx.fill();
+      ctx.fillStyle = '#e0f4ff';
+      ctx.beginPath(); ctx.arc(sx, sy+bob, this.r*0.55, 0, 7); ctx.fill();
+      // ice crown spikes
+      ctx.fillStyle = '#ffffff';
+      for(let i=-3;i<=3;i++){
+        const a = -Math.PI/2 + i * 0.32;
+        const x = sx + Math.cos(a) * (this.r + 6);
+        const y = sy - this.r - 6 + Math.sin(a) * (this.r + 6);
+        ctx.beginPath(); ctx.moveTo(x, y);
+        ctx.lineTo(x - 3, y - 8); ctx.lineTo(x + 3, y - 8);
+        ctx.closePath(); ctx.fill();
+      }
+      // frozen eyes
+      ctx.fillStyle = '#bfe8ff';
+      ctx.fillRect(sx-9, sy-7+bob, 6, 6);
+      ctx.fillRect(sx+3, sy-7+bob, 6, 6);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(sx-7, sy-5+bob, 2, 2);
+      ctx.fillRect(sx+5, sy-5+bob, 2, 2);
+      // breath mist
+      if(Math.floor(performance.now()/100) % 2 === 0){
+        ctx.fillStyle = 'rgba(220,240,255,0.3)';
+        ctx.beginPath(); ctx.arc(sx, sy+this.r-2+bob, this.r*0.4, 0, 7); ctx.fill();
+      }
+    } else {
+      ctx.fillStyle=c;
+      ctx.beginPath(); ctx.arc(sx, sy+bob, this.r, 0, 7); ctx.fill();
+      ctx.fillStyle='rgba(0,0,0,.35)';
+      ctx.beginPath(); ctx.arc(sx, sy+bob, this.r*0.7, 0, 7); ctx.fill();
+      ctx.fillStyle='#ff2a2a';
+      ctx.fillRect(sx-8, sy-5+bob, 5, 5); ctx.fillRect(sx+3, sy-5+bob, 5, 5);
+      ctx.fillStyle='#ffcf4d';
+      for(let i=-2;i<=2;i++) ctx.fillRect(sx+i*7-1, sy-this.r-4+bob, 3, 7);
+    }
     if(this.state==='charge'){ ctx.strokeStyle='rgba(255,80,80,.6)'; ctx.lineWidth=3;
       ctx.beginPath(); ctx.arc(sx,sy+bob,this.r+5,0,7); ctx.stroke(); }
   }

@@ -195,9 +195,11 @@ const bagModal=document.getElementById('bag-modal');
 const charModal=document.getElementById('char-modal');
 const skillsModal=document.getElementById('skills-modal');
 const questsModal=document.getElementById('quests-modal');
+const achievementsModal=document.getElementById('achievements-modal');
 const shopModal=document.getElementById('shop-modal');
 const stashModal=document.getElementById('stash-modal');
 const craftModal=document.getElementById('craft-modal');
+const enchantModal=document.getElementById('enchant-modal');
 function applySettings(){
   game.settings.shake=document.getElementById('set-shake').checked;
   const sm=document.getElementById('set-minimap'); if(sm) game.settings.minimap=sm.checked;
@@ -209,13 +211,13 @@ function applySettings(){
 ['set-shake','set-fps','set-music','set-sfx'].forEach(id=>{
   const el=document.getElementById(id); if(el) el.addEventListener('input',applySettings); });
 
-function anyModalOpen(){ return [settingsModal,bagModal,charModal,skillsModal,questsModal,shopModal,stashModal,craftModal,document.getElementById('fullmap-modal')]
+function anyModalOpen(){ return [settingsModal,bagModal,charModal,skillsModal,questsModal,achievementsModal,shopModal,stashModal,craftModal,enchantModal,document.getElementById('fullmap-modal')]
   .some(m=>!m.classList.contains('hidden')); }
 function openModal(m){ game.paused=true; m.classList.remove('hidden'); m.classList.add('flex'); }
 function closeModal(m){ m.classList.add('hidden'); m.classList.remove('flex');
   if(game.hud) game.hud._hideTooltip();
   if(!anyModalOpen() && !document.getElementById('death-screen').classList.contains('flex')) game.paused=false; }
-function closeAll(){ [settingsModal,bagModal,charModal,skillsModal,questsModal,shopModal,stashModal,craftModal,document.getElementById('fullmap-modal')].forEach(m=>{
+function closeAll(){ [settingsModal,bagModal,charModal,skillsModal,questsModal,achievementsModal,shopModal,stashModal,craftModal,enchantModal,document.getElementById('fullmap-modal')].forEach(m=>{
   m.classList.add('hidden'); m.classList.remove('flex'); });
   if(game.hud) game.hud._hideTooltip();
   if(!document.getElementById('death-screen').classList.contains('flex')) game.paused=false; }
@@ -224,6 +226,7 @@ function openChar(){ game.hud.refreshChar(); game.hud.refreshBag(); openModal(ch
 function openSkills(){ game.hud.refreshSkills(); openModal(skillsModal); }
 function openBag(){ game.hud.refreshBag(); openModal(bagModal); }
 function openQuests(){ game.hud.refreshQuests(); openModal(questsModal); }
+function openAchievements(){ game.hud.refreshAchievements(); openModal(achievementsModal); }
 
 document.getElementById('settings-btn').onclick=()=>openModal(settingsModal);
 document.getElementById('bag-btn').onclick=openBag;
@@ -231,6 +234,7 @@ document.getElementById('map-btn').onclick=()=>{ if(!game.hud) return; const fm=
 document.getElementById('char-btn').onclick=openChar;
 document.getElementById('skills-btn').onclick=openSkills;
 document.getElementById('quests-btn').onclick=openQuests;
+document.getElementById('achieve-btn').onclick=openAchievements;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeModal(document.getElementById(b.dataset.close)));
 document.getElementById('shop-close').onclick=()=>closeModal(shopModal);
 document.getElementById('save-game-btn').onclick=()=>{
@@ -261,6 +265,8 @@ window.addEventListener('keydown', e=>{
   if(k==='c'){ charModal.classList.contains('hidden')?openChar():closeModal(charModal); }
   if(k==='k'){ skillsModal.classList.contains('hidden')?openSkills():closeModal(skillsModal); }
   if(k==='j'){ questsModal.classList.contains('hidden')?openQuests():closeModal(questsModal); }
+  if(k==='y'){ achievementsModal.classList.contains('hidden')?openAchievements():closeModal(achievementsModal); }
+  if(k==='g' && !game.paused){ if(game.triggerCompanionAbility) game.triggerCompanionAbility(); }
   if(k==='m'){ if(!game.hud) return; const fm=document.getElementById('fullmap-modal');
     if(fm.classList.contains('hidden')){ game.hud.showFullMap(); openModal(fm); } else closeModal(fm); }
   // hotbar 1-9 (only when not in a menu)

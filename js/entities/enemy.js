@@ -27,6 +27,24 @@ const CFG = {
   // swamp (Murkbog)
   spitter: { hp:34, speed:0.5,  dmg:9,  xp:30, gold:[7,15], color:'#5a8a3a', r:11, behavior:'ranged', shootRange:320, shootCd:1.8, onHit:'poison', view:320, fov:1.1 },
   croaker: { hp:60, speed:0.78, dmg:14, xp:36, gold:[8,18], color:'#3a6a2a', r:13, behavior:'lunge', onHit:'poison', view:230, fov:0.9 },
+  // ---- new: mage (forest, swamp) ----
+  // Hovers at range, fires homing arcane missiles, teleports when cornered.
+  mage:    { hp:32, speed:0.45, dmg:12, xp:38, gold:[9,20], color:'#6b3a9a', r:11, behavior:'mage', shootRange:260, shootCd:1.8, view:280, fov:1.2, erratic:true },
+  // ---- new: berserker (cave, dungeon) ----
+  // Slow at first; enrages below 30% HP (red glow, +50% speed and +40% damage).
+  berserker:{ hp:130,speed:0.42, dmg:18, xp:60, gold:[12,26],color:'#7a3030', r:14, behavior:'berserker', view:240, fov:1.0 },
+  // ---- new: frost_mage (snow) ----
+  // A mage variant that chills on hit. Spawns in Frostpeak.
+  frost_mage:{ hp:36, speed:0.45, dmg:13, xp:42, gold:[10,22],color:'#80c0ff', r:11, behavior:'mage', shootRange:240, shootCd:1.7, onHit:'chill', view:280, fov:1.2, erratic:true },
+  // ---- new: tundra biome ----
+  // Ghostly ice wraith: flies erratically, melee, chills on hit.
+  ice_wraith:{ hp:30, speed:1.0,  dmg:11, xp:34, gold:[8,18], color:'#cfeaff', r:10, behavior:'chase', erratic:true, onHit:'chill', view:220, fov:1.4 },
+  // Slow frost golem with heavy armor and AoE smash (chain-on-death burst).
+  frost_golem:{ hp:160, speed:0.32, dmg:24, xp:78, gold:[18,36], color:'#a8c8e0', r:18, behavior:'lunge', view:200, fov:0.7 },
+  // Snow stalker: invisible until close, fast rush attack.
+  snow_stalker:{ hp:46, speed:1.4,  dmg:16, xp:46, gold:[12,24], color:'#e0eef5', r:11, behavior:'lunge', view:280, fov:1.3 },
+  // Frozen husk: shambling zombie, very tough, low damage, slow.
+  frozen_husk:{ hp:90, speed:0.38, dmg:12, xp:50, gold:[10,20], color:'#7a8a9a', r:13, behavior:'chase', view:180, fov:0.8 },
 };
 
 // Elite (champion) modifiers. An elite enemy rolls one of these — it buffs the
@@ -73,6 +91,11 @@ export class Enemy {
     this.wander={x:0,y:0,t:0};
     // pathfinding: cached A* path + recompute throttle
     this.path=null; this.pathIdx=0; this.pathT=0;
+    // behavior-specific state
+    this.shootTimer=0;             // generic projectile timer
+    this._mageT=Math.random()*2;   // mage: phase timer for hover/teleport
+    this._berserkThreshold=c.hp*0.3;  // berserker: enrage at 30% HP
+    this._enraged=false;           // berserker: visual + stat flag
   }
 
   // can this enemy currently perceive the player? sight cone OR very close (hearing).
@@ -93,6 +116,10 @@ export class Enemy {
 
   update(dt, player, world, game){
     if(this.dead) return;
+    // snow_stalker: track distance for the alpha fade
+    if(this.type === 'snow_stalker'){
+      this._stalkerFade = Math.hypot(this.x-player.x, this.y-player.y);
+    }
     this.hitFlash=Math.max(0,this.hitFlash-dt);
     this.attackCd=Math.max(0,this.attackCd-dt);
     this.shootTimer=Math.max(0,this.shootTimer-dt);
@@ -111,9 +138,19 @@ export class Enemy {
       this._idleBehavior(dt,world);   // not hunting: patrol/return home
       return;
     }
+    // berserker enrage check: enrage at 30% HP (only if not already enraged)
+    if(this.behavior==='berserker' && !this._enraged && this.hp <= this._berserkThreshold){
+      this._enraged = true;
+      this.speed *= 1.5;        // +50% speed
+      this.dmg   = Math.round(this.dmg * 1.4);  // +40% damage
+      game.spawnParticles(this.x, this.y, '#ff5050', 16);
+      game.cam.shake = 4;
+    }
     // hunting: dispatch by behavior
     if(this.behavior==='ranged')      this._rangedAI(dt,player,world,game,dist,nx,ny);
     else if(this.behavior==='lunge')  this._lungeAI(dt,player,world,game,dist,nx,ny);
+    else if(this.behavior==='mage')   this._mageAI(dt,player,world,game,dist,nx,ny);
+    else if(this.behavior==='berserker') this._berserkerAI(dt,player,world,game,dist,nx,ny);
     else                              this._chaseAI(dt,player,world,game,dist,nx,ny);
   }
 
@@ -217,6 +254,77 @@ export class Enemy {
     } else { // recover
       this.lungeTimer-=dt; if(this.lungeTimer<=0) this.lungeState='idle';
     }
+  }
+
+  // mage: hover at range, fire slow homing arcane missiles. When the player
+  // closes in (within 60px) the mage teleports to a new open tile away from
+  // the player (cooldown 4s). Mild idle drift keeps the mage visually alive.
+  _mageAI(dt, player, world, game, dist, nx, ny){
+    this._mageT -= dt;
+    // melee body damage if the player walks into the mage
+    if(dist < this.r + player.r + 2 && this.attackCd<=0){
+      this.attackCd=1.0;
+      player.takeDamage(this.dmg, Math.atan2(ny,nx)+Math.PI, game);
+      if(this.onHit) applyStatus(player, this.onHit);
+      this.knockback.x = -nx*2; this.knockback.y = -ny*2;
+    }
+    // teleport when cornered
+    if(dist < 70 && this._mageT <= 0){
+      const tx = player.x + nx*120 + (Math.random()-0.5)*60;
+      const ty = player.y + ny*120 + (Math.random()-0.5)*60;
+      if(world.nearestOpen){
+        const np = world.nearestOpen(tx, ty);
+        if(np && Math.hypot(np.x-this.x, np.y-this.y) > 30){
+          game.spawnParticles(this.x, this.y, this.color, 12);
+          this.x = np.x; this.y = np.y;
+          game.spawnParticles(this.x, this.y, '#fff', 8);
+          game.spawnParticles(this.x, this.y, this.color, 8);
+          this._mageT = 4.0;  // next teleport cooldown
+        } else { this._mageT = 1.0; }
+      } else { this._mageT = 1.0; }
+    }
+    // main phase: maintain range, fire missiles
+    if(this.shootTimer<=0){
+      this.shootTimer=this.shootCd||1.8;
+      // fire a homing arcane missile toward the player
+      const ang = Math.atan2(player.y-this.y, player.x-this.x) + (Math.random()-0.5)*0.2;
+      const color = this.type==='frost_mage' ? '#80c0ff' : (this.color||'#a45cff');
+      const proj = new Projectile(this.x, this.y, ang, {
+        speed: 4.0, dmg: this.dmg, r: 6, color,
+        kind: this.type==='frost_mage' ? 'ice' : 'arcane', life: 2.0, hostile: true,
+        // homing: handled by overriding angle each tick in the update loop below
+        homing: 0.06,
+      });
+      if(game.projectiles) game.projectiles.push(proj);
+      game.spawnParticles(this.x, this.y, color, 4);
+    }
+    // gentle drift away from the player when too close, toward when too far
+    if(dist < 140)        this._move(-nx*this.speed, -ny*this.speed, world);
+    else if(dist > this.shootRange) this._navigate(player.x, player.y, this.speed, world, dt);
+    else                  this._move((nx+Math.sin(this.bob*2)*0.3)*this.speed*0.4, (ny+Math.cos(this.bob*2)*0.3)*this.speed*0.4, world);
+    this.face = {x:nx, y:ny};
+  }
+
+  // berserker: slow approach, then chase at full speed. When HP < 30%, the
+  // enrage flag (set in update) kicks in and the visual goes red. Damage
+  // and speed are already boosted at that point. Contact damage only.
+  _berserkerAI(dt, player, world, game, dist, nx, ny){
+    if(dist < this.r + player.r + 2 && this.attackCd<=0){
+      this.attackCd=0.7;
+      const mult = this._enraged ? 1.25 : 1.0;
+      player.takeDamage(Math.round(this.dmg*mult), Math.atan2(ny,nx)+Math.PI, game);
+      if(this.onHit) applyStatus(player, this.onHit);
+      this.knockback.x=-nx*2; this.knockback.y=-ny*2;
+    }
+    if(dist > this.r+player.r){
+      // enrage: small charge forward in the player's direction
+      if(this._enraged && this.attackCd <= 0){
+        this._move(nx*this.speed*1.6, ny*this.speed*1.6, world);
+      } else {
+        this._navigate(player.x, player.y, this.speed, world, dt);
+      }
+    }
+    this.face = {x:nx, y:ny};
   }
 
   _move(dx,dy,world){
@@ -348,10 +456,127 @@ export class Enemy {
       ctx.fillStyle='#cfe6f5'; ctx.fillRect(sx-this.r+3,sy-this.r+3+bob,this.r*2-6,6); // fur
       ctx.fillStyle='#2a5a7a'; ctx.fillRect(sx-6,sy-4+bob,4,4); ctx.fillRect(sx+2,sy-4+bob,4,4);
       ctx.fillStyle='#fff'; ctx.fillRect(sx-4,sy+5+bob,3,4); ctx.fillRect(sx+1,sy+5+bob,3,4); // fangs
+    } else if(t==='mage' || t==='frost_mage'){
+      // robed figure: wide triangular robe, hat, glowing eyes. The frost
+      // variant draws in icy blue and adds a small floating crystal.
+      const isFrost = t === 'frost_mage';
+      // body/robe
+      ctx.fillStyle=c; ctx.beginPath();
+      ctx.moveTo(sx-this.r, sy+this.r); ctx.lineTo(sx+this.r, sy+this.r);
+      ctx.lineTo(sx+4, sy-4+bob); ctx.lineTo(sx-4, sy-4+bob);
+      ctx.closePath(); ctx.fill();
+      // head
+      ctx.fillStyle='#f1c39a'; ctx.fillRect(sx-5,sy-12+bob,10,8);
+      // hat
+      ctx.fillStyle = isFrost ? '#6090d0' : '#4a2a6a';
+      ctx.beginPath();
+      ctx.moveTo(sx-7, sy-7+bob); ctx.lineTo(sx+7, sy-7+bob);
+      ctx.lineTo(sx+3, sy-18+bob); ctx.lineTo(sx-3, sy-18+bob);
+      ctx.closePath(); ctx.fill();
+      // hat tip
+      ctx.fillStyle = isFrost ? '#bfe8ff' : '#a45cff';
+      ctx.fillRect(sx-1, sy-19+bob, 2, 3);
+      // glowing eyes
+      ctx.fillStyle = isFrost ? '#bfe8ff' : '#a45cff';
+      ctx.fillRect(sx-3, sy-9+bob, 2, 2);
+      ctx.fillRect(sx+1, sy-9+bob, 2, 2);
+      // floating crystal in front
+      ctx.fillStyle = isFrost ? '#bfe8ff' : '#a45cff';
+      const cx = sx + Math.cos(this.bob*2)*4;
+      const cy = sy - 18 + Math.sin(this.bob*2)*3;
+      ctx.beginPath(); ctx.arc(cx, cy, 3, 0, 7); ctx.fill();
+    } else if(t==='berserker'){
+      // big brutish body; pulse red when enraged
+      const tint = this._enraged ? '#ff5050' : c;
+      const aura = this._enraged ? 0.45 + 0.2*Math.sin(performance.now()/100) : 0;
+      if(this._enraged){
+        ctx.save(); ctx.globalAlpha=aura; ctx.fillStyle='#ff3030';
+        ctx.beginPath(); ctx.arc(sx,sy+bob,this.r+5,0,7); ctx.fill(); ctx.restore();
+      }
+      // body
+      ctx.fillStyle=tint; ctx.fillRect(sx-this.r,sy-10+bob,this.r*2,22);
+      // belt
+      ctx.fillStyle='#2a1a14'; ctx.fillRect(sx-this.r,sy+4+bob,this.r*2,3);
+      // shoulders
+      ctx.fillStyle=tint; ctx.fillRect(sx-this.r-2,sy-12+bob,5,8);
+      ctx.fillRect(sx+this.r-3,sy-12+bob,5,8);
+      // head
+      ctx.fillStyle='#d8a070'; ctx.fillRect(sx-6,sy-18+bob,12,8);
+      // angry eyes
+      ctx.fillStyle='#ff0'; ctx.fillRect(sx-4,sy-15+bob,2,2);
+      ctx.fillStyle='#ff0'; ctx.fillRect(sx+2,sy-15+bob,2,2);
+      // mouth
+      ctx.fillStyle='#3a1a14'; ctx.fillRect(sx-3,sy-11+bob,6,1);
+      // weapon: huge axe in right hand
+      ctx.fillStyle='#5a3a22'; ctx.fillRect(sx+this.r+2, sy-6+bob, 2, 14);
+      ctx.fillStyle='#aaaaaa'; ctx.beginPath();
+      ctx.moveTo(sx+this.r+4, sy-10+bob); ctx.lineTo(sx+this.r+10, sy-4+bob);
+      ctx.lineTo(sx+this.r+10, sy+4+bob); ctx.lineTo(sx+this.r+4, sy+8+bob);
+      ctx.closePath(); ctx.fill();
     } else if(t==='spitter'){
       ctx.fillStyle=c; ctx.beginPath(); ctx.ellipse(sx,sy+bob,this.r,this.r*0.8,0,0,7); ctx.fill();
       ctx.fillStyle='#9aff5f'; ctx.beginPath(); ctx.arc(sx,sy-2+bob,3,0,7); ctx.fill(); // glowing maw
       ctx.fillStyle='#1a3a0a'; ctx.fillRect(sx-6,sy-5+bob,3,3); ctx.fillRect(sx+3,sy-5+bob,3,3);
+    } else if(t==='ice_wraith'){
+      // ghostly floating form: cyan blob with hollow eyes and trailing wisps
+      ctx.save(); ctx.globalAlpha=0.85; ctx.fillStyle=c;
+      ctx.beginPath(); ctx.ellipse(sx, sy+bob, this.r, this.r*0.9, 0, 0, 7); ctx.fill();
+      ctx.globalAlpha=0.45; ctx.beginPath(); ctx.ellipse(sx+2, sy+2+bob, this.r*0.7, this.r*0.5, 0, 0, 7); ctx.fill();
+      ctx.globalAlpha=1;
+      // hollow eyes (dark)
+      ctx.fillStyle='#1a2a3a'; ctx.fillRect(sx-4, sy-2+bob, 2, 2);
+      ctx.fillRect(sx+2, sy-2+bob, 2, 2);
+      // trailing wisps below
+      ctx.fillStyle='rgba(180,220,255,0.5)';
+      ctx.beginPath(); ctx.moveTo(sx-5, sy+6+bob); ctx.quadraticCurveTo(sx, sy+12+bob, sx+5, sy+6+bob); ctx.fill();
+      ctx.restore();
+    } else if(t==='frost_golem'){
+      // hulking icy body with cracks
+      ctx.fillStyle=c; ctx.fillRect(sx-this.r, sy-this.r+bob, this.r*2, this.r*2);
+      ctx.fillStyle='#7a98b0'; ctx.fillRect(sx-this.r+3, sy-this.r+3+bob, this.r*2-6, this.r*2-6);
+      // cracks (icy white)
+      ctx.fillStyle='#eaf6ff';
+      ctx.fillRect(sx-4, sy-4+bob, 8, 1);
+      ctx.fillRect(sx-2, sy-2+bob, 4, 1);
+      ctx.fillRect(sx+2, sy+2+bob, 6, 1);
+      // eyes
+      ctx.fillStyle='#bfe8ff'; ctx.fillRect(sx-6, sy-2+bob, 4, 4);
+      ctx.fillStyle='#fff';    ctx.fillRect(sx+2, sy-2+bob, 4, 4);
+    } else if(t==='snow_stalker'){
+      // pale wraith-like figure that fades into the snow
+      const dist = this._stalkerFade || 0;
+      const alpha = 0.35 + 0.45 * Math.min(1, dist / 80);
+      ctx.save(); ctx.globalAlpha = alpha;
+      // body
+      ctx.fillStyle=c; ctx.fillRect(sx-7, sy-9+bob, 14, 18);
+      // shoulders
+      ctx.fillStyle=c; ctx.fillRect(sx-10, sy-12+bob, 5, 8);
+      ctx.fillRect(sx+5,  sy-12+bob, 5, 8);
+      // face
+      ctx.fillStyle='#1a1a24';
+      ctx.fillRect(sx-4, sy-6+bob, 2, 2);
+      ctx.fillRect(sx+2, sy-6+bob, 2, 2);
+      // dagger in hand
+      ctx.fillStyle='#dadada'; ctx.fillRect(sx+9, sy-4+bob, 1, 6);
+      ctx.fillStyle='#5a3a22'; ctx.fillRect(sx+8, sy+2+bob, 3, 1);
+      ctx.restore();
+    } else if(t==='frozen_husk'){
+      // shambling zombie: bulky, cracked icy skin
+      ctx.fillStyle=c; ctx.fillRect(sx-this.r, sy-9+bob, this.r*2, 18);
+      // belly
+      ctx.fillStyle='#5a6a7a'; ctx.fillRect(sx-this.r+2, sy+1+bob, this.r*2-4, 8);
+      // cracks
+      ctx.fillStyle='#a8c8e0';
+      ctx.fillRect(sx-6, sy-3+bob, 3, 1);
+      ctx.fillRect(sx+3, sy+bob, 4, 1);
+      // head (rotting, mostly exposed)
+      ctx.fillStyle='#c0a890'; ctx.fillRect(sx-6, sy-15+bob, 12, 8);
+      ctx.fillStyle='#1a1a14'; ctx.fillRect(sx-4, sy-13+bob, 2, 2);
+      ctx.fillStyle='#1a1a14'; ctx.fillRect(sx+2, sy-13+bob, 2, 2);
+      // exposed ribs showing through the belly
+      ctx.fillStyle='#e0eef5';
+      ctx.fillRect(sx-3, sy+3+bob, 6, 1);
+      ctx.fillRect(sx-3, sy+5+bob, 6, 1);
     } else if(t==='croaker'){
       ctx.fillStyle=c; ctx.beginPath(); ctx.ellipse(sx,sy+bob,this.r,this.r*0.7,0,0,7); ctx.fill();
       ctx.fillStyle='#7aff8a'; ctx.fillRect(sx-7,sy-9+bob,4,4); ctx.fillRect(sx+3,sy-9+bob,4,4); // eyes
@@ -385,6 +610,15 @@ export class Projectile {
     this.hitSet=null; this.dead=false; this.trail=[];
   }
   update(dt, world, enemies, game){
+    // Homing projectiles gently steer toward the player. Steered by a small
+    // angular velocity (homing param) rather than full lock-on, so they can
+    // be dodged with sharp movement.
+    if(this.homing && game && game.player){
+      const desired = Math.atan2(game.player.y-this.y, game.player.x-this.x);
+      // smallest-angle delta
+      let delta = ((desired - this.angle + Math.PI*3) % (Math.PI*2)) - Math.PI;
+      this.angle += Math.max(-this.homing, Math.min(this.homing, delta));
+    }
     this.x+=Math.cos(this.angle)*this.speed; this.y+=Math.sin(this.angle)*this.speed;
     this.life-=dt;
     this.trail.push({x:this.x,y:this.y}); if(this.trail.length>6) this.trail.shift();

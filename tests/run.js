@@ -175,13 +175,16 @@ console.log('=== weapons (ranged + melee variety) ===');
 console.log('=== enemy speeds vs player ===');
 {
   // mirror player baseSpeed (1.9) and assert every enemy is slower than it
-
   const enemySrc = readFileSync(new URL('../js/entities/enemy.js', import.meta.url), 'utf8');
   const playerSrc = readFileSync(new URL('../js/entities/player.js', import.meta.url), 'utf8');
   const pm = playerSrc.match(/baseSpeed\s*=\s*([0-9.]+)/);
   const playerSpeed = pm ? parseFloat(pm[1]) : 0;
   ok('player baseSpeed parsed', playerSpeed > 0);
-  const speeds = [...enemySrc.matchAll(/speed:\s*([0-9.]+)/g)].map(m => parseFloat(m[1]));
+  // Scan ONLY the CFG block (between "const CFG = {" and its closing brace)
+  // to avoid pulling speeds from Projectile / particle / AI code.
+  const cfgStart = enemySrc.indexOf('const CFG = {');
+  const cfgBlock = cfgStart >= 0 ? enemySrc.slice(cfgStart, enemySrc.indexOf('};', cfgStart)) : enemySrc;
+  const speeds = [...cfgBlock.matchAll(/speed:\s*([0-9.]+)/g)].map(m => parseFloat(m[1]));
   ok('found enemy speeds', speeds.length >= 10);
   const maxEnemy = Math.max(...speeds);
   ok('every enemy slower than player ('+maxEnemy+' < '+playerSpeed+')', maxEnemy < playerSpeed);
@@ -920,6 +923,82 @@ console.log('=== heat bar UI ===');
     ok('tursoRegister is function', typeof tursoRegister === 'function');
     ok('tursoDelete is function', typeof tursoDelete === 'function');
   }
+
+
+// ============ Sprint 3.5 — achievements, enchantments, tundra biome ============
+console.log('\n=== sprint 3.5 (achievements, enchant, tundra) ===');
+{
+  const ach = await import('../js/data/achievements.js');
+  const enc = await import('../js/data/enchantments.js');
+  const cr  = await import('../js/systems/craft.js');
+  const mp  = await import('../js/data/maps.js');
+  const bs  = await import('../js/entities/boss.js');
+  const co  = await import('../js/entities/companion.js');
+
+  // Achievements
+  ok('32 achievement definitions', Object.keys(ach.ACHIEVEMENTS).length === 32);
+  ok('5 achievement categories', ach.ACHIEVEMENT_CATS.length === 5);
+  const stats = ach.achievementStats({});
+  ok('achievementStats returns total', typeof stats.total === 'number');
+
+  // Enchantments
+  ok('5 enchantment defs', Object.keys(enc.ENCHANTMENTS).length === 5);
+  const sw = makeItem('sword_iron', 1);
+  enc.applyEnchant(sw, 'fire');
+  ok('applyEnchant mutates item.enchant', sw.enchant === 'fire');
+  ok('applyEnchant rejects unknown scroll', enc.applyEnchant(makeItem('sword_iron', 1), 'fake') === false);
+  ok('applyEnchant rejects armor', enc.applyEnchant(makeItem('armor_leather', 1), 'fire') === false);
+  const common = makeItem('sword_iron', 1);
+  const legend = makeItem('sword_iron', 1); legend.rarity = 'legendary';
+  ok('enchantCost scales with rarity', enc.enchantCost(legend) > enc.enchantCost(common));
+
+  // Strip enchant
+  const sw2 = makeItem('sword_iron', 1);
+  enc.applyEnchant(sw2, 'ice');
+  ok('stripEnchant clears enchant', enc.stripEnchant(sw2) === 'ice' && !sw2.enchant);
+  ok('stripEnchantCost = 0 for unenchanted', cr.stripEnchantCost(makeItem('sword_iron', 1)) === 0);
+  const sw3 = makeItem('sword_iron', 1); enc.applyEnchant(sw3, 'holy');
+  ok('stripEnchantCost > 0 for enchanted', cr.stripEnchantCost(sw3) > 0);
+  const sw4 = makeItem('sword_iron', 1); enc.applyEnchant(sw4, 'lightning');
+  ok('stripWeaponEnchant returns scroll id', cr.stripWeaponEnchant(sw4) === 'lightning');
+  ok('stripWeaponEnchant returns null when none', cr.stripWeaponEnchant(makeItem('sword_iron', 1)) === null);
+
+  // Tundra maps
+  ok('tundra_edge exists', !!mp.MAPS.tundra_edge);
+  ok('tundra_edge has enemies', (mp.MAPS.tundra_edge.enemies.count || 0) >= 5);
+  ok('tundra_heart exists', !!mp.MAPS.tundra_heart);
+  ok('frost_spire has Glacius boss', mp.MAPS.frost_spire.boss === 'glacius');
+  ok('frost_spire has exit portal', (mp.MAPS.frost_spire.portals || []).length > 0);
+
+  // Portal chain
+  const sg = mp.MAPS.snow_glacier.portals.map(p => p.to);
+  ok('snow_glacier → tundra_edge portal', sg.includes('tundra_edge'));
+  const te = mp.MAPS.tundra_edge.portals.map(p => p.to);
+  ok('tundra_edge → tundra_heart portal', te.includes('tundra_heart'));
+  const th = mp.MAPS.tundra_heart.portals.map(p => p.to);
+  ok('tundra_heart → frost_spire portal', th.includes('frost_spire'));
+
+  // Glacius boss
+  ok('Glacius has 3 phases', bs.BOSSES.glacius.phases.length === 3);
+  const allAttacks = new Set();
+  for (const ph of bs.BOSSES.glacius.phases) for (const a of ph.attacks) allAttacks.add(a);
+  for (const atk of ['frostBolt', 'blizzard', 'iceWall', 'clones']) {
+    ok('Glacius attack: ' + atk, allAttacks.has(atk));
+  }
+
+  // Companions + abilities
+  ok('3 companion abilities defined', Object.keys(co.COMPANION_ABILITIES).length === 3);
+  for (const [id, def] of Object.entries(co.COMPANION_ABILITIES)) {
+    ok('Ability ' + id + ' has name', !!def.name);
+    ok('Ability ' + id + ' has cd', typeof def.cd === 'number');
+    ok('Ability ' + id + ' has fn', typeof def.fn === 'function');
+  }
+
+  // Status (already imported at top as STATUS)
+  for (const k of ['burn', 'chill', 'stun', 'poison']) {
+    ok('STATUS has ' + k, !!STATUS[k]);
+  }
+}
 
 
 

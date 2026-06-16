@@ -5,8 +5,10 @@ import { SHOP_STOCK } from '../data/maps.js';
 import { rarityColor, rarityName, affixText } from '../data/affixes.js';
 import { QUESTS } from '../data/quests.js';
 import { SPELLS, knownSpells, spellRank } from '../data/spells.js';
-import { reforgeCost, upgradeCost, canUpgrade } from '../systems/craft.js';
+import { reforgeCost, upgradeCost, canUpgrade, stripEnchantCost } from '../systems/craft.js';
 import { drawArmorIcon, drawHelmIcon, drawShieldIcon, drawRingIcon, drawWeaponIcon } from '../sprites.js';
+import { ACHIEVEMENTS, ACHIEVEMENT_CATS, achievementStats } from '../data/achievements.js';
+import { ENCHANTMENTS, enchantCost, enchantInfo } from '../data/enchantments.js';
 
 export class HUD {
   constructor(game){
@@ -101,6 +103,52 @@ export class HUD {
   setActiveSlot(i){ this.activeSlot=i;
     [...this.el.itemSlots.children].forEach((s,idx)=>s.classList.toggle('active',idx===i)); }
 
+  // Update the achievement badge in the bottom-right HUD button
+  _updateAchieveBadge(){
+    if(!this.game.achievements) return;
+    const stats = achievementStats(this.game.achievements.unlocked);
+    const badge = document.getElementById('achieve-badge');
+    if(badge){
+      badge.textContent = stats.done;
+      badge.style.display = stats.done > 0 ? 'flex' : 'none';
+    }
+  }
+
+  // Show / update the companion ability icon next to the spell loadout.
+  // Visible only when a companion is recruited. The icon shows the companion's
+  // glyph and the cooldown overlay fills up while on cooldown.
+  refreshCompanionAbility(){
+    const slot = document.getElementById('companion-ability');
+    if(!slot) return;
+    const comp = (this.game._companions && this.game._companions[0]) || null;
+    if(!comp || !comp.alive){
+      slot.style.display = 'none';
+      return;
+    }
+    slot.style.display = '';
+    const cd = slot.querySelector('.cd');
+    const ico = slot.querySelector('.ico');
+    if(ico) ico.textContent = comp.icon;
+    // cooldown overlay: 100% when just triggered, 0% when ready
+    const max = comp._abilityMaxCd || 1;
+    const remain = comp._abilityCd || 0;
+    if(cd){
+      if(remain > 0){
+        cd.style.height = Math.min(100, (remain / max) * 100) + '%';
+        cd.style.background = 'rgba(0,0,0,0.65)';
+      } else {
+        cd.style.height = '0%';
+        cd.style.background = 'rgba(0,0,0,0)';
+      }
+    }
+    // tooltip via title
+    const inner = slot.querySelector('.spell-slot');
+    if(inner) inner.title = `${comp.name}: ${this._companionAbilityName(comp.kind)} (G)`;
+  }
+  _companionAbilityName(kind){
+    return ({kira:'Arrow Volley', thorin:'Shield Bash', luna:'Arcane Blast'})[kind] || 'Ability';
+  }
+
   refresh(){
     const p=this.game.player, inv=this.game.inventory, hot=this.game.hotbar;
     this.el.hpFill.style.width=(p.hp/p.hpMax*100)+'%';
@@ -112,6 +160,7 @@ export class HUD {
     this.el.xpText.textContent=`${p.xp} / ${p.xpNext} XP`;
     this.el.levelText.textContent=p.level;
     if(this.el.mapName && this.game.world) this.el.mapName.textContent=this.game.world.def.name;
+    this._updateAchieveBadge();
     [...this.el.itemSlots.children].forEach((s,i)=>{
       const id=hot[i]; const item=id?inv.find(x=>x.id===id):null;
       s.querySelector('.ico').textContent=item?item.icon:'';
@@ -626,20 +675,198 @@ export class HUD {
     const it=this._craftSel;
     if(!it){ d.innerHTML='<p class="text-[10px] text-gray-500">Select a piece of gear to reforge (reroll its bonuses) or upgrade (raise its rarity).</p>'; return; }
     const rc=reforgeCost(it), uc=upgradeCost(it), canUp=canUpgrade(it);
+    const sec=stripEnchantCost(it);
     const gold=this.game.player.gold;
+    const encLine = it.enchant
+      ? `<div class="craft-affix">Active enchant: <b>${it.enchant}</b></div>` : '';
     d.innerHTML=`<div class="craft-sel-name" style="color:${rarityColor(it)}">${it.icon} ${rarityName(it)} ${it.name}</div>
       <div class="craft-affix">${affixText(it)||'<span class="text-gray-500">no bonus stats</span>'}</div>
-      <button class="menu-btn craft-btn" id="craft-reforge" ${gold<rc?'disabled':''}>Reforge \u2014 ${rc}g</button>
+      ${encLine}
+      <button class="menu-btn craft-btn" id="craft-reforge" ${gold<rc?'disabled':''}>Reforge — ${rc}g</button>
       <div class="craft-hint">Re-rolls the bonus stats at the current rarity.</div>
-      <button class="menu-btn craft-btn" id="craft-upgrade" ${(!canUp||gold<uc)?'disabled':''}>${canUp?('Upgrade \u2014 '+uc+'g'):'Max rarity'}</button>
-      <div class="craft-hint">${canUp?'Raises rarity one tier and re-rolls for the higher tier.':'Already legendary.'}</div>`;
+      <button class="menu-btn craft-btn" id="craft-upgrade" ${(!canUp||gold<uc)?'disabled':''}>${canUp?('Upgrade — '+uc+'g'):'Max rarity'}</button>
+      <div class="craft-hint">${canUp?'Raises rarity one tier and re-rolls for the higher tier.':'Already legendary.'}</div>
+      ${sec?`<button class="menu-btn craft-btn" id="craft-strip" ${gold<sec?'disabled':''}>Strip Enchant — ${sec}g</button>
+      <div class="craft-hint">Removes the current enchant and returns the matching scroll to your bag.</div>`:''}`;
     const rb=d.querySelector('#craft-reforge'); if(rb) rb.onclick=()=>{ const ni=this.game.reforgeItem(it);
       if(ni) this._craftSel=ni; this.refreshCraft(); };
     const ub=d.querySelector('#craft-upgrade'); if(ub) ub.onclick=()=>{ const ni=this.game.upgradeItem(it);
       if(ni) this._craftSel=ni; this.refreshCraft(); };
+    const sb=d.querySelector('#craft-strip'); if(sb) sb.onclick=()=>{ this.game.stripEnchantFromItem(it); this.refreshCraft(); };
+  }
+
+  // ===== ENCHANT (Arcane Anvil) =====
+  openEnchant(){ const m=document.getElementById('enchant-modal');
+    m.classList.remove('hidden'); m.classList.add('flex');
+    this._enchantSel=null; this._enchantScroll=null; this.refreshEnchant();
+  }
+  refreshEnchant(){
+    const g=this.game;
+    if(!g) return;
+    const goldEl = document.getElementById('enchant-gold');
+    if(goldEl) goldEl.textContent = g.player.gold;
+    // weapons column
+    const wpDiv = document.getElementById('enchant-weapons');
+    if(wpDiv){
+      wpDiv.innerHTML = '';
+      const weapons = g.inventory.filter(it => it.type === 'weapon');
+      if(!weapons.length){
+        wpDiv.innerHTML = '<div class="text-[9px] text-gray-500 text-center py-4">No weapons in your bag.</div>';
+      }
+      for(const w of weapons){
+        const info = w.enchant ? enchantInfo(w.enchant) : null;
+        const cost = enchantCost(w);
+        const row = document.createElement('div');
+        row.className = 'shop-row';
+        const col = w.rarity ? rarityColor(w) : '#cdd';
+        row.innerHTML = `<span style="color:${col}">${w.icon} ${w.name}${info ? ' <span style="color:'+info.color+'">['+info.short+']</span>' : ''}</span>
+          <span class="shop-price">${cost}g</span>`;
+        row.onclick = ()=>{ this._enchantSel = w; this.refreshEnchant(); };
+        if(this._enchantSel === w) row.style.borderColor = '#ffcf4d';
+        wpDiv.appendChild(row);
+      }
+    }
+    // scrolls column
+    const scDiv = document.getElementById('enchant-scrolls');
+    if(scDiv){
+      scDiv.innerHTML = '';
+      const scrolls = g.inventory.filter(it => it.type === 'consumable' && CATALOG[it.id] && CATALOG[it.id].enchant);
+      if(!scrolls.length){
+        scDiv.innerHTML = '<div class="text-[9px] text-gray-500 text-center py-4">No scrolls. Buy them at the Arcanum shop.</div>';
+      }
+      // dedupe by enchant kind, show stack
+      const seen = new Set();
+      for(const s of scrolls){
+        const k = CATALOG[s.id].enchant;
+        if(seen.has(k)) continue;
+        seen.add(k);
+        const info = enchantInfo(k) || {name:k, color:'#ffcf4d', desc:''};
+        const totalQty = scrolls.filter(x => CATALOG[x.id] && CATALOG[x.id].enchant === k).reduce((a,x)=>a+(x.qty||1), 0);
+        const row = document.createElement('div');
+        row.className = 'shop-row';
+        row.innerHTML = `<span style="color:${info.color}">${CATALOG[s.id].icon} ${info.name} <span class="text-gray-400">x${totalQty}</span></span>
+          <span class="shop-price" style="color:${info.color}">${info.short}</span>`;
+        row.onclick = ()=>{ this._enchantScroll = s.id; this.refreshEnchant(); };
+        if(this._enchantScroll === s.id) row.style.borderColor = info.color;
+        scDiv.appendChild(row);
+      }
+    }
+    // detail: combine selected weapon + scroll
+    const det = document.getElementById('enchant-detail');
+    if(det){
+      const w = this._enchantSel;
+      const sid = this._enchantScroll;
+      if(w && sid){
+        const k = CATALOG[sid] && CATALOG[sid].enchant;
+        const info = k ? enchantInfo(k) : null;
+        const cost = enchantCost(w);
+        const col = info ? info.color : '#cdd';
+        const cur = w.enchant ? enchantInfo(w.enchant) : null;
+        det.innerHTML = `<div class="craft-sel-name" style="color:${col}">${cur ? 'Re-enchant '+w.name+' to ' : 'Enchant '+w.name+' with '}${info ? info.name : k}</div>
+          <div class="craft-affix" style="color:${col}">${info ? info.desc : ''}</div>
+          <div class="text-[9px] text-gray-400">Cost: <span class="text-gold">${cost}g</span> + 1× ${CATALOG[sid].name}</div>
+          <div class="mt-2"><button id="enchant-go" class="menu-btn">BIND ENCHANTMENT</button></div>`;
+        const btn = det.querySelector('#enchant-go');
+        if(btn) btn.onclick = ()=>{
+          const ni = g.enchantItemWith(w, sid);
+          if(ni){
+            // refresh weapon list (in case names changed) and clear picks
+            this._enchantSel = ni;
+            this._enchantScroll = null;
+            this.refreshEnchant();
+          }
+        };
+      } else {
+        det.innerHTML = '<div class="text-[9px] text-gray-500">Pick a weapon on the left and a scroll on the right to see the binding cost.</div>';
+      }
+    }
   }
 
   setFps(v,show){ this.el.fps.classList.toggle('hidden',!show); this.el.fps.textContent='FPS '+v; }
+
+  // ===== ACHIEVEMENTS =====
+  // Steam-style toast that pops in from the right, lingers, and slides out.
+  achievementToast(a){
+    const wrap = document.getElementById('achieve-toasts');
+    if(!wrap) return;
+    const t = document.createElement('div');
+    t.className = 'achieve-toast';
+    t.innerHTML = `<div class="ico">${a.icon}</div>
+      <div><div class="lbl">ACHIEVEMENT UNLOCKED</div>
+      <div class="nm">${a.name}</div>
+      <div class="ds">${a.desc}</div></div>`;
+    wrap.appendChild(t);
+    // animate in next frame
+    requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('in')));
+    // slide out and remove after 4s
+    setTimeout(()=>{ t.classList.remove('in'); setTimeout(()=>t.remove(), 400); }, 4000);
+  }
+
+  // Full achievements panel (Y key). Tab by category, show progress bars.
+  _achieveActiveCat = 'all';
+  refreshAchievements(){
+    const game = this.game;
+    const tracker = game && game.achievements;
+    const wrap = document.getElementById('achieve-list');
+    const tabs = document.getElementById('achieve-tabs');
+    const prog = document.getElementById('achieve-progress');
+    if(!wrap || !tabs) return;
+    if(!tracker){
+      wrap.innerHTML = '<div class="text-[9px] text-gray-500 text-center py-6">No save data loaded.</div>';
+      tabs.innerHTML = '';
+      if(prog) prog.textContent = '0 / 0';
+      return;
+    }
+    // progress header
+    const stats = achievementStats(tracker.unlocked);
+    if(prog) prog.textContent = `${stats.done} / ${stats.total}`;
+    // tabs
+    tabs.innerHTML = '';
+    const cats = [{id:'all', name:'All', color:'#cdd3df'}, ...ACHIEVEMENT_CATS];
+    cats.forEach(c=>{
+      const b = document.createElement('button');
+      b.className = 'achieve-tab' + (c.id === this._achieveActiveCat ? ' active' : '');
+      b.style.background = c.id === this._achieveActiveCat ? c.color : '#0d1018';
+      b.style.color = c.id === this._achieveActiveCat ? '#0d1018' : c.color;
+      b.textContent = c.name;
+      b.onclick = ()=>{ this._achieveActiveCat = c.id; this.refreshAchievements(); };
+      tabs.appendChild(b);
+    });
+    // rows
+    wrap.innerHTML = '';
+    const list = Object.values(ACHIEVEMENTS);
+    const filtered = this._achieveActiveCat === 'all' ? list : list.filter(a => a.cat === this._achieveActiveCat);
+    if(!filtered.length){
+      wrap.innerHTML = '<div class="text-[9px] text-gray-500 text-center py-6">No achievements in this category.</div>';
+      return;
+    }
+    // sort: unlocked first, then by goal
+    filtered.sort((a,b)=>{
+      const ua = !!tracker.unlocked[a.id], ub = !!tracker.unlocked[b.id];
+      if(ua !== ub) return ua ? -1 : 1;
+      return (a.goal||0) - (b.goal||0);
+    });
+    for(const a of filtered){
+      const unlocked = !!tracker.unlocked[a.id];
+      const now = this._achieveProgress(a, tracker);
+      const row = document.createElement('div');
+      row.className = 'achieve-row' + (unlocked ? ' unlocked' : '') + (a.secret ? ' secret' : '');
+      row.innerHTML = `<div class="achieve-icon" style="color:${unlocked ? '#ffcf4d' : '#3a4258'}">${a.icon}</div>
+        <div><div class="achieve-name">${a.name}${a.secret ? ' <span class="text-[6px] text-cyan-300">[SECRET]</span>' : ''}</div>
+        <div class="achieve-desc">${a.desc}</div>
+        <div class="achieve-bar"><div style="width:${Math.min(100, Math.floor(now/a.goal*100))}%; background:${unlocked ? '#ffcf4d' : a.cat==='secrets' ? '#5ad8ff' : '#74d83f'}"></div></div>
+        <div class="achieve-progress-label">${now} / ${a.goal}</div></div>
+        <div></div>`;
+      wrap.appendChild(row);
+    }
+  }
+  // Resolve current numeric progress for a stat-based achievement
+  _achieveProgress(a, tracker){
+    if(!tracker || !a.stat) return 0;
+    if(a.stat === 'maps') return Object.keys(tracker.stats.maps || {}).filter(k => tracker.stats.maps[k] > 0).length;
+    if(a.stat === 'topAffixCount') return tracker.stats.topAffixCount || 0;
+    return tracker.stats[a.stat] || 0;
+  }
 }
 
 

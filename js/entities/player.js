@@ -212,6 +212,7 @@ export class Player {
 
   takeDamage(amt, fromAngle, game){
     if(this.invuln>0 || this.dead) return;
+    if(game && game.achievements) game.achievements.onPlayerHit();
     // defense mitigation
     amt = amt * (100/(100+this.def));
     if(this.blocking){
@@ -243,6 +244,7 @@ export class Player {
       this.recompute(); this.hp=this.hpMax; this.mp=this.mpMax;
       game.floater('LEVEL UP!',this.x,this.y-44,'#ffcf4d'); game.sfx('levelup');
       game.toast('Level '+this.level+'! +1 skill point (press K)');
+      if(game.achievements) game.achievements.onLevelUp(this.level);
     }
   }
   die(game){ this.dead=true; game.onPlayerDeath(); }

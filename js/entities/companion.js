@@ -1,8 +1,15 @@
 // Companion system: recruitable NPCs that follow the player and fight enemies.
 // Companions have a simple AI: follow player, attack nearby enemies, use abilities.
+//
+// Each companion has a unique active ability (cooldown-based) that the player
+// can trigger with the G key. Abilities are dispatched by the companion's
+// `kind` field (kira / thorin / luna) and defined in the COMPANION_ABILITIES
+// table below.
 import { TILE } from '../systems/world.js';
 import { rollRarity, applyRarity } from '../data/affixes.js';
 import { makeItem } from '../data/gear.js';
+import { applyStatus } from '../systems/status.js';
+import { Projectile } from './enemy.js';
 
 export class Companion {
   constructor(name, icon, x, y){
@@ -12,8 +19,10 @@ export class Companion {
     this.r=10; this.color='#88ddff';
     this._atkCd=0; this._followDist=40; this._aggroRange=120;
     this._target=null; this._deathTime=0;
-    // ability: each companion has a unique ability
+    // ability: each companion has a unique ability (cooldown in seconds).
+    // _abilityCd is the active timer; 0 means ready. _abilityMaxCd is the reset.
     this._abilityCd=0; this._abilityMaxCd=8;
+    this.kind=null; // 'kira' | 'thorin' | 'luna' set by game.recruitCompanion
   }
   get xpToNext(){ return this.level*50; }
   gainXp(amt){
@@ -42,7 +51,6 @@ export class Companion {
     }
     this._target=nearest;
     if(this._target){
-      // attack if in range
       const d=Math.hypot(this._target.x-this.x, this._target.y-this.y);
       if(d<30 && this._atkCd<=0){
         let dmg=Math.round(this.atk*(0.9+Math.random()*0.2));
@@ -51,11 +59,10 @@ export class Companion {
         this._atkCd=1.0;
         if(this._target.dead) this.gainXp(20);
       }
-      // move toward target
       if(d>24){ const ang=Math.atan2(this._target.y-this.y, this._target.x-this.x);
         this.x+=Math.cos(ang)*this.spd*60*dt; this.y+=Math.sin(ang)*this.spd*60*dt; }
-      // use ability
-      if(this._abilityCd<=0 && d<80){ this._useAbility(game, player); this._abilityCd=this._abilityMaxCd; }
+      // auto-use ability when in combat and off cooldown
+      if(this._abilityCd<=0 && d<80) this._useAbility(game, player);
     } else {
       // follow player
       const d=Math.hypot(player.x-this.x, player.y-this.y);
@@ -68,12 +75,19 @@ export class Companion {
     this.x=Math.max(20,Math.min(game.world.w-20,this.x));
     this.y=Math.max(20,Math.min(game.world.h-20,this.y));
   }
+  // Trigger the companion's unique ability. Returns true if fired.
+  triggerAbility(game, player){
+    if(this._abilityCd>0) return false;
+    this._useAbility(game, player);
+    return true;
+  }
   _useAbility(game, player){
-    // default: small AoE heal around companion
-    const healAmt=10+this.level*3;
-    player.heal(healAmt, game);
-    game.floater('+'+healAmt+' HP', player.x, player.y-20, '#44ff88');
-    game.spawnParticles(this.x, this.y, '#44ff88', 8);
+    const def = COMPANION_ABILITIES[this.kind];
+    if(!def){ return; }
+    def.fn(game, player, this);
+    this._abilityCd = def.cd;
+    game.sfx('levelup');
+    game.floater(def.label, this.x, this.y - 22, def.color);
   }
   draw(ctx, cam){
     if(!this.alive) return;
@@ -101,19 +115,118 @@ export class Companion {
   }
   serialize(){
     return { name:this.name, icon:this.icon, x:this.x, y:this.y, alive:this.alive,
-      level:this.level, xp:this.xp, hp:this.hp, maxHp:this.maxHp, atk:this.atk, def:this.def };
+      level:this.level, xp:this.xp, hp:this.hp, maxHp:this.maxHp, atk:this.atk, def:this.def,
+      kind:this.kind };
   }
   static deserialize(data){
     const c=new Companion(data.name, data.icon, data.x, data.y);
     c.level=data.level||1; c.xp=data.xp||0; c.hp=data.hp||80; c.maxHp=data.maxHp||80;
     c.atk=data.atk||8; c.def=data.def||2; c.alive=data.alive!==false;
+    c.kind=data.kind||null;
     return c;
   }
 }
 
 // Companion registry — recruitable companions
 export const COMPANIONS = {
-  kira: { name:'Kira', icon:'∧', desc:'A skilled ranger with a healing aura.', color:'#88ffaa' },
-  thorin: { name:'Thorin', icon:'■', desc:'A sturdy dwarf warrior.', color:'#ffaa44' },
-  luna: { name:'Luna', icon:'★', desc:'A mage who blasts enemies with arcane bolts.', color:'#bb88ff' },
+  kira:   { name:'Kira',   icon:'∧', desc:'A skilled ranger. G: Arrow Volley.', color:'#88ffaa' },
+  thorin: { name:'Thorin', icon:'■', desc:'A sturdy dwarf warrior. G: Shield Bash.', color:'#ffaa44' },
+  luna:   { name:'Luna',   icon:'★', desc:'A mage who blasts enemies. G: Arcane Blast.', color:'#bb88ff' },
+};
+
+// ===== ABILITY DEFINITIONS =====
+// Each ability has a name, label (floater), color, cooldown (seconds), and a
+// function(game, player, companion) that performs the effect. The function
+// is responsible for spawning particles / floaters / sfx.
+export const COMPANION_ABILITIES = {
+  kira: {
+    name: 'Arrow Volley',
+    label: 'ARROW VOLLEY!',
+    color: '#a3d977',
+    cd: 6,
+    fn: (game, player, comp)=>{
+      // Fire 3 arrows at the nearest enemies in a 120° cone facing the player
+      const targets = [];
+      for(const e of game.enemies){
+        if(e.dead) continue;
+        if(Math.hypot(e.x-comp.x, e.y-comp.y) > 200) continue;
+        targets.push(e);
+      }
+      if(game.boss && !game.boss.dead) targets.push(game.boss);
+      targets.sort((a,b)=>Math.hypot(a.x-comp.x,a.y-comp.y) - Math.hypot(b.x-comp.x,b.y-comp.y));
+      const aim = game.player._aim || 0;
+      for(let i=0;i<3 && i<targets.length;i++){
+        const e = targets[i];
+        // spread the 3 shots a bit
+        const spread = (i-1) * 0.18;
+        const a = Math.atan2(e.y-comp.y, e.x-comp.x) + spread;
+        const proj = new Projectile(comp.x, comp.y, a, {
+          speed: 7, dmg: 8 + comp.level*2, r: 4,
+          color: '#a3d977', kind: 'arrow', life: 1.0, hostile: false,
+        });
+        if(game.projectiles) game.projectiles.push(proj);
+        game.spawnParticles(comp.x, comp.y, '#a3d977', 4);
+      }
+    },
+  },
+  thorin: {
+    name: 'Shield Bash',
+    label: 'SHIELD BASH!',
+    color: '#ffd86a',
+    cd: 8,
+    fn: (game, player, comp)=>{
+      // Find nearest enemy and stun it for 1.2s with heavy damage
+      let nearest=null, nd=160;
+      for(const e of game.enemies){
+        if(e.dead) continue;
+        const d=Math.hypot(e.x-comp.x, e.y-comp.y);
+        if(d<nd){ nd=d; nearest=e; }
+      }
+      if(game.boss && !game.boss.dead){
+        const d=Math.hypot(game.boss.x-comp.x, game.boss.y-comp.y);
+        if(d<nd){ nd=d; nearest=game.boss; }
+      }
+      if(!nearest) return;
+      const ang = Math.atan2(nearest.y-comp.y, nearest.x-comp.x);
+      nearest.hit(15 + comp.level*3, ang, game, 12);
+      // apply stun status (1.2s)
+      try { applyStatus(nearest, 'stun', 1.2); } catch(_){}
+      // also: knockback big
+      nearest.knockback.x = Math.cos(ang) * 10;
+      nearest.knockback.y = Math.sin(ang) * 10;
+      game.spawnParticles(nearest.x, nearest.y, '#ffd86a', 16);
+      game.cam.shake = 6;
+    },
+  },
+  luna: {
+    name: 'Arcane Blast',
+    label: 'ARCANE BLAST!',
+    color: '#a45cff',
+    cd: 10,
+    fn: (game, player, comp)=>{
+      // AoE damage + slow in 80px radius centered on the companion
+      const R = 80;
+      const dmg = 12 + comp.level*3;
+      let hits = 0;
+      for(const e of game.enemies){
+        if(e.dead) continue;
+        const d = Math.hypot(e.x-comp.x, e.y-comp.y);
+        if(d < R){
+          e.hit(dmg, Math.random()*7, game, 4);
+          try { applyStatus(e, 'chill', 2.5); } catch(_){}
+          hits++;
+        }
+      }
+      if(game.boss && !game.boss.dead){
+        const d=Math.hypot(game.boss.x-comp.x, game.boss.y-comp.y);
+        if(d<R){
+          game.boss.hit(dmg, Math.random()*7, game, 4);
+          try { applyStatus(game.boss, 'chill', 2.5); } catch(_){}
+          hits++;
+        }
+      }
+      game.spawnParticles(comp.x, comp.y, '#a45cff', 24 + hits*4);
+      game.cam.shake = 8;
+    },
+  },
 };

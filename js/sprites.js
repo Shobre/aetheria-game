@@ -9,6 +9,8 @@
 // All draw functions must be self-contained — they may save/restore ctx state
 // only when they need to translate/rotate. They never mutate global state.
 
+import { ENCHANTMENTS } from './data/enchantments.js';
+
 const SW = 24;            // sprite virtual width
 const SH = 32;            // sprite virtual height
 const _body = (ctx, bx, by, sc, shirt, pants, skin) => {
@@ -408,6 +410,27 @@ const NPC_SPRITES = {
     ctx.fillRect(bx + 0, by + 10, 4, 1);
     _coin(ctx, bx, by);
   },
+  'Aurora Keeper': (ctx, sx, sy, bob) => {
+    // Tundra NPC: a hooded mage in icy robes with a glowing crystal staff
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _robe(ctx, bx, by, '#bfe0f0');
+    _hood(ctx, bx, by, '#80a0c0');
+    ctx.fillStyle = '#bfe8ff';
+    ctx.fillRect(bx + 9, by + 8, 1, 1);
+    ctx.fillRect(bx + 14, by + 8, 1, 1);
+    // staff with a pulsing aurora orb
+    ctx.fillStyle = '#5a3a22';
+    ctx.fillRect(bx - 3, by + 4, 2, 22);
+    const pulse = 0.6 + 0.4*Math.sin(performance.now()/300);
+    ctx.fillStyle = `rgba(180,220,255,${pulse})`;
+    ctx.beginPath();
+    ctx.arc(bx - 2, by + 3, 4, 0, 7);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(bx - 2, by + 3, 2, 0, 7);
+    ctx.fill();
+  },
   'Merchant': (ctx, sx, sy, bob) => {
     const bx = sx - SW / 2, by = sy - SH / 2 + bob;
     _body(ctx, bx, by, 0, '#5a3a5a', '#3a2a1a', '#f1c39a');
@@ -571,6 +594,21 @@ export function drawPlayerSprite(ctx, sx, sy, facing, equipment, opts = {}) {
   ctx.fill();
   // weapon on back (or in hand during attack windup)
   if (weapon) _drawWeaponOnPlayer(ctx, bx, by, weapon, facing, attacking, attackProgress);
+  // enchantment glow: pulsing halo around the player's body in the element color
+  if (weapon && weapon.enchant){
+    const info = ENCHANTMENTS[weapon.enchant];
+    if(info){
+      const pulse = 0.35 + 0.15*Math.sin(performance.now()/180);
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = info.color;
+      ctx.beginPath();
+      ctx.arc(bx + 12, by + 14, 14, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
 }
 
 // Render the equipped weapon carried on the player's back. During an attack
