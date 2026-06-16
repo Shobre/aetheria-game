@@ -233,6 +233,12 @@ export class Game {
     this._updateEscort();
     this.hud.refresh();
     if(this.settings.minimap && this.hud.drawMinimap) this.hud.drawMinimap();
+    // Sprint 9: drive the low-HP heartbeat layer from the player's HP ratio.
+    // updateHeartbeat() is a no-op until the player dips below the
+    // threshold, so the cost is one division per frame when healthy.
+    if(this.player && this.player.hpMax > 0){
+      this.audio.updateHeartbeat(this.player.hp / this.player.hpMax);
+    }
     this.input.lateUpdate();
   }
 

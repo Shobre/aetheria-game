@@ -212,6 +212,17 @@ function launchUser(state,username){
     if(window.__keybinds){ window.__keybinds.set(state.keybinds); window.__keybinds.applyToInput(); }
   }
   game.start(state); game._username=username; applySettings();
+  // Sprint 9: restore the heartbeat preference from localStorage. The DOM
+  // checkbox may already be set by applySettings() if applySettings ran
+  // after start, but we want to honor the saved preference on every load.
+  try{
+    const hbPref = localStorage.getItem('aetheria_heartbeat_v1');
+    if(hbPref != null && game.audio && game.audio.setHeartbeatEnabled){
+      game.audio.setHeartbeatEnabled(hbPref === '1');
+      const cb=document.getElementById('set-heartbeat');
+      if(cb) cb.checked = (hbPref === '1');
+    }
+  }catch(e){}
 }
 function launch(state){ show('game-container'); game.resize(); game.start(state); applySettings(); }
 
@@ -233,8 +244,14 @@ function applySettings(){
   game.audio.musicVol=document.getElementById('set-music').value/100;
   game.audio.sfxVol=document.getElementById('set-sfx').value/100;
   if(game.audio.applyMusicVol) game.audio.applyMusicVol();
+  // Sprint 9: heartbeat toggle
+  const hb=document.getElementById('set-heartbeat');
+  if(hb && game.audio.setHeartbeatEnabled){
+    game.audio.setHeartbeatEnabled(hb.checked);
+    try{ localStorage.setItem('aetheria_heartbeat_v1', hb.checked ? '1' : '0'); }catch(e){}
+  }
 }
-['set-shake','set-fps','set-music','set-sfx'].forEach(id=>{
+['set-shake','set-fps','set-music','set-sfx','set-heartbeat'].forEach(id=>{
   const el=document.getElementById(id); if(el) el.addEventListener('input',applySettings); });
 
 function anyModalOpen(){ return [settingsModal,bagModal,charModal,skillsModal,questsModal,achievementsModal,shopModal,stashModal,craftModal,enchantModal,document.getElementById('fullmap-modal'),document.getElementById('combat-log-modal')]
@@ -270,7 +287,11 @@ document.getElementById('save-game-btn').onclick=()=>{
   if(uname){ cloudSave(uname, game.slot, game._buildState()); }
   else game.save();
 };
-document.getElementById('quit-btn').addEventListener('click', ()=>{ if(confirm('Quit to menu?')){ game.quitToMenu(); show('start-screen'); } });
+// (quit-btn click is wired once further down in this file — the canonical
+// handler near the bottom registers via .onclick=. This early addEventListener
+// was a duplicate that got silently overridden by the later .onclick=, so we
+// drop it. Keep the start-screen behavior consistent: logout does NOT show
+// start-screen, regular quit does.)
 document.getElementById('logout-btn').addEventListener('click', ()=>{
   if(confirm('Logout? Unsaved progress may be lost.')){
     game.quitToMenu();
@@ -337,8 +358,20 @@ window.addEventListener('blur', ()=>{ if(game.running && !anyModalOpen()) game.p
 window.addEventListener('focus', ()=>{ if(game.running && !anyModalOpen() &&
   !document.getElementById('death-screen').classList.contains('flex')) game.paused=false; });
 
+// (quit-btn click handler is registered once, near the bottom of this file.)
 window.addEventListener('beforeunload', ()=>{ if(game.running) game.autosave(); });
-document.getElementById('quit-btn').onclick=()=>{ if(confirm('Quit to menu?')){ game._username=null; game.quitToMenu(); show('login-screen'); } };
+// Quit to menu: prefer the start screen if a user is still authenticated
+// (preserves login state), otherwise fall back to the login screen. The old
+// code always showed login-screen which dumped authenticated users back
+// through sign-in, even when their session was still valid.
+document.getElementById('quit-btn').onclick=()=>{
+  if(confirm('Quit to menu?')){
+    const a = getAuth();
+    game._username = null;
+    game.quitToMenu();
+    if(a && a.username){ show('start-screen'); } else { show('login-screen'); }
+  }
+};
 window.addEventListener('load', ()=>{
   // Init Turso tables
   tursoInit().catch(()=>{});

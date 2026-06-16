@@ -6,6 +6,9 @@ import { RARITY, RARITY_ORDER, rollRarity, applyRarity, affixText, rarityName } 
 import { SKILLS, skillStats, canLearn } from '../js/data/skilltree.js';
 import { QUESTS, questsForGiver } from '../js/data/quests.js';
 import { STATUS, applyStatus, hasStatus, tickStatuses } from '../js/systems/status.js';
+// Sprint 9 — procedural music overhaul
+import { MOODS, resolveMood, DEFAULT_MOOD } from '../js/data/music.js';
+import { Audio } from '../js/systems/audio.js';
 import { readFileSync } from 'node:fs';
 
 let pass = 0, fail = 0;
@@ -1508,6 +1511,97 @@ console.log('\n=== sprint 7 (rebindable keys) ===');
   ok('CSS has .kb-key.conflict', cssSrc.includes('.kb-key.conflict'));
 }
 
+
+// ============ Sprint 9 — Procedural Music Overhaul ============
+console.log('\n=== sprint 9 (music overhaul) ===');
+{
+  // ---- data/music.js: mood table ----
+  ok('MOODS has calm', !!MOODS.calm);
+  ok('MOODS has tense', !!MOODS.tense);
+  ok('MOODS has boss', !!MOODS.boss);
+  // Per-biome variants (Sprint 9 specific)
+  const requiredBiomes = ['forest','desert','snow','swamp','tundra','cave','dungeon','city','house'];
+  for(const b of requiredBiomes){
+    ok(`MOODS.${b}_calm exists`, !!MOODS[b + '_calm']);
+    ok(`MOODS.${b}_tense exists`, !!MOODS[b + '_tense']);
+    ok(`MOODS.${b}_boss exists`, !!MOODS[b + '_boss']);
+  }
+  // Each mood has the right shape
+  for(const k of Object.keys(MOODS)){
+    const m = MOODS[k];
+    ok(`${k}.scale is non-empty array`, Array.isArray(m.scale) && m.scale.length >= 3);
+    ok(`${k}.scale contains positive frequencies`, m.scale.every(f => f > 0 && f < 2000));
+    ok(`${k}.chords is non-empty array`, Array.isArray(m.chords) && m.chords.length >= 1);
+    ok(`${k}.tempo is a positive number`, typeof m.tempo === 'number' && m.tempo > 0);
+    ok(`${k}.type is a valid wave`, ['sine','triangle','sawtooth','square'].includes(m.type));
+    ok(`${k}.feel is 0..1`, m.feel >= 0 && m.feel <= 1);
+  }
+  // resolveMood: explicit mood name → that mood
+  eq('resolveMood("calm", false) = calm', resolveMood('calm', false), 'calm');
+  eq('resolveMood("calm", true) = calm (boss is for boss-fight maps only)', resolveMood('calm', true), 'calm');
+  eq('resolveMood("forest_tense", false) = forest_tense', resolveMood('forest_tense', false), 'forest_tense');
+  // resolveMood: bare biome name + tense → that biome's tense variant
+  eq('resolveMood("forest", false) → forest_calm', resolveMood('forest', false), 'forest_calm');
+  // resolveMood: unknown mood → default
+  eq('resolveMood("nonexistent", false) → DEFAULT_MOOD', resolveMood('nonexistent', false), DEFAULT_MOOD);
+  // resolveMood: null/empty → default
+  eq('resolveMood(null, false) → DEFAULT_MOOD', resolveMood(null, false), DEFAULT_MOOD);
+  eq('resolveMood(undefined, false) → DEFAULT_MOOD', resolveMood(undefined, false), DEFAULT_MOOD);
+
+  // ---- audio.js: Audio class ----
+  const a = new Audio();
+  ok('Audio has musicVol default 0.4', a.musicVol === 0.4);
+  ok('Audio has sfxVol default 0.7', a.sfxVol === 0.7);
+  ok('Audio has heartbeat enabled by default', a.heartbeatEnabled === true);
+  ok('Audio has heartbeat threshold 0.35', a.heartbeatThreshold === 0.35);
+  ok('Audio has heartbeatIntensity 0', a.heartbeatIntensity === 0);
+  ok('Audio starts with no music', a.music === null);
+  ok('Audio starts with no heartbeat', a.heartbeat === null);
+
+  // updateHeartbeat: above threshold = 0
+  a.updateHeartbeat(1.0);
+  eq('updateHeartbeat(1.0) leaves intensity 0', a.heartbeatIntensity, 0);
+  a.updateHeartbeat(0.5);
+  eq('updateHeartbeat(0.5) (above threshold) leaves intensity 0', a.heartbeatIntensity, 0);
+  // at threshold: 0
+  a.updateHeartbeat(0.35);
+  ok('updateHeartbeat(at threshold 0.35) is near 0', a.heartbeatIntensity < 0.01);
+  // below threshold: ramps toward 1
+  a.updateHeartbeat(0.0);
+  ok('updateHeartbeat(0.0) sets intensity near 1', a.heartbeatIntensity > 0.95);
+  a.updateHeartbeat(0.175);  // halfway between 0 and threshold
+  ok('updateHeartbeat(0.175) sets intensity near 0.5', Math.abs(a.heartbeatIntensity - 0.5) < 0.05);
+
+  // setHeartbeatEnabled(false) keeps intensity at 0
+  a.heartbeatIntensity = 0.99;  // simulate
+  a.setHeartbeatEnabled(false);
+  a.updateHeartbeat(0.0);
+  eq('setHeartbeatEnabled(false) keeps intensity 0', a.heartbeatIntensity, 0);
+  a.setHeartbeatEnabled(true);
+
+  // setMusicVol mutates and re-applies
+  a.setMusicVol(0.5);
+  eq('setMusicVol(0.5) sets musicVol', a.musicVol, 0.5);
+
+  // ---- file/contract smoke tests ----
+  const audioSrc = readFileSync(new URL('../js/systems/audio.js', import.meta.url), 'utf8');
+  const musicSrc = readFileSync(new URL('../js/data/music.js', import.meta.url), 'utf8');
+  const gameSrc2 = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
+  const mainSrc2 = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  const indexSrc2 = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+  ok('audio.js uses lookahead setInterval (not a plain setInterval that drifts)', audioSrc.includes('scheduleAheadTime'));
+  ok('audio.js implements _tickMusic', audioSrc.includes('_tickMusic'));
+  ok('audio.js implements updateHeartbeat', audioSrc.includes('updateHeartbeat'));
+  ok('audio.js no longer uses the bare setInterval for arpeggio (replaced by lookahead)',
+     audioSrc.includes('_tickMusic') && !audioSrc.match(/setInterval\(playNote/));
+  ok('music.js defines resolveMood', musicSrc.includes('resolveMood'));
+  ok('game.js calls audio.updateHeartbeat in update loop', gameSrc2.includes('audio.updateHeartbeat'));
+  ok('main.js wires the heartbeat checkbox', mainSrc2.includes('set-heartbeat') || mainSrc2.includes("'set-heartbeat'"));
+  ok('index.html has #set-heartbeat checkbox', indexSrc2.includes('id="set-heartbeat"'));
+  ok('main.js persists heartbeat pref to localStorage', mainSrc2.includes('aetheria_heartbeat_v1'));
+  ok('main.js restores heartbeat pref on launchUser', mainSrc2.includes("localStorage.getItem('aetheria_heartbeat_v1')"));
+}
 
 
 console.log('\n' + (fail === 0 ? '? ALL PASS' : '? FAILURES') + ` - ${pass} passed, ${fail} failed`);
