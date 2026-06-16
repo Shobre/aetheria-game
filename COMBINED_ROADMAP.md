@@ -377,7 +377,17 @@ The existing `audio.js` already had a 3-mood system (calm/tense/boss) backed by 
 ---
 
 ## Test Coverage
-- **Total:** 1289 tests across all modules (547 → 600 → 613 → 675 → 700 → 783 → 1022 → 1142 → 1216 → 1289 after Sprints 3, 4, 5, 6, 7, 9, 10, 11, 12)
+- **Total:** 1296 tests across all modules (547 → 600 → 613 → 675 → 700 → 783 → 1022 → 1142 → 1216 → 1289 → 1296 after Sprints 3, 4, 5, 6, 7, 9, 10, 11, 12 + ReferenceError fixes)
 - **Run:** npm test (plain Node, no framework dependency)
 
-*Last updated: Sprint 12 complete (commit 4139238)*
+## Post-Sprint 12 hotfix: browser ReferenceErrors (commit fdc8d59)
+
+After Sprint 12 shipped, the user opened the live page and immediately hit `Uncaught ReferenceError: getKeybindOverrides is not defined at main.js:145`. That was a Sprint 7 bug — a missing import that the Node test harness never executed (top-level module code is skipped on import). Fixed by adding the missing import (commit `ce1f6b7`).
+
+The user then hit `Uncaught ReferenceError: input is not defined at game.js:111`. That was a Sprint 10 regression — `Game.start(state)` had no `input` parameter, but a line inside it called `new GamepadAdapter(input, this)`. The constructor had `input`, but `start()` did not. Fixed by changing the bare `input` to `this.input` (line 111).
+
+While fixing #2, the new static-analysis test ("no bare this.X-field references in class methods" in `tests/run.js`) caught a **third latent bug**: `Game.render()` line 437 used `cam` as a bare identifier in the night-time torch-glow gradient code, but `cam` was never declared in `render()`. This would have crashed the page as soon as the day/night cycle hit night. Fixed by adding `const cam=this.cam;` on the line above.
+
+Live game verified running on Vercel via headless browser on 2026-06-16 — sign-in, save-slot selection, game start, render at dayTime=100 (deep night), fastTravel call, H-key press, all clean (0 console errors).
+
+*Last updated: Post-Sprint 12 hotfix complete (commit fdc8d59)*
