@@ -519,3 +519,62 @@ body{image-rendering:pixelated}
   text-shadow: 0 0 2px #000;
   font-family: monospace;
 }
+
+/* Sprint 10: tutorial panel (anchored top/center/bottom) */
+.tutorial-panel {
+  position: fixed; left: 0; right: 0; z-index: 25;
+  display: flex; justify-content: center; pointer-events: none;
+}
+.tutorial-panel[data-where="center"] { top: 50%; transform: translateY(-50%); }
+.tutorial-panel[data-where="top"]    { top: 80px; }
+.tutorial-panel[data-where="bottom"] { bottom: 130px; }
+.tutorial-panel.hidden { display: none; }
+.tutorial-panel .tutorial-card {
+  pointer-events: auto;
+  background: linear-gradient(180deg, #1b2030f0, #262c40f0);
+  border: 1px solid #4a5070;
+  border-radius: 8px;
+  padding: 14px 20px;
+  max-width: 460px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,207,77,0.12);
+  color: #dde2ee;
+  font-family: system-ui, -apple-system, sans-serif;
+  animation: tut-pop 0.18s ease-out;
+}
+@keyframes tut-pop { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.tutorial-step {
+  font-size: 11px; color: #ffcf4d; letter-spacing: 0.18em; font-weight: 700;
+  margin-bottom: 4px; text-transform: uppercase;
+}
+.tutorial-title { font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.tutorial-body  { font-size: 13px; line-height: 1.45; color: #c0c8d8; }
+.tutorial-foot  {
+  margin-top: 10px; display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px;
+}
+.tutorial-progress { color: #ffcf4d; letter-spacing: 0.05em; font-family: monospace; }
+.tutorial-skip {
+  background: #3a3040; color: #dde2ee; border: 1px solid #6a5a7a;
+  padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 11px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.tutorial-skip:hover { background: #4a4050; border-color: #aa9aba; }
+
+/* Sprint 10: gamepad connection indicator (bottom-left, just above the minimap) */
+#gamepad-status {
+  position: fixed; left: 12px; bottom: 12px; z-index: 15;
+  font-family: monospace; font-size: 11px; color: #889;
+  background: rgba(20, 24, 36, 0.7);
+  padding: 4px 8px; border-radius: 4px;
+  border: 1px solid #2a3040;
+  user-select: none; pointer-events: none;
+  transition: color 0.2s, border-color 0.2s;
+}
+#gamepad-status.connected {
+  color: #4dd28a; border-color: #2a5040;
+}
+#gamepad-status .gp-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: #555; margin-right: 6px; vertical-align: middle;
+}
+#gamepad-status.connected .gp-dot { background: #4dd28a; box-shadow: 0 0 4px #4dd28a; }

@@ -19,6 +19,8 @@ import { applyStatus } from './status.js';
 import { AMMO, ammoForKind, rangedWeaponKind } from '../data/ammo.js';
 import { FlowField } from './pathfinding.js';
 import { getKeybindOverrides, setKeybindOverrides } from '../ui/keybinds.js';
+import { GamepadAdapter } from './gamepad.js';
+import { Tutorial } from './tutorial.js';
 
 // Display names for the toast when a companion joins. Kept in sync with
 // COMPANION_ABILITIES in companion.js (which is private to that module).
@@ -86,6 +88,17 @@ export class Game {
     this.hud=new HUD(this);
     this.loadMap(state.map, state.pos.x/TILE, state.pos.y/TILE, true);
     this.player.invuln=2.5;
+    // Sprint 10: gamepad adapter (writes into input.keys / input.mouse on poll)
+    // and tutorial runner (the panel UI; the persisted flag bag lives on the
+    // game as `this._tutorialFlag` and is read by the trigger predicates in
+    // js/data/tutorial.js).
+    this.gamepad = new GamepadAdapter(input, this);
+    this.tutorial = new Tutorial(this);
+    if(state.tutorial) this.tutorial.attachSaveState(state);
+    // Fresh flag bag for this run; the tutorial steps check this in their
+    // trigger predicates. We reset it in start() so a fresh run starts clean
+    // (the bag is transient state, not persisted).
+    this._tutorialFlag = {};
     this.running=true; this.paused=false;
     this._lastT=performance.now();
     requestAnimationFrame(this._loop.bind(this));
@@ -224,7 +237,8 @@ export class Game {
       const d=Math.hypot(it.x-this.player.x,it.y-this.player.y);
       if(d<22){ it.dead=true; const obj=it.item?it.item:makeItem(it.id,1); this.addItem(obj); this.sfx('pickup');
         this.toast('Picked up '+(obj.name||CATALOG[it.id].name));
-        this.logCombat('Picked up ' + (obj.name || CATALOG[it.id].name), 'info'); }
+        this.logCombat('Picked up ' + (obj.name || CATALOG[it.id].name), 'info');
+        if(this._tutorialFlag) this._tutorialFlag.pickedUp = true; }  // Sprint 10
     }
     this.drops=this.drops.filter(it=>!it.dead);
 
@@ -239,7 +253,26 @@ export class Game {
     if(this.player && this.player.hpMax > 0){
       this.audio.updateHeartbeat(this.player.hp / this.player.hpMax);
     }
+    // Sprint 10: gamepad polling (writes into input.keys/mouse as a side
+    // effect) and the tutorial step-advance check.
+    if(this.gamepad) this.gamepad.poll(dt);
+    if(this.tutorial) this.tutorial.update();
+    // Toggle the on-screen gamepad indicator. The element exists in
+    // index.html; the only state we need to sync is "connected" class.
+    this._updateGamepadIndicator();
     this.input.lateUpdate();
+  }
+
+  // Cheap once-per-frame DOM sync for the gamepad status pill. Reads
+  // gamepad.connected and applies the .connected class accordingly. The
+  // element is hidden via the .hidden class on the wrapper; we toggle both.
+  _updateGamepadIndicator(){
+    if(typeof document === 'undefined') return;
+    const el = document.getElementById('gamepad-status');
+    if(!el) return;
+    const c = !!(this.gamepad && this.gamepad.connected);
+    el.classList.toggle('connected', c);
+    el.classList.toggle('hidden', !this.running);  // never show outside a run
   }
 
   _checkInteract(){
@@ -331,6 +364,7 @@ export class Game {
         if(gs.inProgress.length){ this.toast(n.name+': Come back when the task is done.'); return; }
       }
       n._line=(n._line||0); this.toast(n.name+': '+n.lines[n._line%n.lines.length]); n._line++;
+      if(this._tutorialFlag) this._tutorialFlag.spokeNpc = true;  // Sprint 10
     } else if(near.type==='chest'){
       const c=near.ref; if(c.opened) return;
       c.opened=true; this.openedChests[this.currentMap+':'+c.idx]=true; this.sfx('open');
@@ -527,6 +561,7 @@ export class Game {
   }
   castSpell(p, id){
     const sp=SPELLS[id]; if(!sp) return;
+    if(this._tutorialFlag) this._tutorialFlag.castSpell = true;  // Sprint 10
     const pr=sp.proj;
     const dmg=Math.round((pr.base + p.level*(pr.perLvl||0))*p.spellMul);
     const opts={ speed:pr.speed, dmg, r:pr.r, color:pr.color, kind:pr.kind,
@@ -934,6 +969,7 @@ export class Game {
       heat:this.player.heat, _overheatCd:this.player._overheatCd,
       ammo:{...this.player.ammo},
       keybinds,
+      tutorial: this.tutorial ? this.tutorial.detachSaveState() : undefined,
       weaponSkills:this._weaponSkills,
       companions:this._companions.map(c=>c.serialize()) };
   }

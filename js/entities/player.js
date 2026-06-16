@@ -26,6 +26,10 @@ export class Player {
     this.attacking=0; this.attackCd=0; this.blocking=false;
     this.dodging=0; this.dodgeCd=0; this.invuln=0; this.dodgeDir={x:0,y:0};
     this.spellCd={spell_q:0, spell_e:0, spell_r:0};
+    // Sprint 10: tutorial + lightweight metrics. _totalMoved accumulates
+    // from spawn regardless of direction (used by the 'move' tutorial step);
+    // _attackCount counts melee/ranged attacks (used by the 'attack' step).
+    this._totalMoved=0; this._attackCount=0;
     // heat system (ranged weapons)
     this.heat=0;       // 0-100 current heat
     this.heatCap=100;  // max heat before overheat
@@ -177,8 +181,12 @@ export class Player {
     if(mv.x||mv.y){
       let sp=this.blocking?this.speed*0.45:this.speed;
       sp*=(1-(this._statusSlow||0));
+      const ox=this.x, oy=this.y;
       this._move(mv.x*sp,mv.y*sp,world); this.dir=mv;
       this.facing=Math.abs(mv.x)>Math.abs(mv.y)?(mv.x>0?'right':'left'):(mv.y>0?'down':'up');
+      // Sprint 10: tutorial 'move' step measures total distance from spawn.
+      const dx=this.x-ox, dy=this.y-oy;
+      if(dx||dy) this._totalMoved += Math.hypot(dx, dy);
     }
   }
 
@@ -187,6 +195,7 @@ export class Player {
     // melee (ranged weapons fire a bolt instead - handled in game.doMeleeAttack)
     if(input.mousePressed.left && this.attackCd<=0 && !this.blocking && !this.dodging){
       this.attacking=0.18; this.attackCd=this.attackSpeed*cdMul;
+      this._attackCount = (this._attackCount || 0) + 1;  // Sprint 10: tutorial 'attack'
       game.sfx(this.ranged?'fire':'swing'); game.doMeleeAttack(this);
     }
     // spells from the q/e/r loadout (data-driven)

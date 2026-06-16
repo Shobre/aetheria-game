@@ -95,6 +95,9 @@
 <!-- ===== GAME ===== -->
 <div id="game-container" class="screen hidden">
   <canvas id="game-canvas"></canvas>
+  <!-- Sprint 10: gamepad connection indicator. Hidden when no gamepad
+       is connected, lit up green when one is. Updated by GamepadAdapter. -->
+  <div id="gamepad-status" class="hidden"><span class="gp-dot"></span><span class="gp-text">GAMEPAD</span></div>
 
   <!-- HUD -->
   <div id="hud" class="fixed inset-0 pointer-events-none z-10">
@@ -230,6 +233,13 @@
         <div id="keybinds-list" class="space-y-1 text-[10px] max-h-64 overflow-y-auto pr-1"></div>
         <p id="keybinds-hint" class="text-[9px] text-gray-500 mt-2">Click a key, then press the new binding. Mouse buttons cannot be rebound.</p>
       </div>
+
+      <!-- Sprint 10: tutorial reset -->
+      <div class="mt-4 flex justify-between items-center">
+        <span class="text-[10px] text-gray-400">TUTORIAL</span>
+        <button id="tutorial-reset" class="text-[9px] text-gray-400 hover:text-gold">SHOW TUTORIAL ON NEXT LAUNCH</button>
+      </div>
+      <p class="text-[9px] text-gray-500 mt-1">Gamepad support is automatic. Plug in a controller and the on-screen keys update to match.</p>
 
       <div class="grid grid-cols-3 gap-2 mt-6">
         <button id="save-game-btn" class="menu-btn">SAVE</button>

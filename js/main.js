@@ -287,6 +287,14 @@ document.getElementById('save-game-btn').onclick=()=>{
   if(uname){ cloudSave(uname, game.slot, game._buildState()); }
   else game.save();
 };
+// Sprint 10: tutorial reset button. Clears both the localStorage flag and
+// the in-memory tutorial, so the next Game.start() will run it from the top.
+document.getElementById('tutorial-reset').addEventListener('click', ()=>{
+  if(!game || !game.tutorial) return;
+  game.tutorial.reset();
+  if(game._tutorialFlag) game._tutorialFlag.ackWelcome = true;  // don't double-pop the welcome card
+  try { localStorage.removeItem('aetheria_tutorial_v1'); } catch(e){}
+});
 // (quit-btn click is wired once further down in this file — the canonical
 // handler near the bottom registers via .onclick=. This early addEventListener
 // was a duplicate that got silently overridden by the later .onclick=, so we

@@ -1604,6 +1604,323 @@ console.log('\n=== sprint 9 (music overhaul) ===');
 }
 
 
+// ============ Sprint 10 — Gamepad + Tutorial ============
+console.log('\n=== sprint 10 (gamepad + tutorial) ===');
+{
+  // ---- data/gamepad.js: button/axis map shape ----
+  const gp = await import('../js/data/gamepad.js');
+  ok('GAMEPAD_BUTTON_TO_ACTION is a map', typeof gp.GAMEPAD_BUTTON_TO_ACTION === 'object');
+  ok('button 0 (A/Cross) -> attack',   gp.GAMEPAD_BUTTON_TO_ACTION[0]  === 'attack');
+  ok('button 1 (B/Circle) -> dodge',    gp.GAMEPAD_BUTTON_TO_ACTION[1]  === 'dodge');
+  ok('button 2 (X/Square) -> interact', gp.GAMEPAD_BUTTON_TO_ACTION[2]  === 'interact');
+  ok('button 3 (Y/Tri) -> block',       gp.GAMEPAD_BUTTON_TO_ACTION[3]  === 'block');
+  ok('button 9 (Start) -> settings',    gp.GAMEPAD_BUTTON_TO_ACTION[9]  === 'settings');
+  ok('button 12 (DUp) -> move_up',      gp.GAMEPAD_BUTTON_TO_ACTION[12] === 'move_up');
+  ok('button 15 (DRt) -> move_right',   gp.GAMEPAD_BUTTON_TO_ACTION[15] === 'move_right');
+  // All 16 standard buttons mapped
+  for(let i = 0; i < 16; i++){
+    ok(`button ${i} has a mapping`, !!gp.GAMEPAD_BUTTON_TO_ACTION[i]);
+  }
+  ok('TRIGGER_THRESHOLD is in (0,1)', gp.TRIGGER_THRESHOLD > 0 && gp.TRIGGER_THRESHOLD < 1);
+  ok('STICK_DEADZONE is in (0,1)',    gp.STICK_DEADZONE    > 0 && gp.STICK_DEADZONE    < 1);
+  ok('AIM_SPEED is positive',         gp.AIM_SPEED > 0);
+
+  // ---- data/tutorial.js: step list shape ----
+  const tut = await import('../js/data/tutorial.js');
+  ok('TUTORIAL_STEPS is a non-empty array', Array.isArray(tut.TUTORIAL_STEPS) && tut.TUTORIAL_STEPS.length >= 3);
+  // Each step has the required fields
+  for(const s of tut.TUTORIAL_STEPS){
+    ok(`step ${s.id} has id/title/body/trigger/where`, !!(s.id && s.title && s.body && typeof s.trigger === 'function' && s.where));
+  }
+  // Step ids are unique
+  const ids = tut.TUTORIAL_STEPS.map(s => s.id);
+  ok('step ids are unique', new Set(ids).size === ids.length);
+  // The step list contains the canonical first-run steps
+  ok('tutorial starts with welcome', ids[0] === 'welcome');
+  ok('tutorial includes move step',  ids.includes('move'));
+  ok('tutorial includes attack step',ids.includes('attack'));
+  ok('tutorial includes portal step',ids.includes('portal'));
+  // tutorialKeyHint pretty-prints
+  eq('tutorialKeyHint("dodge", {}) = SPACE', tut.tutorialKeyHint('dodge', {}), 'SPACE');
+  eq('tutorialKeyHint("attack", {}) = LMB',  tut.tutorialKeyHint('attack', {}), 'LMB');
+  eq('tutorialKeyHint("spell_q", {}) = Q',   tut.tutorialKeyHint('spell_q', {}), 'Q');
+  // tutorialKeyHint respects a binding override
+  eq('tutorialKeyHint("dodge", {dodge:"x"}) = X', tut.tutorialKeyHint('dodge', {dodge: 'x'}), 'X');
+  // TUTORIAL_DEFAULT has the right shape
+  ok('TUTORIAL_DEFAULT.version is a number', typeof tut.TUTORIAL_DEFAULT.version === 'number');
+  ok('TUTORIAL_DEFAULT.completed is array', Array.isArray(tut.TUTORIAL_DEFAULT.completed));
+  eq('TUTORIAL_DEFAULT.skipped is false', tut.TUTORIAL_DEFAULT.skipped, false);
+
+  // ---- Trigger predicates against a fake game object ----
+  // Build a minimal fake game that satisfies the trigger predicates and
+  // assert each step completes under the right condition.
+  const fakeGame = {
+    player: { _totalMoved: 0, _attackCount: 0 },
+    _tutorialFlag: {},
+    currentMap: 'meadow',
+  };
+  // The 'welcome' step: no trigger from the predicate alone (acks on any
+  // input), so the first input press flips ackWelcome via _syncDomFlags in
+  // the runtime — here we simulate the flag flip and re-evaluate.
+  fakeGame._tutorialFlag.ackWelcome = true;
+  ok('welcome step trigger fires when ackWelcome is set',
+     tut.TUTORIAL_STEPS.find(s => s.id === 'welcome').trigger(fakeGame));
+  // The 'move' step
+  ok('move step does not fire at 0 distance',
+     !tut.TUTORIAL_STEPS.find(s => s.id === 'move').trigger(fakeGame));
+  fakeGame.player._totalMoved = 80;
+  ok('move step fires at 80px moved',
+     tut.TUTORIAL_STEPS.find(s => s.id === 'move').trigger(fakeGame));
+  // The 'attack' step
+  ok('attack step does not fire at 0 attacks',
+     !tut.TUTORIAL_STEPS.find(s => s.id === 'attack').trigger(fakeGame));
+  fakeGame.player._attackCount = 1;
+  ok('attack step fires at 1 attack',
+     tut.TUTORIAL_STEPS.find(s => s.id === 'attack').trigger(fakeGame));
+  // The 'pickup' step: driven by game._tutorialFlag.pickedUp
+  ok('pickup step does not fire without flag',
+     !tut.TUTORIAL_STEPS.find(s => s.id === 'pickup').trigger(fakeGame));
+  fakeGame._tutorialFlag.pickedUp = true;
+  ok('pickup step fires when pickedUp flag is set',
+     tut.TUTORIAL_STEPS.find(s => s.id === 'pickup').trigger(fakeGame));
+  // The 'portal' step: based on currentMap
+  ok('portal step does not fire in meadow',
+     !tut.TUTORIAL_STEPS.find(s => s.id === 'portal').trigger(fakeGame));
+  fakeGame.currentMap = 'city';
+  ok('portal step fires when currentMap is city',
+     tut.TUTORIAL_STEPS.find(s => s.id === 'portal').trigger(fakeGame));
+
+  // ---- GamepadAdapter: synthetic gamepad events write into a fake Input ----
+  const { GamepadAdapter } = await import('../js/systems/gamepad.js');
+  // Build a fake Input matching the real shape: keys/pressed maps and
+  // bindings, plus mouseDown/mousePressed maps.
+  const fakeInput = {
+    keys: {}, pressed: {},
+    mouse: { x: 100, y: 100 },
+    mouseDown: { left: false, right: false, middle: false },
+    mousePressed: { left: false, right: false, middle: false },
+    bindings: { ...(await import('../js/data/keybinds.js')).DEFAULT_BIND },
+    canvas: { width: 1280, height: 720 },
+  };
+  // Monkey-patch navigator.getGamepads to return a synthetic pad. Each test
+  // mutates the global, polls, then asserts on the input maps.
+  const makePad = (overrides = {}) => ({
+    buttons: new Array(16).fill(0).map(() => ({ pressed: false, touched: false, value: 0 })),
+    axes: [0, 0, 0, 0],
+    ...overrides,
+  });
+  let currentPad = makePad();
+  // Node 22 makes `globalThis.navigator` a getter; use defineProperty so
+  // the override sticks for the rest of the test run.
+  try {
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { getGamepads: () => [currentPad, null, null, null] },
+      configurable: true, writable: true,
+    });
+  } catch(e) {
+    globalThis.navigator.getGamepads = () => [currentPad, null, null, null];
+  }
+  // Adapter needs `input.bindings.move_up` etc to look up. The fake above
+  // is sufficient. Construct (no pad connected yet -> not connected).
+  let pad = new GamepadAdapter(fakeInput, { _tutorialFlag: {} });
+
+  // No pad: poll() returns false, no input is written.
+  currentPad = null;
+  // The adapter doesn't re-check on every constructor call — only on
+  // connect/disconnect events or when poll() re-validates. We use poll()
+  // to drive the re-validate, which is also the production path.
+  pad.poll(0.016);
+  ok('adapter reports disconnected when no pad is present', !pad.connected);
+  ok('poll with no pad returns false', pad.poll(0.016) === false);
+  ok('no key written when no pad is connected', Object.keys(fakeInput.keys).length === 0);
+
+  // Plug in a pad and press A (button 0, "attack" -> mouse1 LMB).
+  currentPad = makePad();
+  currentPad.buttons[0].pressed = true; currentPad.buttons[0].value = 1;
+  // Adapter only re-checks navigator.getGamepads() on connect/disconnect
+  // events, so simulate a connect by manually setting index.
+  pad.index = 0; pad.connected = true;
+  pad.poll(0.016);
+  ok('press A -> mouseDown.left is true', fakeInput.mouseDown.left === true);
+  ok('press A -> mousePressed.left is true (edge trigger)', fakeInput.mousePressed.left === true);
+  // Release A
+  currentPad.buttons[0].pressed = false; currentPad.buttons[0].value = 0;
+  pad.poll(0.016);
+  ok('release A -> mouseDown.left is false', fakeInput.mouseDown.left === false);
+
+  // Press B (button 1, "dodge" -> space).
+  currentPad.buttons[1].pressed = true; currentPad.buttons[1].value = 1;
+  pad.poll(0.016);
+  ok('press B -> keys[" "] is true', fakeInput.keys[' '] === true);
+  ok('press B -> pressed[" "] is true (edge trigger)', fakeInput.pressed[' '] === true);
+  // Release B
+  currentPad.buttons[1].pressed = false; currentPad.buttons[1].value = 0;
+  pad.poll(0.016);
+  ok('release B -> keys[" "] is false', fakeInput.keys[' '] === false);
+
+  // Press X (button 2, "interact" -> f).
+  currentPad.buttons[2].pressed = true; currentPad.buttons[2].value = 1;
+  pad.poll(0.016);
+  ok('press X -> keys["f"] is true', fakeInput.keys['f'] === true);
+  currentPad.buttons[2].pressed = false;
+  pad.poll(0.016);
+
+  // Press D-pad up (button 12, "move_up" -> w).
+  currentPad.buttons[12].pressed = true; currentPad.buttons[12].value = 1;
+  pad.poll(0.016);
+  ok('press DUp -> keys["w"] is true', fakeInput.keys['w'] === true);
+  currentPad.buttons[12].pressed = false;
+  pad.poll(0.016);
+  ok('release DUp -> keys["w"] is false', fakeInput.keys['w'] === false);
+
+  // Left stick: push Y to -0.5 (move up via stick)
+  currentPad.axes[0] = 0; currentPad.axes[1] = -0.5;
+  pad.poll(0.016);
+  ok('stick up (Y=-0.5) -> keys["w"] is true', fakeInput.keys['w'] === true);
+  // Release stick (axes back to 0)
+  currentPad.axes[0] = 0; currentPad.axes[1] = 0;
+  pad.poll(0.016);
+  ok('stick released (Y=0) -> keys["w"] is false', fakeInput.keys['w'] === false);
+
+  // Stick deadzone: tiny Y (-0.1) should NOT register
+  currentPad.axes[1] = -0.1;
+  pad.poll(0.016);
+  ok('tiny stick (-0.1) is within deadzone (keys["w"] stays false)', fakeInput.keys['w'] === false);
+
+  // Right stick aim: positive X should advance mouse.x
+  const before = fakeInput.mouse.x;
+  currentPad.axes[1] = 0;
+  currentPad.axes[2] = 0.6; currentPad.axes[3] = 0;
+  pad.poll(0.5);
+  ok('right stick X>0 advances mouse.x', fakeInput.mouse.x > before);
+  ok('right stick X>0 stays within canvas.width',
+     fakeInput.mouse.x <= fakeInput.canvas.width);
+
+  // Rebind sensitivity: rebind "attack" to "k" and re-press A; should
+  // write to keys["k"] (not mouse1).
+  currentPad.axes[2] = 0; currentPad.axes[3] = 0;
+  fakeInput.bindings.attack = 'k';
+  currentPad.buttons[0].pressed = true; currentPad.buttons[0].value = 1;
+  pad.poll(0.016);
+  ok('rebind: press A with attack="k" -> keys["k"] is true', fakeInput.keys['k'] === true);
+  ok('rebind: press A with attack="k" -> mouseDown.left stays false',
+     fakeInput.mouseDown.left === false);
+  // Restore default for any later tests
+  currentPad.buttons[0].pressed = false;
+  pad.poll(0.016);
+  delete fakeInput.bindings.attack;
+  fakeInput.bindings.attack = 'mouse1';
+
+  // Disconnect: poll with no pad releases every key/button.
+  currentPad.buttons[1].pressed = true; currentPad.buttons[1].value = 1;
+  pad.poll(0.016);
+  ok('pre-disconnect: keys[" "] is true (B held)', fakeInput.keys[' '] === true);
+  currentPad = null;
+  pad.poll(0.016);
+  ok('disconnect: keys[" "] is released', fakeInput.keys[' '] === false);
+  ok('disconnect: adapter reports not connected', !pad.connected);
+
+  // ---- Tutorial round-trip persistence (no DOM required) ----
+  // We test the data-shape of detachSaveState and the version constant.
+  // The full constructor touches `document.getElementById` only when the
+  // panel is shown; we assert that a fresh state has the right keys.
+  const { Tutorial } = await import('../js/systems/tutorial.js');
+  // Stub localStorage so _load() / _persistLocal() work in node.
+  const _ls = {};
+  globalThis.localStorage = {
+    getItem: (k) => k in _ls ? _ls[k] : null,
+    setItem: (k, v) => { _ls[k] = String(v); },
+    removeItem: (k) => { delete _ls[k]; },
+  };
+  // A game stub: enough surface for Tutorial to construct + run.
+  const stubGame = { _tutorialFlag: {}, input: { pressed: {}, mousePressed: { left:false, right:false, middle:false } } };
+  const t = new Tutorial(stubGame);
+  // Fresh start: tutorial is active, current is the first step.
+  ok('fresh Tutorial: skipped is false', t.skipped === false);
+  ok('fresh Tutorial: has a current step', !!t.current);
+  eq('fresh Tutorial: starts on welcome', t.current && t.current.id, 'welcome');
+  // detachSaveState shape
+  const saved = t.detachSaveState();
+  ok('detachSaveState returns an object', typeof saved === 'object' && saved !== null);
+  eq('detachSaveState.version matches TUTORIAL_VERSION', saved.version, tut.TUTORIAL_VERSION);
+  ok('detachSaveState.completed is array', Array.isArray(saved.completed));
+  eq('detachSaveState.skipped is false', saved.skipped, false);
+
+  // attachSaveState honors a "skipped" save
+  t.attachSaveState({ tutorial: { version: tut.TUTORIAL_VERSION, skipped: true, completed: ids } });
+  eq('attachSaveState sets skipped from save', t.skipped, true);
+  eq('attachSaveState sets completed from save', t.completed.size, ids.length);
+
+  // attachSaveState ignores a wrong-version save
+  t.skipped = false; t.completed = new Set();
+  t.attachSaveState({ tutorial: { version: 999, skipped: true, completed: ids } });
+  eq('attachSaveState ignores a version-mismatched save', t.skipped, false);
+
+  // skip() flips state and persists
+  t.skipped = false; t.completed = new Set();
+  t.skip();
+  ok('skip() marks all steps as completed', t.completed.size === tut.TUTORIAL_STEPS.length);
+  eq('skip() sets skipped to true', t.skipped, true);
+  ok('skip() persists skipped to localStorage',
+     (() => { try { return JSON.parse(_ls['aetheria_tutorial_v1']).skipped === true; } catch(e) { return false; } })());
+
+  // reset() puts the tutorial back at the start and clears localStorage
+  t.reset();
+  eq('reset() clears skipped', t.skipped, false);
+  eq('reset() clears completed', t.completed.size, 0);
+  ok('reset() removes localStorage key', _ls['aetheria_tutorial_v1'] === undefined);
+
+  // Stepping through: complete a step and the next one shows.
+  // We use the stub game's flag bag to drive triggers.
+  stubGame._tutorialFlag.ackWelcome = true;
+  // First, force the welcome step to be 'completed' so the next one shows.
+  t.completed.add('welcome');
+  t._advance();
+  eq('after completing welcome, current is move', t.current.id, 'move');
+  // Drive the 'move' trigger to completion
+  stubGame.player = { _totalMoved: 0 };
+  t.update();
+  ok('move step does not advance at 0 distance', t.current.id === 'move');
+  stubGame.player._totalMoved = 80;
+  t.update();
+  // After the 'move' step triggers, the next not-completed step is 'attack'
+  // (the step list goes: welcome → move → attack → pickup → ...). The test
+  // was originally written expecting 'pickup' which would only be true if
+  // 'attack' were also completed — it isn't.
+  eq('move step advances to attack at 80px', t.current.id, 'attack');
+
+  // ---- file/contract smoke tests ----
+  const gameSrc3   = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
+  const mainSrc3   = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  const indexSrc3  = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const cssSrc     = readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
+  const gpSrc      = readFileSync(new URL('../js/systems/gamepad.js', import.meta.url), 'utf8');
+  const tutSrc     = readFileSync(new URL('../js/systems/tutorial.js', import.meta.url), 'utf8');
+
+  ok('game.js imports GamepadAdapter', gameSrc3.includes("import { GamepadAdapter }"));
+  ok('game.js imports Tutorial',       gameSrc3.includes("import { Tutorial }"));
+  ok('game.js constructs gamepad in start()',  gameSrc3.includes("new GamepadAdapter("));
+  ok('game.js constructs tutorial in start()', gameSrc3.includes("new Tutorial("));
+  ok('game.js polls gamepad in update()',  gameSrc3.includes("this.gamepad.poll("));
+  ok('game.js updates tutorial in update()', gameSrc3.includes("this.tutorial.update()"));
+  ok('game.js persists tutorial in _buildState', gameSrc3.includes('tutorial: this.tutorial ? this.tutorial.detachSaveState()'));
+  ok('game.js updates the gamepad indicator',  gameSrc3.includes('_updateGamepadIndicator'));
+  ok('main.js wires the tutorial-reset button', mainSrc3.includes("tutorial-reset"));
+  ok('index.html has #tutorial-reset button',  indexSrc3.includes('id="tutorial-reset"'));
+  ok('index.html has #gamepad-status element', indexSrc3.includes('id="gamepad-status"'));
+  ok('css defines .tutorial-panel',     cssSrc.includes('.tutorial-panel'));
+  ok('css defines .tutorial-skip',       cssSrc.includes('.tutorial-skip'));
+  ok('css defines #gamepad-status',      cssSrc.includes('#gamepad-status'));
+  ok('gamepad.js writes into input.keys (write-through to Input)', gpSrc.includes('this.input.keys'));
+  ok('gamepad.js synthesizes edge press via input.pressed', gpSrc.includes('this.input.pressed'));
+  ok('gamepad.js polls navigator.getGamepads', gpSrc.includes('navigator.getGamepads'));
+  ok('tutorial.js honors attachSaveState', tutSrc.includes('attachSaveState'));
+  ok('tutorial.js honors detachSaveState', tutSrc.includes('detachSaveState'));
+  ok('tutorial.js honors skip()',         tutSrc.includes('skip('));
+  ok('tutorial.js honors reset()',        tutSrc.includes('reset('));
+}
+
+
 console.log('\n' + (fail === 0 ? '? ALL PASS' : '? FAILURES') + ` - ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }
 
