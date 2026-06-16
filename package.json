@@ -2,7 +2,6 @@
   "name": "aetheria-game",
   "version": "1.0.0",
   "description": "Aetheria — a top-down Zelda-like action-RPG (vanilla JS + Canvas + Tailwind)",
-  "type": "module",
   "scripts": {
     "test": "node tests/run.js",
     "lint": "eslint js/",
