@@ -17,6 +17,7 @@ import { Companion, COMPANIONS } from '../entities/companion.js';
 import { ENCHANTMENTS, applyEnchant, enchantCost, enchantInfo } from '../data/enchantments.js';
 import { applyStatus } from './status.js';
 import { AMMO, ammoForKind, rangedWeaponKind } from '../data/ammo.js';
+import { FlowField } from './pathfinding.js';
 
 // Display names for the toast when a companion joins. Kept in sync with
 // COMPANION_ABILITIES in companion.js (which is private to that module).
@@ -54,6 +55,9 @@ export class Game {
     this._dayTime=0; this._dayLen=120; // day/night cycle (seconds)
     this._weaponSkills={}; // {sword:0, axe:0, spear:0, bow:0, staff:0}
     this._companions=[]; // active companions
+    // Sprint 6: flow field for pathfinding. Recomputed when the player crosses
+    // a tile boundary — a single BFS replaces N parallel A* runs across enemies.
+    this._flowField=null; this._flowGoal={x:0,y:0}; this._flowRecomputeT=0;
   }
 
   start(state){
@@ -84,6 +88,7 @@ export class Game {
   loadMap(mapId, tx, ty, keepPos){
     this.world=new World(mapId);
     this.currentMap=mapId;
+    this._flowField=null;  // Sprint 6: invalidate the cached field for the new map
     if(!keepPos){
       // snap to nearest walkable tile so we never land inside a wall/decor
       const sp=this.world.nearestOpen(tx*TILE+TILE/2, ty*TILE+TILE/2);
@@ -176,6 +181,9 @@ export class Game {
     this.player.update(dt,this.input,this.world,this.cam,this);
     this.cam.follow(this.player,this.world);
     if(!this.settings.shake) this.cam.shake=0;
+    // Sprint 6: refresh the flow field when the player has moved to a new tile
+    // (or every 0.5s, whichever comes first). Cheap BFS that every enemy can read.
+    this._refreshFlowField(dt);
 
     for(const e of this.enemies) e.update(dt,this.player,this.world,this);
     this.enemies=this.enemies.filter(e=>!e.dead);
@@ -425,6 +433,25 @@ export class Game {
   // Undead = skeletons, frostlings, frost mages, etc. We classify by type.
   _isUndead(e){
     return ['skeleton','frostling','frost_mage','skeleton_archer'].includes(e.type);
+  }
+  // Sprint 6: keep the flow field pointed at the player. Recompute when the
+  // player crosses a tile or every 0.5s — whichever comes first. BFS is cheap
+  // (single linear scan of the map); the win is that 10+ chasing enemies
+  // each call O(1) instead of running their own A*.
+  _refreshFlowField(dt){
+    const p = this.player;
+    if(!p || !this.world) return;
+    this._flowRecomputeT -= dt;
+    const newTx = Math.floor(p.x / 32);
+    const newTy = Math.floor(p.y / 32);
+    const oldTx = Math.floor(this._flowGoal.x / 32);
+    const oldTy = Math.floor(this._flowGoal.y / 32);
+    if(!this._flowField || newTx !== oldTx || newTy !== oldTy || this._flowRecomputeT <= 0){
+      const w = this.world;
+      this._flowField = new FlowField((x, y) => w._blockedTile(x, y), w.cols, w.rows, p.x, p.y);
+      this._flowGoal.x = p.x; this._flowGoal.y = p.y;
+      this._flowRecomputeT = 0.5;  // hard ceiling so a moving player still gets fresh fields
+    }
   }
   _fireRangedShot(p){
     if(p._overheatCd>0) return;

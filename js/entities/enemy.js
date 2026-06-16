@@ -190,7 +190,7 @@ export class Enemy {
 
   // ranged: hold range, shoot on cd; otherwise close the gap (pathfinding)
   _rangedAI(dt,player,world,game,dist,nx,ny){
-    if(dist>=this.shootRange){ this._navigate(player.x,player.y,this.speed,world,dt); return; }
+    if(dist>=this.shootRange){ this._navigate(player.x,player.y,this.speed,world,dt,game); return; }
     if(dist<160) this._move(-nx*this.speed,-ny*this.speed,world);        // back away
     else if(dist>240) this._move(nx*this.speed*0.6,ny*this.speed*0.6,world);
     if(this.shootTimer<=0){ this.shootTimer=this.shootCd;
@@ -207,7 +207,7 @@ export class Enemy {
       this._move((nx+this.wander.x)*this.speed,(ny+this.wander.y)*this.speed,world);
       this.face={x:nx,y:ny};
     } else {
-      this._navigate(player.x,player.y,this.speed,world,dt);
+      this._navigate(player.x,player.y,this.speed,world,dt,game);
     }
     if(dist<this.r+player.r+2 && this.attackCd<=0){
       this.attackCd=0.8; player.takeDamage(this.dmg,Math.atan2(player.y-this.y,player.x-this.x)+Math.PI,game);
@@ -236,7 +236,7 @@ export class Enemy {
 
   _lungeAI(dt,player,world,game,dist,nx,ny){
     if(this.lungeState==='idle'){
-      if(dist>this.r+player.r){ this._navigate(player.x,player.y,this.speed,world,dt); }
+      if(dist>this.r+player.r){ this._navigate(player.x,player.y,this.speed,world,dt,game); }
       // only wind up a lunge when there's a clear line to the player (no wall between)
       if(dist<150 && world.hasLineOfSight(this.x,this.y,player.x,player.y)){
         this.lungeState='telegraph'; this.lungeTimer=0.5; this.lungeDir={x:nx,y:ny}; }
@@ -300,7 +300,7 @@ export class Enemy {
     }
     // gentle drift away from the player when too close, toward when too far
     if(dist < 140)        this._move(-nx*this.speed, -ny*this.speed, world);
-    else if(dist > this.shootRange) this._navigate(player.x, player.y, this.speed, world, dt);
+    else if(dist > this.shootRange) this._navigate(player.x, player.y, this.speed, world, dt, game);
     else                  this._move((nx+Math.sin(this.bob*2)*0.3)*this.speed*0.4, (ny+Math.cos(this.bob*2)*0.3)*this.speed*0.4, world);
     this.face = {x:nx, y:ny};
   }
@@ -321,7 +321,7 @@ export class Enemy {
       if(this._enraged && this.attackCd <= 0){
         this._move(nx*this.speed*1.6, ny*this.speed*1.6, world);
       } else {
-        this._navigate(player.x, player.y, this.speed, world, dt);
+        this._navigate(player.x, player.y, this.speed, world, dt, game);
       }
     }
     this.face = {x:nx, y:ny};
@@ -337,7 +337,7 @@ export class Enemy {
   // If line-of-sight is clear -> steer straight (cheap, smooth).
   // Otherwise follow a cached A* path, recomputed a few times per second.
   // Sets this.face. Returns true if it produced movement toward the target.
-  _navigate(tx,ty,speed,world,dt){
+  _navigate(tx,ty,speed,world,dt,game){
     this.pathT-=dt;
     if(world.hasLineOfSight(this.x,this.y,tx,ty)){
       // direct approach
@@ -347,9 +347,21 @@ export class Enemy {
       this.path=null; // drop stale path
       return true;
     }
+    // Sprint 6 fast-path: read the shared flow field if Game has one. O(1)
+    // per enemy, vs. per-enemy A* + line-of-sight throttling. Fall through
+    // to the A* path if the field is missing or this cell is unreachable.
+    if(game && game._flowField && game._flowField.isReachable(this.x, this.y)){
+      const v = game._flowField.sample(this.x, this.y);
+      if(v[0] !== 0 || v[1] !== 0){
+        this._move(v[0]*speed, v[1]*speed, world);
+        this.face = {x: v[0], y: v[1]};
+        return true;
+      }
+    }
     // need a path; (re)compute on throttle or when exhausted
     if(this.pathT<=0 || !this.path || this.pathIdx>=this.path.length){
-      this.path=world.findPath(this.x,this.y,tx,ty);
+      // Sprint 6: use the smoothed A* — fewer waypoints, enemies cut corners.
+      this.path=world.findPathSmoothed(this.x,this.y,tx,ty);
       this.pathIdx=0; this.pathT=0.4+Math.random()*0.2;
     }
     if(this.path && this.pathIdx<this.path.length){

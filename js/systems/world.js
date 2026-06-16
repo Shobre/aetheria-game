@@ -1,6 +1,7 @@
 // World: generic biome/dungeon/house generator driven by map definitions.
 import { MAPS } from '../data/maps.js';
 import { drawNPCSprite } from '../sprites.js';
+import { smoothPath } from './pathfinding.js';
 export const TILE = 32;
 
 // tile ids (internal - no external consumers, so not exported)
@@ -316,6 +317,15 @@ export class World {
       }
     }
     return null;
+  }
+
+  // A* with the Sprint 6 funnel/line-of-sight smoothing pass applied. Most enemy
+  // AI should use this — it removes redundant tile-centre waypoints so enemies
+  // cut corners instead of stair-stepping. Pure additive: findPath is unchanged.
+  findPathSmoothed(sx, sy, tx, ty, maxNodes){
+    const raw = this.findPath(sx, sy, tx, ty, maxNodes);
+    if(!raw) return null;
+    return smoothPath(raw, (x0, y0, x1, y1) => this.hasLineOfSight(x0, y0, x1, y1));
   }
 
   _tileColor(t, x, y){

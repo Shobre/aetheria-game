@@ -1,7 +1,7 @@
 # Aetheria — Master Development Roadmap
 
 **Live:** https://aetheria-game-alpha.vercel.app
-**Tests:** 675/675 pass
+**Tests:** 700/700 pass
 **Fallow Score:** 86.5 (good) · 99 (without hotspots)
 
 A top-down, Zelda-like action-RPG built with vanilla JS (ES modules), HTML5 Canvas, and Tailwind. Pixel-art rendering, procedural world generation, a full equipment/skill/shop economy, and persistent 3-slot saves with cloud sync.
@@ -173,11 +173,26 @@ Bows and crossbows now require physical ammo. The Arcane Staff is unchanged (it 
 
 **Sprint 5 results:** 675/675 tests passing (was 613, +62 from ammo suite), 0 dead exports, fallow health 86.5 (good)
 
-## ⬜ Backlog — Future Sprints
+## ✅ Sprint 6 — Complete
 
-### 🟡 Pathfinding Polish
-- Path smoothing / funnel so enemies cut corners
-- Flow-field caching for groups of enemies chasing one target
+### ✅ 1. Path Smoothing (line-of-sight pull)
+After A* produces a sequence of tile-centre waypoints, a funnel pass walks the path and skips any waypoint the enemy can see straight through. Result: enemies cut corners instead of stair-stepping along tile boundaries.
+- `js/systems/pathfinding.js` — new `smoothPath(waypoints, hasLoS)` helper
+- `World.findPathSmoothed(sx, sy, tx, ty)` — drops in wherever `findPath` is used
+- Enemy `_navigate()` now calls the smoothed variant
+
+### ✅ 2. Flow-Field Cache (shared pathfinding across enemies)
+When 6+ enemies chase the same player, each would otherwise run its own A*. A flow field is a single BFS-computed unit-vector grid pointing from every cell toward the player. Enemies read the field as an O(1) lookup.
+- `FlowField` class in `pathfinding.js` — BFS distance + neighbour-averaged vectors
+- `Game._refreshFlowField(dt)` — recomputes when the player crosses a tile boundary or every 0.5s
+- `Enemy._navigate()` — fast-path samples the field before falling back to A*
+- `loadMap()` invalidates the cache on map transitions
+- Vector construction averages all lower-distance neighbours so cells with 3 open sides get a diagonal vector (not just axis-aligned)
+- `TILE` constant inlined in `pathfinding.js` to break the would-be circular import (world.js ↔ pathfinding.js)
+
+**Sprint 6 results:** 700/700 tests passing (was 675, +25 from pathfinding suite), 0 dead exports, fallow health 86.5 (good, unchanged)
+
+## ⬜ Backlog — Future Sprints
 
 ### ⚪ Rebindable Keys
 Settings panel with click-to-rebind for all actions, stored in localStorage
@@ -229,7 +244,7 @@ Repurpose Merchants Hut as player home with expanded storage
 
 ## Test Coverage
 
-- **Total:** 675 tests across all modules (547 → 600 → 613 → 675 after Sprints 3, 4, 5)
+- **Total:** 700 tests across all modules (547 → 600 → 613 → 675 → 700 after Sprints 3, 4, 5, 6)
 - **Run:** npm test (plain Node, no framework dependency)
 
-*Last updated: Sprint 5 complete (commit 8300981)*
+*Last updated: Sprint 6 complete (commit pending)*

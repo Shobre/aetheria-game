@@ -1211,6 +1211,112 @@ console.log('\n=== sprint 5 (ammo / quiver) ===');
 }
 
 
+// ============ Sprint 6 — Pathfinding Polish ============
+console.log('\n=== sprint 6 (path smoothing + flow field) ===');
+{
+  const pf = await import('../js/systems/pathfinding.js');
+
+  // ---- smoothPath: line-of-sight pull ----
+  // Helper: stub hasLoS that returns true unless an explicit blocked rect is hit.
+  function makeStubLos(blocked){
+    return (x0, y0, x1, y1) => {
+      // straight-line raycast; reject if any sample point falls inside `blocked`
+      const dist = Math.hypot(x1-x0, y1-y0);
+      const steps = Math.max(2, Math.ceil(dist / 8));
+      for(let i = 1; i < steps; i++){
+        const t = i/steps, px = x0 + (x1-x0)*t, py = y0 + (y1-y0)*t;
+        if(blocked(px, py)) return false;
+      }
+      return true;
+    };
+  }
+  // 1. Empty / null path
+  ok('smoothPath(null) = null-handled', pf.smoothPath(null, ()=>true) === null);
+  ok('smoothPath([]) = []', Array.isArray(pf.smoothPath([], ()=>true)) && pf.smoothPath([], ()=>true).length === 0);
+  // 2. Two-point path stays the same
+  const two = [{x:0,y:0},{x:32,y:32}];
+  ok('smoothPath 2 points returns 2', pf.smoothPath(two, ()=>true).length === 2);
+  // 3. Three collinear points collapses to 2
+  const line3 = [{x:0,y:0},{x:32,y:0},{x:64,y:0}];
+  const colSm = pf.smoothPath(line3, ()=>true);
+  ok('smoothPath 3 collinear -> 2 waypoints', colSm.length === 2);
+  ok('smoothPath keeps start and end', colSm[0].x === 0 && colSm[colSm.length-1].x === 64);
+
+  // 4. Path blocked by a wall: must keep the wall-blocking waypoint
+  //    A -> B -> C where the direct cut A->C would cross a wall.
+  //    Wall is wide enough that the line from (0,0) to (96,96) at y=32
+  //    actually grazes it, but a detour through (32,80) clears it.
+  const wallCorner = { x: 16, y: 16, w: 80, h: 24 };  // horizontal wall at y=16..40
+  const los = makeStubLos((px, py) => px >= wallCorner.x && px <= wallCorner.x + wallCorner.w
+                                          && py >= wallCorner.y && py <= wallCorner.y + wallCorner.h);
+  // Verify: direct cut (0,0)→(96,96) is blocked
+  ok('wall test setup: direct cut (0,0)->(96,96) is blocked', los(0, 0, 96, 96) === false);
+  // Verify: (0,0)→(32,80) skips the wall (passes under y=40)
+  ok('wall test setup: detour to (32,80) is clear', los(0, 0, 32, 80) === true);
+  // Path that A* might produce: (0,0) → (16,64) → (48,80) → (80,80) → (96,96)
+  // Smoothing should preserve the y-bend at (16,64) and the x-bend at (80,80)
+  const around = [{x:0,y:0}, {x:16,y:64}, {x:48,y:80}, {x:80,y:80}, {x:96,y:96}];
+  const sm = pf.smoothPath(around, los);
+  ok('smoothPath around wall: result is shorter than input',
+     sm.length < around.length);
+  ok('smoothPath around wall: keeps start', sm[0].x === 0 && sm[0].y === 0);
+  ok('smoothPath around wall: keeps end',   sm[sm.length-1].x === 96 && sm[sm.length-1].y === 96);
+
+  // 5. Open-field waypoints collapse aggressively
+  const open = [{x:0,y:0}, {x:32,y:0}, {x:64,y:0}, {x:96,y:0}];
+  const smOpen = pf.smoothPath(open, ()=>true);
+  ok('smoothPath collapses 4 collinear -> 2 waypoints', smOpen.length === 2);
+
+  // ---- FlowField: BFS distance + vector field ----
+  // Build a 10x10 open grid; goal at center
+  const blocked = () => false;  // everything walkable
+  const ff = new pf.FlowField(blocked, 10, 10, 5*32+16, 5*32+16);
+  ok('FlowField goal distance = 0', ff.distance(5*32+16, 5*32+16) === 0);
+  ok('FlowField adjacent cell distance = 1', ff.distance(4*32+16, 5*32+16) === 1);
+  // 4-dir BFS, so diagonal cell (one over in both x and y) is 2 steps
+  ok('FlowField diagonal cell distance = 2 (4-dir BFS)', ff.distance(4*32+16, 4*32+16) === 2);
+  ok('FlowField far cell distance > 5', ff.distance(0, 0) > 5);
+  ok('FlowField every open cell is reachable', ff.isReachable(0, 0));
+  ok('FlowField far cell sample points roughly toward center',
+     (() => {
+       const v = ff.sample(0, 0);
+       // tile (0,0) is bottom-left of grid; goal is at (5,5), so v[0] and v[1] both > 0
+       return v[0] > 0 && v[1] > 0;
+     })());
+
+  // Goal cell itself returns zero vector
+  const goalVec = ff.sample(5*32+16, 5*32+16);
+  ok('FlowField goal cell returns [0,0]', goalVec[0] === 0 && goalVec[1] === 0);
+
+  // Wall completely surrounds the goal: every non-goal cell is unreachable.
+  // Goal is at (5,5); surround tile (5,5) with a ring of walls at (4,4)-(6,6).
+  const walled = (x, y) => (x === 4 || x === 5 || x === 6) && (y === 4 || y === 5 || y === 6)
+                            && !(x === 5 && y === 5);  // everything in 3x3 except the goal
+  const ff2 = new pf.FlowField(walled, 10, 10, 5*32+16, 5*32+16);
+  ok('FlowField with surrounding wall: only goal reachable', (() => {
+    let reachable = 0;
+    for(let y = 0; y < 10; y++) for(let x = 0; x < 10; x++) if(ff2.isReachable(x*32+16, y*32+16)) reachable++;
+    return reachable === 1;  // only the goal tile
+  })());
+  ok('FlowField with surrounding wall: cell (0,0) unreachable', !ff2.isReachable(0, 0));
+  ok('FlowField with surrounding wall: (0,0) distance = -1', ff2.distance(0, 0) === -1);
+  ok('FlowField with surrounding wall: (0,0) sample returns [0,0]',
+     (() => { const v = ff2.sample(0, 0); return v[0] === 0 && v[1] === 0; })());
+
+  // Out-of-bounds world coord clamps to nearest tile (no throw)
+  let ffOutThrew = false;
+  try { ff.distance(-100, -100); } catch(e) { ffOutThrew = true; }
+  ok('FlowField out-of-bounds does not throw', !ffOutThrew);
+
+  // FlowField with unreachable goal: every cell is unreachable
+  const allWall = () => true;
+  const ffDead = new pf.FlowField(allWall, 4, 4, 2*32+16, 2*32+16);
+  ok('FlowField with unreachable goal: no reachable cells', ffDead.distance(0, 0) === -1);
+  ok('FlowField with unreachable goal: sample returns [0,0]',
+     (() => { const v = ffDead.sample(0, 0); return v[0] === 0 && v[1] === 0; })());
+}
+
+
 
 console.log('\n' + (fail === 0 ? '? ALL PASS' : '? FAILURES') + ` - ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }
