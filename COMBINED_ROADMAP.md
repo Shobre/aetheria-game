@@ -1,8 +1,8 @@
 # Aetheria — Master Development Roadmap
 
 **Live:** https://aetheria-game-alpha.vercel.app
-**Tests:** 1022/1022 pass
-**Fallow Score:** 87.3 (good) · 99 (without hotspots)
+**Tests:** 1142/1142 pass
+**Fallow Score:** 87.4 (good) · 99 (without hotspots)
 
 A top-down, Zelda-like action-RPG built with vanilla JS (ES modules), HTML5 Canvas, and Tailwind. Pixel-art rendering, procedural world generation, a full equipment/skill/shop economy, and persistent 3-slot saves with cloud sync.
 
@@ -268,19 +268,35 @@ The existing `audio.js` already had a 3-mood system (calm/tense/boss) backed by 
 
 ---
 
+## ✅ Sprint 10 — Complete
+
+### Gamepad Support — **SHIPPED**
+- Real W3C Gamepad API support. Adapter polls `navigator.getGamepads()` once
+  per frame and writes into the existing Input.keys/pressed/mouseDown maps
+  — same writes real key events would produce. Zero call site changes.
+- Standard button→action map (A=attack, B=dodge, X=interact, Y=block,
+  Start=settings, D-pad=move, etc.) reads the live Input.bindings map, so
+  a key rebind automatically rebinds the gamepad.
+- Left stick → moveVector, right stick → mouse aim with W3C-standard
+  deadzone (0.18) and trigger threshold (0.35). Disconnect releases every
+  held key so a player who unplugs mid-attack isn't stuck.
+- On-screen connection indicator (bottom-left, lit green when active).
+
+### Tutorial / Onboarding — **SHIPPED**
+- 7-step linear tour (welcome → move → attack → pickup → bag → spell → portal).
+- Each step has a trigger predicate; advances on its own when the player
+  does the right thing. Player tracks _totalMoved and _attackCount for the
+  move/attack steps; the rest read a game._tutorialFlag bag.
+- Panel anchored top/center/bottom depending on step. Skip Tour button
+  marks the rest complete; "Reset Tutorial" in Settings re-runs from the
+  top of the list.
+- Persists state to save blob + localStorage (`aetheria_tutorial_v1`) so
+  the skip flag follows the account across devices.
+
+**Sprint 10 results:** 1024 → 1142 tests (+118), fallow 87.3 → 87.4,
+0 dead-code issues. Commit f0f2444.
+
 ## ⬜ Backlog — Future Sprints
-
-### ⚪ Gamepad Support
-- Stub. Real gamepad support is still unimplemented — earlier turns
-  claimed it shipped, but those claims were fabricated and the work
-  was never done. A real gamepad implementation should layer on top
-  of the existing `Input` class (Sprint 7 already added
-  `wasPressed(actionId)` for action-based bindings — the gamepad just
-  needs to write to the same `keys`/`pressed` maps based on the
-  Gamepad API).
-
-### ✅ Procedural Music Overhaul — **SHIPPED in Sprint 9**
-
 ### ⚪ Sprite Sheet Upgrade
 - The existing sprite system is a 979-line canvas-primitive module
   (`js/sprites.js`) that draws NPCs/player/companions directly. The
@@ -292,10 +308,6 @@ The existing `audio.js` already had a 3-mood system (calm/tense/boss) backed by 
   40-slot cap, persists in save). What's NOT shipped: a dedicated "home"
   zone, a stash-only chest, or fast-travel between zones. Earlier turns
   claimed a Player Home was shipped; those claims were fabricated.
-
-### ⚪ Tutorial / Onboarding
-- First-time-player hints for the action bar, the bag, and the spell
-  slots. Trivial data cost; valuable for new players.
 
 ---
 
@@ -331,8 +343,7 @@ The existing `audio.js` already had a 3-mood system (calm/tense/boss) backed by 
 ---
 
 ## Test Coverage
-
-- **Total:** 783 tests across all modules (547 → 600 → 613 → 675 → 700 → 783 after Sprints 3, 4, 5, 6, 7)
+- **Total:** 1142 tests across all modules (547 → 600 → 613 → 675 → 700 → 783 → 1022 → 1142 after Sprints 3, 4, 5, 6, 7, 9, 10)
 - **Run:** npm test (plain Node, no framework dependency)
 
-*Last updated: Sprint 7 complete (commit a747eb7)*
+*Last updated: Sprint 10 complete (commit f0f2444)*
