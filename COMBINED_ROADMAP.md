@@ -232,4 +232,4 @@ Repurpose Merchants Hut as player home with expanded storage
 - **Total:** 675 tests across all modules (547 → 600 → 613 → 675 after Sprints 3, 4, 5)
 - **Run:** npm test (plain Node, no framework dependency)
 
-*Last updated: Sprint 5 complete (commit pending)*
+*Last updated: Sprint 5 complete (commit 8300981)*
