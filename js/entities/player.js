@@ -377,12 +377,12 @@ export class Player {
       ctx.stroke();
     }
     // weapon silhouette at tip
-    this._drawWeaponShape(ctx, reach, opts);
+    this._drawWeaponShape(ctx, reach, opts, prog);
     ctx.restore();
   }
   // Draws a recognizable weapon shape at the tip of the slash arc.
   // ctx is already rotated to the slash direction (pointing outward).
-  _drawWeaponShape(ctx, reach, opts){
+  _drawWeaponShape(ctx, reach, opts, prog){
     const k = opts.kind;
     const woodC = '#5a3a22';
     const wc = opts.bladeColor;

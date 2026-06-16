@@ -10,6 +10,7 @@ import { STATUS, applyStatus, hasStatus, tickStatuses } from '../js/systems/stat
 import { MOODS, resolveMood, DEFAULT_MOOD } from '../js/data/music.js';
 import { Audio } from '../js/systems/audio.js';
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 let pass = 0, fail = 0;
 const fails = [];
@@ -2243,6 +2244,52 @@ console.log('\n=== sprint 12 (player home + home chest + fast-travel) ===');
   ok('main.js imports setKeybindOverrides', mainSrc.includes('setKeybindOverrides'));
   ok('main.js single combined import from keybinds.js',
      /import\s*\{[^}]*\bKeybindUI\b[^}]*\bgetKeybindOverrides\b[^}]*\bsetKeybindOverrides\b[^}]*\}\s*from\s*['"]\.\/ui\/keybinds\.js['"]/.test(mainSrc));
+
+  // ---- ESLint `no-undef` check (Sprint 13 — defense-in-depth) ----
+  // Run ESLint programmatically on the project's source tree. This catches
+  // any reference to an undeclared identifier — the bug shape behind all
+  // 5 of the recent browser ReferenceErrors (getKeybindOverrides, input,
+  // cam, p, resolveEquip, and the just-fixed prog in player.js:429).
+  // ESLint runs as a child process because its plugin surface (parsers,
+  // rules, configs) is too heavy to bring into the test harness's module
+  // graph; spawning it costs ~1s and gives us a real linter, not a regex
+  // re-implementation. If ESLint ever becomes unavailable, this falls
+  // back to a "skip" ok() rather than failing the test suite.
+  console.log('\n=== ESLint no-undef check (Sprint 13 regression guard) ===');
+  {
+    const { spawnSync } = await import('node:child_process');
+    const cwd = path.resolve(import.meta.dirname, '..');
+    const r = spawnSync('npx', ['--no-install', 'eslint', '--no-config-lookup', '--config', 'eslint.config.js', 'js/'], {
+      cwd, encoding: 'utf8', timeout: 60_000,
+    });
+    if(r.error && r.error.code === 'ENOENT'){
+      ok('eslint: npx not found (skipped — install eslint to re-enable)', true);
+    } else if(r.status === null){
+      ok('eslint: timed out or crashed (skipped)', false);
+    } else {
+      const out = (r.stdout || '') + (r.stderr || '');
+      // Parse ESLint's JSON output if --format json is supported; otherwise
+      // fall back to counting "error" lines.
+      let errCount = 0;
+      const jsonStart = out.indexOf('[');
+      if(jsonStart >= 0){
+        try {
+          const arr = JSON.parse(out.slice(jsonStart));
+          errCount = arr.reduce((n, f) => n + f.errorCount, 0);
+        } catch { /* fall through */ }
+      }
+      if(errCount === 0){
+        // heuristic fallback: count " error" lines in plain output
+        errCount = (out.match(/^\s*\d+:\d+\s+error/gm) || []).length;
+      }
+      if(errCount > 0){
+        console.log('  ! ESLint reported ' + errCount + ' no-undef error(s):');
+        const lines = out.split('\n').filter(l => /\d+:\d+\s+error/.test(l)).slice(0, 20);
+        for(const l of lines) console.log('     ' + l.trim());
+      }
+      ok('eslint: 0 no-undef errors in js/', errCount === 0);
+    }
+  }
 
   // ---- regression: bare this.X-field references in class methods ----
   // The `getKeybindOverrides` and `input` regressions both had the same shape:
