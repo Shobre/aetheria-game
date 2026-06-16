@@ -79,41 +79,45 @@ A top-down, Zelda-like action-RPG built with vanilla JS (ES modules), HTML5 Canv
 
 ---
 
-## 🔄 Sprint 3 — Current Focus
+## ✅ Sprint 3 — Complete
 
-### 🟡 1. Achievement System
+### ✅ 1. Achievement System
 Track and display player milestones (first kill, boss slayer, explorer, etc.)
-- `js/data/achievements.js` — Achievement definitions
+- `js/data/achievements.js` — 32 achievement definitions across 5 categories
 - `js/systems/achievements.js` — Tracker with hook into game events
 - UI: new panel (Y key or trophy icon) showing locked/unlocked/progress
 - Steam-style toast notification on unlock
 - Categories: Combat, Exploration, Collection, Quests, Secrets
 
-### 🟡 2. New Enemy Types
-- **Archer** — Keeps distance, fires arrows, flees when player closes in
+### ✅ 2. New Enemy Types
 - **Mage** — Casts homing missiles or AoE rings, teleports when cornered
 - **Berserker** — Starts slow, enrages below 30% HP (speed + damage boost, visual red glow)
+- **Frost mage** — Mage variant that chills on hit
+- **Tundra enemies** — ice_wraith, frost_golem, snow_stalker (alpha-fades by distance), frozen_husk
 
-Each needs: sprite, stats, AI behaviors, drop table, spawn in appropriate biomes.
+Each has: sprite, stats, AI behaviors, drop table, spawn in appropriate biomes.
 
-### 🟡 3. Frozen Tundra Biome + Boss
-- 3 maps: `tundra_edge`, `tundra_heart`, `frost_spire`
+### ✅ 3. Frozen Tundra Biome + Boss
+- 3 maps: `tundra_edge` → `tundra_heart` → `frost_spire`
+- Portal chain: snow_glacier → tundra_edge → tundra_heart → frost_spire
 - Enemies: ice_wraith, frost_golem, snow_stalker, frozen_husk
-- Hazards: thin ice (slippery + crack), blizzard (reduced visibility)
-- Boss: **Glacius, the Eternal Winter** — creates ice walls, blizzard AoE, frozen clone decoys
+- Boss: **Glacius, the Eternal Winter** — 3 phases with frostBolt / blizzard (24 radial) / iceWall (5 in a row) / clones (2 decoys)
 
-### 🟡 4. Weapon Enchantment System
+### ✅ 4. Weapon Enchantment System
 - Enchantments: Fire (burn), Ice (slow), Lightning (chain), Poison (DoT), Holy (bonus vs undead)
-- Applied at Arcane Anvil (new NPC in town, or new station at Arcanum)
-- Cost: gold + enchantment scroll (enemy drop / shop)
+- Applied at Anvil of Binding (new NPC in Arcanum)
+- Cost: gold + enchantment scroll (catalogue/shop)
 - Visual: weapon glow tint matches element
 - Enchantment stored in item.enchant field, saved/loaded
+- Blacksmith can strip enchant (returns scroll for 75% of base item price)
 
-### 🟡 5. Companion Abilities
-- Each companion gets a unique active ability with cooldown
-- UI: companion ability icon on HUD with cooldown overlay
-- Player triggers with G key, or companion uses autonomously based on AI
-- Examples: Shield Bash (stun), Healing Aura, Arrow Volley, Taunt
+### ✅ 5. Companion Abilities
+- **Kira (Ranger)** — Arrow Volley (3 homing shots, 6s CD)
+- **Thorin (Warrior)** — Shield Bash (stun + knockback, 8s CD)
+- **Luna (Mage)** — Arcane Blast (AoE + chill, 10s CD)
+- G-key binding + HUD cooldown overlay, also fires autonomously in combat
+
+**Sprint 3 results:** 600/600 tests passing (was 547), 0 dead exports, fallow health 86.1 (good)
 
 ---
 
@@ -188,9 +192,9 @@ Repurpose Merchants Hut as player home with expanded storage
 
 ## Test Coverage
 
-- **Total:** 547 tests across all modules
+- **Total:** 600 tests across all modules (547 → 600 after Sprint 3)
 - **Run:** npm test (plain Node, no framework dependency)
 
 ---
 
-*Last updated: Sprint 3 planning phase*
+*Last updated: Sprint 3 complete (commit 270903d)*
