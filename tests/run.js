@@ -2246,6 +2246,32 @@ console.log('\n=== sprint 12 (player home + home chest + fast-travel) ===');
 }
 
 
+console.log('\n=== smoke test: dynamic import of all boot-path modules (Sprint 12 regression guard) ===');
+{
+  // Re-uses the _smoke_modules.mjs script. Catches the class of bug where
+  // a module references an undefined global at the top level — e.g. the
+  // `getKeybindOverrides is not defined` regression that survived from
+  // Sprint 7 to Sprint 12 because the Node test harness never executed
+  // browser top-level code. The smoke test sets up browser shims and
+  // dynamically imports each module; a ReferenceError there is a page-load
+  // bug in production.
+  const smoke = await import('./_smoke_modules.mjs');
+  smoke.result.summary();
+  ok('boot-path modules: 0 ReferenceErrors', smoke.result.referenceErrors.length === 0);
+  ok('boot-path modules: ' + smoke.result.modules.length + ' modules checked',
+     smoke.result.modules.length >= 5);
+  // Each module should either load OK or fail with a known browser-only
+  // error (canvas.getContext, document is undefined, etc.). The summary
+  // above tags those as "browser-only (expected)".
+  const unexpectedErrors = smoke.result.otherErrors.filter(e => !e.expected);
+  ok('boot-path modules: 0 unexpected errors', unexpectedErrors.length === 0);
+  if(smoke.result.referenceErrors.length > 0 || unexpectedErrors.length > 0){
+    console.log('  ! Boot-path issues detected — page would fail to load in browser:');
+    console.log('    ' + JSON.stringify({ ref: smoke.result.referenceErrors, unex: unexpectedErrors }));
+  }
+}
+
+
 console.log('\n' + (fail === 0 ? '? ALL PASS' : '? FAILURES') + ` - ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }
 
