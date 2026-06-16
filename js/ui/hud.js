@@ -6,6 +6,7 @@ import { rarityColor, rarityName, affixText } from '../data/affixes.js';
 import { QUESTS } from '../data/quests.js';
 import { SPELLS, knownSpells, spellRank } from '../data/spells.js';
 import { reforgeCost, upgradeCost, canUpgrade, stripEnchantCost } from '../systems/craft.js';
+import { AMMO, AMMO_ORDER, DEFAULT_AMMO } from '../data/ammo.js';
 import { drawArmorIcon, drawHelmIcon, drawShieldIcon, drawRingIcon, drawWeaponIcon } from '../sprites.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_CATS, achievementStats } from '../data/achievements.js';
 import { ENCHANTMENTS, enchantCost, enchantInfo } from '../data/enchantments.js';
@@ -62,6 +63,14 @@ export class HUD {
     heatBar.className='hidden';
     heatBar.innerHTML='<div class="heat-fill" id="heat-fill"></div>';
     this.el.itemSlots.parentElement.appendChild(heatBar);
+    // Sprint 5: ammo / quiver bar (shown alongside heat when a ranged weapon is equipped)
+    const ammoBar=document.createElement('div');
+    ammoBar.id='ammo-bar';
+    ammoBar.className='hidden';
+    ammoBar.innerHTML='<span class="ammo-icon" id="ammo-icon">➶</span>'
+      + '<div class="ammo-fill" id="ammo-fill"></div>'
+      + '<span class="ammo-label" id="ammo-label">0</span>';
+    heatBar.parentElement.appendChild(ammoBar);
   }
 
   // generic drag-to-swap between slots of the same kind ('hotbar' | 'spell')
@@ -265,7 +274,7 @@ export class HUD {
     cells.forEach((c,i)=>{
       const item=inv[i];
       if(item){ let cmpHtml='';
-        if(item.type!=='consumable'){ const cmp=compareItem(item,eq);
+        if(item.type!=='consumable' && item.type!=='ammo'){ const cmp=compareItem(item,eq);
           if(cmp){ cmpHtml=`<span class="cmp cmp-${cmp.dir}">${cmp.text}</span>`; }
           c.style.borderColor=rarityColor(item);
           const ax=affixText(item); c.title=rarityName(item)+' '+item.name+(ax?' ('+ax+')':'')+(cmp?'  score '+cmp.text:''); }
@@ -277,23 +286,67 @@ export class HUD {
         qty.textContent = item.qty>1?item.qty:'';
         c.appendChild(qty);
         if(cmpHtml) c.insertAdjacentHTML('beforeend', cmpHtml);
-        const hint=item.type==='consumable'?'Click to use':'Click to equip';
+        // ammo is auto-consumed on fire — clicking it just shows the tooltip
+        const hint = item.type==='consumable' ? 'Click to use'
+                   : item.type==='ammo'      ? 'Auto-used on ranged fire'
+                   : 'Click to equip';
         this._bindTooltip(c, ()=>this._buildItemTooltip(item,{hint}));
-        c.onclick=()=>{ if(item.type==='consumable') this.game.useConsumable(item.id);
-          else this.game.equipItem(item); this.refreshBag(); };
+        c.onclick=()=>{
+          if(item.type==='consumable') this.game.useConsumable(item.id);
+          else if(item.type==='ammo')  this.toast('Loaded into quiver automatically', '#9bd1ff');
+          else this.game.equipItem(item);
+          this.refreshBag();
+        };
       } else { c.innerHTML=''; c.onclick=null; c.title=''; c.style.borderColor=''; this._hideTooltip(); }
     });
     this.el.goldText.textContent=this.game.player.gold;
     this.el.slotsText.textContent=`${inv.length}/30`;
-    // heat bar
+    // heat bar + ammo bar (ranged weapons)
     const heatBar=document.getElementById('heat-bar');
     const heatFill=document.getElementById('heat-fill');
+    const ammoBar=document.getElementById('ammo-bar');
+    const ammoFill=document.getElementById('ammo-fill');
+    const ammoLabel=document.getElementById('ammo-label');
+    const ammoIcon=document.getElementById('ammo-icon');
     if(heatBar && heatFill){
       const isRanged=this.game.player.ranged;
       heatBar.classList.toggle('hidden',!isRanged);
       if(isRanged){
         heatFill.style.width=Math.min(100,p.heat/this.game.player.heatCap*100)+'%';
         heatFill.className='heat-fill'+(p.heat>=p.heatCap?' overheat':'')+(this.game.player._overheatCd>0?' cooldown':'');
+      }
+    }
+    // ammo bar: show for bow/crossbow; hide for staff (no ammo) and melee
+    if(ammoBar && ammoFill && ammoLabel && ammoIcon){
+      const weaponId = p.weapon;
+      const kind = weaponId ? (weaponId.includes('crossbow') ? 'crossbow'
+                              : weaponId.startsWith('bow_')    ? 'bow' : null) : null;
+      const needsAmmo = !!kind;
+      ammoBar.classList.toggle('hidden', !needsAmmo);
+      if(needsAmmo){
+        // AMMO_ORDER is the canonical preference list; filter to this kind.
+        const matching = (p.ammo || {});
+        const orderedIds = AMMO_ORDER.filter(id => AMMO[id] && AMMO[id].forKind === kind);
+        let total = 0, activeId = null, activeQty = 0;
+        for(const id of orderedIds){
+          if((matching[id]||0) > 0){
+            total += matching[id];
+            if(!activeId){ activeId=id; activeQty=matching[id]; }
+          }
+        }
+        // visual fill: 30 arrows = 100% bar; soft cap so the bar is readable
+        const cap = 30;
+        ammoFill.style.width = Math.min(100, (total/cap)*100) + '%';
+        ammoFill.className = 'ammo-fill' + (total===0 ? ' empty' : total<=5 ? ' low' : '');
+        ammoLabel.textContent = total>0 ? String(total) : 'none';
+        ammoIcon.textContent = kind==='crossbow' ? '⊢' : '➶';
+        // DEFAULT_AMMO is the "expected" ammo id for this kind — surface a helpful hint
+        // when the player has none of the default and only better types loaded.
+        const expected = DEFAULT_AMMO[kind];
+        ammoBar.title = activeId
+          ? 'Next shot: ' + (AMMO[activeId]?.name || activeId) + ' x' + activeQty
+              + (activeId === expected ? '' : '  (default: ' + (AMMO[expected]?.name||expected) + ')')
+          : 'Out of ammo — buy ' + (AMMO[expected]?.name||expected) + ' from a shop';
       }
     }
   }

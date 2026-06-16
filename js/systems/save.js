@@ -1,6 +1,7 @@
 // Save system: localStorage-backed, 3 slots. Schema v2 (maps, gear, skills).
 import { makeItem } from '../data/gear.js';
 import { STARTING_MAP } from '../data/maps.js';
+import { STARTING_AMMO } from '../data/ammo.js';
 
 const KEY = 'aetheria_saves_v2';
 
@@ -52,6 +53,8 @@ export const SaveSystem = {
       // chests opened, keyed "map:index" so each map persists independently
       openedChests:{},
       boughtSpells:{},
+      // ammo / quiver (Sprint 5) — {ammoId: qty}; sourced from data/ammo.js
+      ammo:{ ...STARTING_AMMO },
     };
     this.save(n, state);
     return state;

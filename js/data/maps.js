@@ -23,6 +23,7 @@ export const MAPS = {
     chests:[
       { x:50, y:38, loot:{type:'item',id:'potion',qty:3} },
       { x:6,  y:8,  loot:{type:'gold',amount:40} },
+      { x:42, y:30, loot:{type:'item',id:'arrow_wood',qty:15} },
     ],
   },
 
@@ -42,6 +43,7 @@ export const MAPS = {
     chests:[
       { x:45, y:10, loot:{type:'item',id:'armor_leather',qty:1} },
       { x:10, y:42, loot:{type:'gold',amount:75} },
+      { x:30, y:35, loot:{type:'item',id:'arrow_iron',qty:12} },
     ],
   },
 
@@ -204,7 +206,7 @@ export const MAPS = {
     enemies:{ count:0, types:[] },
     portals:[ { x:6, y:12, to:'city', tx:42, ty:31, label:'Plaza', door:true } ],
     npcs:[ { x:7, y:5, name:'Trader Pol', icon:'◆', shop:true,
-      stock:['bow_short','bow_long','crossbow','dagger','dagger_venom','armor_leather','shield_wood','ring_vigor','ring_power','potion','bomb'],
+      stock:['bow_short','bow_long','crossbow','dagger','dagger_venom','armor_leather','shield_wood','ring_vigor','ring_power','potion','bomb','arrow_wood','arrow_iron','bolt_wood','bolt_iron'],
       lines:['A bit of everything!','Press F to shop.'] } ],
     chests:[],
   },
@@ -341,6 +343,7 @@ export const MAPS = {
     chests:[
       { x:8, y:36, loot:{type:'gold',amount:180} },
       { x:42, y:8, loot:{type:'item',id:'potion_l',qty:2} },
+      { x:25, y:25, loot:{type:'item',id:'bolt_iron',qty:15} },
     ],
   },
   tundra_heart: {

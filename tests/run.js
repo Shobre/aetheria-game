@@ -1070,6 +1070,147 @@ console.log('\n=== sprint 4 (spawn, log, balance) ===');
 }
 
 
+// ============ Sprint 5 — Ammo / Quiver System ============
+console.log('\n=== sprint 5 (ammo / quiver) ===');
+{
+  const am = await import('../js/data/ammo.js');
+  const gear = await import('../js/data/gear.js');
+  const maps = await import('../js/data/maps.js');
+  const save = await import('../js/systems/save.js');
+  const enemyMod = await import('../js/entities/enemy.js');
+
+  // ---- AMMO registry shape ----
+  ok('AMMO registry exported', am.AMMO && typeof am.AMMO === 'object');
+  ok('AMMO has arrow_wood', 'arrow_wood' in am.AMMO);
+  ok('AMMO has arrow_iron', 'arrow_iron' in am.AMMO);
+  ok('AMMO has arrow_fire', 'arrow_fire' in am.AMMO);
+  ok('AMMO has bolt_wood', 'bolt_wood' in am.AMMO);
+  ok('AMMO has bolt_iron', 'bolt_iron' in am.AMMO);
+  ok('AMMO has exactly 5 entries', Object.keys(am.AMMO).length === 5);
+
+  // each entry has the required shape
+  for(const id of Object.keys(am.AMMO)){
+    const e = am.AMMO[id];
+    ok('AMMO.' + id + ' has name/icon/price/sell/forKind',
+       typeof e.name === 'string' && typeof e.icon === 'string'
+       && Number.isFinite(e.price) && Number.isFinite(e.sell)
+       && (e.forKind === 'bow' || e.forKind === 'crossbow'));
+  }
+
+  // arrows fit bows, bolts fit crossbows
+  ok('arrow_wood.forKind === bow', am.AMMO.arrow_wood.forKind === 'bow');
+  ok('bolt_iron.forKind === crossbow', am.AMMO.bolt_iron.forKind === 'crossbow');
+  // arrows don't fit crossbows
+  for(const arrowId of ['arrow_wood','arrow_iron','arrow_fire']){
+    ok(arrowId + ' is rejected for crossbow kind', am.ammoForKind('crossbow').indexOf(arrowId) === -1);
+  }
+  // bolts don't fit bows
+  for(const boltId of ['bolt_wood','bolt_iron']){
+    ok(boltId + ' is rejected for bow kind', am.ammoForKind('bow').indexOf(boltId) === -1);
+  }
+
+  // ---- rangedWeaponKind() ----
+  eq('rangedWeaponKind(bow_short) = bow', am.rangedWeaponKind('bow_short'), 'bow');
+  eq('rangedWeaponKind(bow_long) = bow', am.rangedWeaponKind('bow_long'), 'bow');
+  eq('rangedWeaponKind(crossbow) = crossbow', am.rangedWeaponKind('crossbow'), 'crossbow');
+  eq('rangedWeaponKind(staff_arcane) = null (uses MP)', am.rangedWeaponKind('staff_arcane'), null);
+  eq('rangedWeaponKind(sword_iron) = null (melee)', am.rangedWeaponKind('sword_iron'), null);
+  eq('rangedWeaponKind(null) = null', am.rangedWeaponKind(null), null);
+
+  // ---- weaponNeedsAmmo() ----
+  ok('weaponNeedsAmmo(bow) = true', am.weaponNeedsAmmo('bow') === true);
+  ok('weaponNeedsAmmo(crossbow) = true', am.weaponNeedsAmmo('crossbow') === true);
+  ok('weaponNeedsAmmo(staff) = false', am.weaponNeedsAmmo('staff') === false);
+
+  // ---- ammoForKind preference order: best first ----
+  // bows should prefer arrow_fire > arrow_iron > arrow_wood
+  const bowOrder = am.ammoForKind('bow');
+  ok('bow ammo order has arrow_fire first', bowOrder[0] === 'arrow_fire');
+  ok('bow ammo order has arrow_wood last', bowOrder[bowOrder.length-1] === 'arrow_wood');
+  // crossbow should prefer bolt_iron > bolt_wood
+  const xbowOrder = am.ammoForKind('crossbow');
+  ok('crossbow ammo order has bolt_iron first', xbowOrder[0] === 'bolt_iron');
+
+  // ---- AMMO stats: iron/fire have atkBonus, wood does not ----
+  eq('arrow_wood.atkBonus = 0', am.AMMO.arrow_wood.atkBonus, 0);
+  ok('arrow_iron.atkBonus > 0', am.AMMO.arrow_iron.atkBonus > 0);
+  ok('arrow_fire.atkBonus >= arrow_iron.atkBonus',
+     am.AMMO.arrow_fire.atkBonus >= am.AMMO.arrow_iron.atkBonus);
+  ok('arrow_fire has burn status', am.AMMO.arrow_fire.statusOnHit === 'burn');
+  ok('arrow_fire burn duration > 0', am.AMMO.arrow_fire.statusDur > 0);
+
+  // ---- gear.js exposes ammo items in CATALOG ----
+  ok('gear.CATALOG.arrow_wood exists', 'arrow_wood' in gear.CATALOG);
+  ok('gear.CATALOG.arrow_wood.type = ammo', gear.CATALOG.arrow_wood.type === 'ammo');
+  ok('gear.CATALOG.bolt_iron.type = ammo', gear.CATALOG.bolt_iron.type === 'ammo');
+  ok('ammo catalog items have ammo field', gear.CATALOG.arrow_wood.ammo === 'arrow_wood');
+
+  // ---- makeItem creates ammo with qty ----
+  const arrows = gear.makeItem('arrow_wood', 20);
+  ok('makeItem(arrow_wood, 20).type = ammo', arrows.type === 'ammo');
+  eq('makeItem(arrow_wood, 20).qty = 20', arrows.qty, 20);
+  ok('makeItem arrow carries .ammo id', arrows.ammo === 'arrow_wood');
+
+  // ---- makeItem legacy behavior preserved ----
+  const potion = gear.makeItem('potion', 3);
+  ok('potion is still consumable', potion.type === 'consumable');
+  eq('potion qty preserved', potion.qty, 3);
+  ok('potion has no .ammo field', potion.ammo === undefined);
+
+  // ---- Projectile stores statusDur and passes it to applyStatus ----
+  const stub = { statuses: {} };
+  // re-import status module to use the real applyStatus
+  const statMod = await import('../js/systems/status.js');
+  // Create a fire-arrow Projectile, manually invoke hit on a stub enemy
+  const { Projectile } = enemyMod;
+  const fireProj = new Projectile(0, 0, 0, { speed: 1, dmg: 5, status: 'burn', statusDur: 4.0 });
+  eq('Projectile stores status', fireProj.status, 'burn');
+  eq('Projectile stores statusDur', fireProj.statusDur, 4.0);
+  // Apply via the same path the projectile uses: applyStatus(stub, status, dur)
+  statMod.applyStatus(stub, fireProj.status, fireProj.statusDur || undefined);
+  ok('fire-arrow burn applied with custom duration',
+     stub.statuses.burn && Math.abs(stub.statuses.burn.time - 4.0) < 1e-6);
+  // Wood arrow should NOT apply a status (no statusOnHit)
+  const woodProj = new Projectile(0, 0, 0, { speed: 1, dmg: 5 });
+  eq('wood arrow has no status', woodProj.status, null);
+  ok('wood arrow has no statusDur', !woodProj.statusDur);
+
+  // ---- save.newGame starts the player with ammo ----
+  // Mock localStorage for the test environment
+  const origLS = globalThis.localStorage;
+  const store = {};
+  globalThis.localStorage = {
+    getItem: (k) => k in store ? store[k] : null,
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: (k) => { delete store[k]; },
+  };
+  try {
+    const fresh = save.SaveSystem.newGame(1);
+    ok('newGame state has ammo', fresh.ammo && typeof fresh.ammo === 'object');
+    ok('newGame starts with arrow_wood > 0', (fresh.ammo.arrow_wood||0) > 0);
+    ok('newGame starts with bolt_wood > 0', (fresh.ammo.bolt_wood||0) > 0);
+  } finally {
+    globalThis.localStorage = origLS;
+  }
+
+  // ---- General Store sells ammo ----
+  const general = maps.MAPS.shop_general;
+  ok('shop_general has stock', Array.isArray(general.npcs[0].stock));
+  ok('shop_general stock includes arrow_wood', general.npcs[0].stock.includes('arrow_wood'));
+  ok('shop_general stock includes arrow_iron', general.npcs[0].stock.includes('arrow_iron'));
+  ok('shop_general stock includes bolt_wood',  general.npcs[0].stock.includes('bolt_wood'));
+  ok('shop_general stock includes bolt_iron',  general.npcs[0].stock.includes('bolt_iron'));
+
+  // ---- Starter ammo chests in maps ----
+  const meadow = maps.MAPS.meadow;
+  ok('meadow has an arrow chest', meadow.chests.some(c => c.loot && c.loot.id === 'arrow_wood'));
+  const forest = maps.MAPS.forest;
+  ok('forest has an arrow_iron chest', forest.chests.some(c => c.loot && c.loot.id === 'arrow_iron'));
+  const tundra = maps.MAPS.tundra_edge;
+  ok('tundra_edge has a bolt_iron chest', tundra.chests.some(c => c.loot && c.loot.id === 'bolt_iron'));
+}
+
+
 
 console.log('\n' + (fail === 0 ? '? ALL PASS' : '? FAILURES') + ` - ${pass} passed, ${fail} failed`);
 if(fail > 0){ console.log('Failed: ' + fails.join('; ')); process.exit(1); }

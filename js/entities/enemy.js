@@ -606,6 +606,7 @@ export class Projectile {
     this.color=opts.color||'#ffcf4d'; this.life=opts.life||1.2;
     this.kind=opts.kind||'fire'; this.hostile=opts.hostile||false;
     this.aoe=opts.aoe||0; this.status=opts.status||null;
+    this.statusDur=opts.statusDur||0;  // Sprint 5: ammo elemental duration override
     this.chain=opts.chain||0; this.crit=opts.crit||false; this.lifesteal=opts.lifesteal||0;
     this.hitSet=null; this.dead=false; this.trail=[];
   }
@@ -641,7 +642,7 @@ export class Projectile {
       if(this.aoe) this._applyAoe(game,enemies);
       else { boss.hit(this.dmg,this.angle,game,3);
         if(this.kind==='ice') boss.freeze(1.0);
-        else if(this.status) applyStatus(boss,this.status); }
+        else if(this.status) applyStatus(boss,this.status,this.statusDur||undefined); }
       if(this.lifesteal>0) game.player.heal(this.dmg*this.lifesteal,game);
       this.dead=true; game.spawnParticles(this.x,this.y,this.color,8); }
   }
@@ -654,7 +655,7 @@ export class Projectile {
       e.hit(this.dmg,this.angle,game,5);
       if(this.crit) game.floater('CRIT',e.x,e.y-24,'#ffcf4d');
       if(this.kind==='ice') e.freeze(1.5);
-      else if(this.status) applyStatus(e,this.status);
+      else if(this.status) applyStatus(e,this.status,this.statusDur||undefined);
       if(this.lifesteal>0) game.player.heal(this.dmg*this.lifesteal,game);
       game.spawnParticles(this.x,this.y,this.color,8);
       if(this.chain>0){

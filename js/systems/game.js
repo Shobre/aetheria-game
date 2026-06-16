@@ -16,6 +16,7 @@ import { reforge, upgrade, reforgeCost, upgradeCost, canUpgrade, stripEnchantCos
 import { Companion, COMPANIONS } from '../entities/companion.js';
 import { ENCHANTMENTS, applyEnchant, enchantCost, enchantInfo } from '../data/enchantments.js';
 import { applyStatus } from './status.js';
+import { AMMO, ammoForKind, rangedWeaponKind } from '../data/ammo.js';
 
 // Display names for the toast when a companion joins. Kept in sync with
 // COMPANION_ABILITIES in companion.js (which is private to that module).
@@ -427,14 +428,46 @@ export class Game {
   }
   _fireRangedShot(p){
     if(p._overheatCd>0) return;
+    // Sprint 5: ammo gate. Bows + crossbows need ammo; staff does not.
+    const weaponId = p.weapon;  // e.g. 'bow_short', 'crossbow', 'staff_arcane'
+    let ammoId = null, ammoAtkBonus = 0, ammoStatus = null, ammoStatusDur = 0;
+    if(weaponId){
+      // dynamic import would be heavy; use direct module path since ammo.js has no DOM deps
+      const am = rangedWeaponKind(weaponId);
+      if(am){
+        // pick the best ammo the player has for this weapon kind
+        const list = ammoForKind(am);
+        for(const id of list){
+          if((p.ammo[id]||0) > 0){ ammoId = id; break; }
+        }
+        if(!ammoId){
+          this.floater('NO AMMO', p.x, p.y-30, '#ff5a4d');
+          this.sfx('block');  // little "click" feedback
+          return;
+        }
+        const ad = AMMO[ammoId];
+        ammoAtkBonus = ad.atkBonus||0;
+        ammoStatus = ad.statusOnHit||null;
+        ammoStatusDur = ad.statusDur||0;
+        p.ammo[ammoId] -= 1;
+        if(p.ammo[ammoId] <= 0) delete p.ammo[ammoId];
+      }
+    }
     const heatCost=12*(p._heatReduction||1);
     p.heat=Math.min(p.heatCap,p.heat+heatCost);
     if(p.heat>=p.heatCap){ p._overheatCd=3; this.floater('OVERHEAT!',p.x,p.y-30,'#f44'); }
-    let dmg=Math.round(p.atk*p.dmgMul*(p._rangedAtkMul||1)*0.85);
+    let dmg=Math.round((p.atk + ammoAtkBonus)*p.dmgMul*(p._rangedAtkMul||1)*0.85);
     const crit=Math.random()*100<p.crit; if(crit) dmg*=2;
     this.projectiles.push(new Projectile(p.x,p.y,p._aim,
       {speed:p.shotSpeed,dmg,r:5,color:'#ffe6a0',kind:'phys',life:1.3,
-       crit, lifesteal:p.lifesteal||0}));
+       crit, lifesteal:p.lifesteal||0,
+       // pass ammo status through the existing projectile status hook
+       status: ammoStatus, statusDur: ammoStatusDur}));
+    // low-ammo ping: when crossing into single digits, brief HUD flash
+    const total = ammoId ? (p.ammo[ammoId]||0) : 0;
+    if(ammoId && total>0 && total<=5){
+      this.toast('Low ammo: '+total+' '+AMMO[ammoId].name.replace(/s$/,'')+(total===1?'':'s')+' left', '#ff9a6a');
+    }
   }
   doMeleeAttack(p){
     if(p.ranged){ this._fireRangedShot(p); return; }
@@ -557,10 +590,20 @@ export class Game {
   // ---- inventory / equipment ----
   addItem(item){
     if(!item) return;
-    if(item.type==='consumable'){
-      const ex=this.inventory.find(i=>i.id===item.id && i.type==='consumable');
-      if(ex){ ex.qty+=item.qty; } else this.inventory.push({...item});
-      if(!this.hotbar.includes(item.id)){ const idx=this.hotbar.indexOf(null); if(idx>=0) this.hotbar[idx]=item.id; }
+    if(item.type==='consumable' || item.type==='ammo'){
+      // Stack by id. Ammo uses the same path as consumables (qty accumulator)
+      // but we skip the hotbar assignment for ammo — ammo auto-consumes on fire.
+      const ex=this.inventory.find(i=>i.id===item.id && (i.type==='consumable' || i.type==='ammo'));
+      if(ex){ ex.qty+=item.qty; }
+      else this.inventory.push({...item});
+      if(item.type==='consumable' && !this.hotbar.includes(item.id)){
+        const idx=this.hotbar.indexOf(null); if(idx>=0) this.hotbar[idx]=item.id;
+      }
+      // Sprint 5: ammo bought/found auto-loads into the quiver (Zelda-style)
+      if(item.type==='ammo' && item.ammo){
+        if(!this.player.ammo) this.player.ammo = {};
+        this.player.ammo[item.ammo] = (this.player.ammo[item.ammo]||0) + item.qty;
+      }
     } else {
       this.inventory.push({...item}); // gear stacks individually (keeps rarity/affixes)
     }
@@ -843,6 +886,7 @@ export class Game {
       boughtSpells:this._boughtSpells,
       username:this._username,
       heat:this.player.heat, _overheatCd:this.player._overheatCd,
+      ammo:{...this.player.ammo},
       weaponSkills:this._weaponSkills,
       companions:this._companions.map(c=>c.serialize()) };
   }

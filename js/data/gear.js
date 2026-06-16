@@ -23,6 +23,16 @@ export const CATALOG = {
   scroll_poison:   { name:'Scroll of Venom',     icon:'☠', type:'consumable', price:120, sell:40, enchant:'poison' },
   scroll_holy:     { name:'Scroll of Blessing',  icon:'✟', type:'consumable', price:200, sell:80, enchant:'holy' },
 
+  // ---- ammo / quiver (Sprint 5) ----
+  // Stacks in the bag (qty-bearing like consumables) but is NOT used on click —
+  // it auto-consumes when the player fires a matching ranged weapon. The 'ammo'
+  // type keeps it out of the consumable hotbar path.
+  arrow_wood:  { name:'Wooden Arrows',  icon:'➶', type:'ammo', price:8,  sell:3,  ammo:'arrow_wood', qty:1 },
+  arrow_iron:  { name:'Iron Arrows',    icon:'➶', type:'ammo', price:22, sell:9,  ammo:'arrow_iron', qty:1 },
+  arrow_fire:  { name:'Fire Arrows',    icon:'➶', type:'ammo', price:40, sell:16, ammo:'arrow_fire', qty:1 },
+  bolt_wood:   { name:'Wooden Bolts',   icon:'⊢', type:'ammo', price:10, sell:4,  ammo:'bolt_wood',  qty:1 },
+  bolt_iron:   { name:'Iron Bolts',     icon:'⊢', type:'ammo', price:26, sell:10, ammo:'bolt_iron',  qty:1 },
+
   // ---- weapons (atk) ----
   sword_wood:  { name:'Wooden Sword', icon:'↑', type:'weapon', price:0,   sell:5,   stats:{atk:2} },
   sword_iron:  { name:'Iron Sword',   icon:'↑', type:'weapon', price:120, sell:50,  stats:{atk:6} },
@@ -71,8 +81,9 @@ export function makeItem(id, qty){
   const c = CATALOG[id];
   if(!c) return null;
   const it = { id, name:c.name, icon:c.icon, type:c.type };
-  if(c.type==='consumable') it.qty = qty||1;
+  if(c.type==='consumable' || c.type==='ammo') it.qty = qty||1;
   if(c.stats) it.stats = {...c.stats};
+  if(c.ammo) it.ammo = c.ammo;  // ammo items carry their own ammo-type id
   // carry weapon behaviour fields so equipped gear keeps melee/ranged characteristics
   for(const k of ['ranged','atkSpeed','reach','shotSpeed']) if(c[k]!=null) it[k]=c[k];
   return it;

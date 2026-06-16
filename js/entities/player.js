@@ -33,6 +33,8 @@ export class Player {
     // parry system
     this._parryWindow=0;  // seconds remaining for perfect-block window
     this._parried=false;  // flag set when parry succeeds this block
+    // ammo / quiver (Sprint 5) — {ammoId: qty}. Bows + crossbows consume from here.
+    this.ammo = (state.ammo && typeof state.ammo === 'object') ? {...state.ammo} : {};
     // 3 castable spell slots (q/e/r) holding spell ids; rearrangeable in the UI
     this.spellSlots = (state.spellSlots && state.spellSlots.length===3)
       ? [...state.spellSlots] : [...STARTER_SPELLS];

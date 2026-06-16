@@ -466,3 +466,41 @@ body{image-rendering:pixelated}
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+
+/* Sprint 5: ammo / quiver bar (sits below the heat bar) */
+#ammo-bar {
+  width: 120px; height: 10px;
+  background: #1a1a2e;
+  border: 1px solid #4a3a1a;
+  border-radius: 4px;
+  margin: 4px auto 0;
+  overflow: hidden;
+  position: relative;
+}
+#ammo-bar .ammo-icon {
+  position: absolute; left: 4px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 9px; color: #d0b070;
+  pointer-events: none;
+  text-shadow: 0 0 2px #000;
+}
+#ammo-bar .ammo-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #c08850, #f0c070);
+  transition: width 0.15s ease;
+  border-radius: 3px;
+}
+#ammo-bar .ammo-fill.empty {
+  background: #883333;
+  animation: heat-pulse 0.4s infinite;
+}
+#ammo-bar .ammo-fill.low {
+  background: linear-gradient(90deg, #aa6644, #ff9944);
+}
+#ammo-bar .ammo-label {
+  position: absolute; right: 4px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 9px; color: #fff;
+  text-shadow: 0 0 2px #000;
+  font-family: monospace;
+}

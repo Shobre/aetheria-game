@@ -1,8 +1,8 @@
 # Aetheria — Master Development Roadmap
 
 **Live:** https://aetheria-game-alpha.vercel.app
-**Tests:** 547/547 pass
-**Fallow Score:** 89 A (with hotspots) · 99 A (without)
+**Tests:** 675/675 pass
+**Fallow Score:** 86.5 (good) · 99 (without hotspots)
 
 A top-down, Zelda-like action-RPG built with vanilla JS (ES modules), HTML5 Canvas, and Tailwind. Pixel-art rendering, procedural world generation, a full equipment/skill/shop economy, and persistent 3-slot saves with cloud sync.
 
@@ -150,12 +150,30 @@ Enemies used to spawn on chests, NPCs, portals, or stack on each other. New `Wor
 
 **Sprint 4 results:** 613/613 tests passing (was 600), 0 dead exports, fallow health 86.2 (good)
 
----
+## ✅ Sprint 5 — Complete
+
+### ✅ 1. Ammo / Quiver System
+Bows and crossbows now require physical ammo. The Arcane Staff is unchanged (it uses MP).
+- `js/data/ammo.js` — 5 ammo types in a flat registry: arrow_wood, arrow_iron, arrow_fire (burn), bolt_wood, bolt_iron
+- Each entry has `forKind` (bow|crossbow), `atkBonus`, optional `statusOnHit` + `statusDur`, plus price/sell
+- `ammoForKind(kind)` + `rangedWeaponKind(weaponId)` map weapons to the right ammo list
+- A new `ammo` field on the player holds `{ammoId: qty}` — auto-saved via `_buildState()`
+- New game starts with `arrow_wood: 30, bolt_wood: 20` (sourced from `STARTING_AMMO`)
+- `_fireRangedShot()` in `game.js` consumes one unit of the best available ammo on every shot; if the quiver is empty the shot is blocked with a "NO AMMO" floater and a soft "click" SFX
+- The `addItem()` flow auto-loads bought/found ammo into the quiver (Zelda-style — no manual drag)
+- HUD: new `#ammo-bar` element (icon + fill + qty label) sits below the heat bar; pulses red when empty, amber when ≤5
+- HUD bag click handler recognises the new `ammo` type and shows an "Auto-used on ranged fire" hint instead of a "Click to use" prompt
+- Shop stock: General Store now stocks all 4 basic ammo types. Chests in meadow, forest, and tundra_edge drop starter packs
+- Projectile gained a `statusDur` field so elemental ammo (Fire Arrows) can apply burn for a custom duration
+
+### ✅ 2. Ammo data-driven design
+- A single `AMMO_ORDER` array defines the universal preference order (best → worst)
+- `DEFAULT_AMMO` table (`{bow: 'arrow_wood', crossbow: 'bolt_wood'}`) drives the HUD's "expected ammo" hint
+- `weaponNeedsAmmo()` returns false for the staff and any melee weapon, so the gate is a single line
+
+**Sprint 5 results:** 675/675 tests passing (was 613, +62 from ammo suite), 0 dead exports, fallow health 86.5 (good)
 
 ## ⬜ Backlog — Future Sprints
-
-### 🟡 Ammo / Quiver System
-Ranged weapons require arrows/bolts (limited stack). Craftable purchasable ammo types.
 
 ### 🟡 Pathfinding Polish
 - Path smoothing / funnel so enemies cut corners
@@ -211,9 +229,7 @@ Repurpose Merchants Hut as player home with expanded storage
 
 ## Test Coverage
 
-- **Total:** 613 tests across all modules (547 → 600 → 613 after Sprints 3+4)
+- **Total:** 675 tests across all modules (547 → 600 → 613 → 675 after Sprints 3, 4, 5)
 - **Run:** npm test (plain Node, no framework dependency)
 
----
-
-*Last updated: Sprint 3 complete (commit 270903d)*
+*Last updated: Sprint 5 complete (commit pending)*
