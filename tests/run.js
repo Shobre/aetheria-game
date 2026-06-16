@@ -2243,6 +2243,274 @@ console.log('\n=== sprint 12 (player home + home chest + fast-travel) ===');
   ok('main.js imports setKeybindOverrides', mainSrc.includes('setKeybindOverrides'));
   ok('main.js single combined import from keybinds.js',
      /import\s*\{[^}]*\bKeybindUI\b[^}]*\bgetKeybindOverrides\b[^}]*\bsetKeybindOverrides\b[^}]*\}\s*from\s*['"]\.\/ui\/keybinds\.js['"]/.test(mainSrc));
+
+  // ---- regression: bare this.X-field references in class methods ----
+  // The `getKeybindOverrides` and `input` regressions both had the same shape:
+  // a method that uses a bare identifier (e.g. `input`, `getKeybindOverrides`)
+  // instead of `this.input` or the imported name. The Node test harness does
+  // not call Game.start(), Game.update(), etc., so the bug only surfaces in
+  // the browser — and the smoke test only catches top-level reference errors,
+  // not errors inside method bodies. This static check walks every class in
+  // js/ and verifies that any identifier matching a `this.X` field is either
+  // (a) a method parameter, (b) a destructured/imported name, or (c) used as
+  // `this.X`. Anything else is a likely ReferenceError waiting to happen.
+  {
+    const { readdirSync, statSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    const { dirname, join } = await import('node:path');
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const jsRoot = join(__dirname, '..', 'js');
+
+    function stripComments(s){
+      // Strip /* ... */ block comments
+      s = s.replace(/\/\*[\s\S]*?\*\//g, '');
+      // Strip // line comments. We can't just match `//.*$` because that
+      // also matches URLs and the like inside strings — but a single-line
+      // strip with a non-string pre-context is close enough for our use
+      // case. We use a 2-pass approach: first strip multi-line strings and
+      // template literals, then strip comments on the leftover.
+      s = s.replace(/(['"`])(?:\\.|(?!\1).)*?\1/g, '""');
+      s = s.replace(/\/\/[^\n]*/g, '');
+      return s;
+    }
+    function walk(dir, out=[]){
+      for(const f of readdirSync(dir)){
+        const p = join(dir, f);
+        if(statSync(p).isDirectory()) walk(p, out);
+        else if(f.endsWith('.js')) out.push(p);
+      }
+      return out;
+    }
+    function findClasses(src){
+      const out = [];
+      const re = /(?:export\s+)?class\s+(\w+)\s*(?:extends\s+\w+\s*)?\{/g;
+      let m;
+      while((m = re.exec(src))){
+        const name = m[1];
+        let depth = 1, i = m.index + m[0].length;
+        while(i < src.length && depth > 0){
+          if(src[i] === '{') depth++;
+          else if(src[i] === '}') depth--;
+          i++;
+        }
+        out.push({ name, body: src.slice(m.index + m[0].length, i - 1) });
+      }
+      return out;
+    }
+    function findMethods(body){
+      const lines = body.split('\n');
+      const methods = [];
+      let cur = null;
+      for(let li = 0; li < lines.length; li++){
+        const line = lines[li];
+        if(cur === null){
+          // Match: name(args) {   or   name(args)\n  {
+          const h1 = line.match(/^\s{2,4}(\w+)\s*\(([^)]*)\)\s*\{?\s*$/);
+          if(h1){
+            cur = {
+              name: h1[1],
+              // Strip default values: `type='slime'` -> `type`, `x=1` -> `x`
+              params: h1[2].split(',').map(p => p.trim().split(/[=]/)[0].trim()).filter(Boolean),
+              startLine: li,
+              depth: 1
+            };
+          } else {
+            const h2 = line.match(/^\s{2,4}(\w+)\s*\(([^)]*)\)\s*$/);
+            if(h2 && li+1 < lines.length && lines[li+1].match(/^\s*\{/)){
+              cur = {
+                name: h2[1],
+                params: h2[2].split(',').map(p => p.trim().split(/[=]/)[0].trim()).filter(Boolean),
+                startLine: li,
+                depth: 1
+              };
+            }
+          }
+        } else {
+          for(const ch of line){
+            if(ch === '{') cur.depth++;
+            else if(ch === '}'){
+              cur.depth--;
+              if(cur.depth === 0){ cur.endLine = li; methods.push(cur); cur = null; break; }
+            }
+          }
+        }
+      }
+      return methods;
+    }
+    function findFieldNames(src){
+      const set = new Set();
+      const re = /this\.(\w+)\s*[=;]/g;
+      let m;
+      while((m = re.exec(src))) set.add(m[1]);
+      return set;
+    }
+
+    function findLocalNames(methodBody){
+      // Returns a Set of identifiers declared as locals, params, or function
+      // params anywhere in the method body. This is the union of:
+      //   - const|let|var NAME (including comma-separated declarators)
+      //   - for(<type> NAME = ...)
+      //   - function NAME(...)
+      //   - catch (NAME)
+      //   - destructured { a, b } / [a, b]
+      //   - arrow function params: (a, b) => ...  or  name => ...
+      //   - any inline function/method params: name(a, b, c) {
+      //     (this catches object-literal methods like hit(dmg, a, g, knock){...})
+      const set = new Set();
+      // Strip comments + strings to avoid `let foo = "bar"` matching `bar`.
+      // Multi-line template literals are handled by the [^...] class.
+      const scrubbed = methodBody
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '')
+        .replace(/(['"`])(?:\\.|(?!\1).)*?\1/g, '""');
+      // 1) const|let|var NAME — also handle comma-separated declarators
+      // First, find blocks of: const|let|var IDENT = expr [, IDENT = expr]*
+      // Walk char-by-char to handle nested brackets
+      const kwRe = /\b(const|let|var)\b/g;
+      let km;
+      while((km = kwRe.exec(scrubbed))){
+        const start = km.index + km[0].length;
+        // Match first declarator
+        const first = scrubbed.slice(start).match(/^\s*(\w+)/);
+        if(!first) continue;
+        set.add(first[1]);
+        // Walk forward through `, NAME = expr` chains, but stop at ; or unmatched )
+        let i = start + first[0].length;
+        let depth = 0;
+        while(i < scrubbed.length){
+          const ch = scrubbed[i];
+          if(ch === '(' || ch === '[' || ch === '{') depth++;
+          else if(ch === ')' || ch === ']' || ch === '}'){
+            if(depth === 0) break;
+            depth--;
+          } else if(ch === ';' && depth === 0){
+            break;
+          } else if(ch === ',' && depth === 0){
+            // Expect optional whitespace then IDENT
+            const rest = scrubbed.slice(i + 1);
+            const m = rest.match(/^\s*(\w+)\s*=/);
+            if(m){ set.add(m[1]); i += m[0].length; continue; }
+            else break;
+          }
+          i++;
+        }
+      }
+      // 2) for(<type> NAME = ...)
+      const forRe = /\bfor\s*\(\s*(?:const|let|var)?\s*(\w+)\s*=/g;
+      let m;
+      while((m = forRe.exec(scrubbed))) set.add(m[1]);
+      // 3) function NAME(
+      const fnRe = /\bfunction\s+(\w+)\s*\(/g;
+      while((m = fnRe.exec(scrubbed))) set.add(m[1]);
+      // 4) catch (NAME)
+      const catchRe = /\bcatch\s*\(\s*(\w+)\s*\)/g;
+      while((m = catchRe.exec(scrubbed))) set.add(m[1]);
+      // 5) destructuring: const { a, b } = ...  / const [a, b] = ...
+      //    (already covered by the kwRe + comma walk above for simple cases,
+      //    but catch the rest)
+      const objRe = /\b(?:const|let|var)\s*\{([^}]+)\}/g;
+      while((m = objRe.exec(scrubbed))){
+        for(const p of m[1].split(',')){
+          const name = p.trim().split(/[:=]/)[0].trim();
+          if(/^\w+$/.test(name)) set.add(name);
+        }
+      }
+      const arrRe = /\b(?:const|let|var)\s*\[([^\]]+)\]/g;
+      while((m = arrRe.exec(scrubbed))){
+        for(const p of m[1].split(',')){
+          const name = p.trim().split(/[:=]/)[0].trim();
+          if(/^\w+$/.test(name)) set.add(name);
+        }
+      }
+      // 6) arrow function params: (a, b) => ...   or a => ...
+      const arrowRe = /\(\s*([^)=]+)\s*\)\s*=>/g;
+      while((m = arrowRe.exec(scrubbed))){
+        for(const p of m[1].split(',')){
+          const name = p.trim().split(/[:=]/)[0].trim();
+          if(/^\w+$/.test(name)) set.add(name);
+        }
+      }
+      // single-ident arrow param: const key = x => x + 1
+      // be careful: avoid matching `==`, `=>` of ternaries, etc.
+      // The pattern `IDENT =>` only matches when IDENT is preceded by = or , or (
+      const singleArrowRe = /(?:^|[=(,]\s*)(\w+)\s*=>/g;
+      while((m = singleArrowRe.exec(scrubbed))) set.add(m[1]);
+      // 7) Inline function/method params: name(a, b, c) {
+      //    Catches object-literal methods like hit(dmg, a, g, knock){...}
+      //    and callbacks. We use a balanced-paren walker for accuracy.
+      const callRe = /\b(\w+)\s*\(/g;
+      while((m = callRe.exec(scrubbed))){
+        const i = m.index + m[0].length;
+        // Find matching close paren
+        let depth = 1;
+        let j = i;
+        while(j < scrubbed.length && depth > 0){
+          if(scrubbed[j] === '(') depth++;
+          else if(scrubbed[j] === ')') depth--;
+          j++;
+        }
+        const inside = scrubbed.slice(i, j - 1);
+        // For each comma-separated param, take the first identifier
+        // but only if there's a `{` or `=>` soon after (to avoid matching
+        // function calls like `foo(x)` where `x` is a value, not a binding)
+        for(const p of inside.split(',')){
+          const name = p.trim().split(/[:=]/)[0].trim();
+          if(/^\w+$/.test(name) && !['true','false','null','undefined','this','new'].includes(name)){
+            // Heuristic: this is a binding only if the call is followed by
+            // `=>` or `function` or `{`. Skip if not.
+            const after = scrubbed.slice(j, j + 30);
+            if(/(?:^|\s)(?:=>|\{)/.test(after) || m[1] === 'function'){
+              set.add(name);
+            }
+          }
+        }
+      }
+      return set;
+    }
+
+    const files = walk(jsRoot);
+    const allIssues = [];
+    for(const file of files){
+      const raw = readFileSync(file, 'utf8');
+      const src = stripComments(raw);
+      const fields = findFieldNames(src);
+      for(const cls of findClasses(src)){
+        for(const method of findMethods(cls.body)){
+          const body = cls.body.split('\n').slice(method.startLine, (method.endLine || method.startLine) + 1).join('\n');
+          const locals = findLocalNames(body);
+          for(const field of fields){
+            if(method.params.includes(field)) continue;
+            if(locals.has(field)) continue; // shadowed by local decl — intentional
+            // Match bare `field` not preceded by '.' or word char, not followed by '=' (LHS of assignment)
+            const re = new RegExp('(?<![.\\w])' + field + '\\b(?!\\s*=)', 'g');
+            let m;
+            while((m = re.exec(body))){
+              const before = body.slice(Math.max(0, m.index - 30), m.index);
+              if(/[:,{]\s*$/.test(before)) continue; // object/destructuring key
+              const lineInBody = body.slice(0, m.index).split('\n').length;
+              const lineNo = method.startLine + lineInBody;
+              allIssues.push({
+                file: file.replace(__dirname + '/../', ''),
+                cls: cls.name,
+                method: method.name,
+                field,
+                line: lineNo,
+                text: body.split('\n')[lineInBody - 1].trim().slice(0, 120)
+              });
+            }
+          }
+        }
+      }
+    }
+    if(allIssues.length > 0){
+      console.log('  ! bare this.X-field references detected (would throw ReferenceError in browser):');
+      for(const i of allIssues){
+        console.log(`     ${i.file}:${i.line}  ${i.cls}.${i.method}()  bare '${i.field}': ${i.text}`);
+      }
+    }
+    ok('no bare this.X-field references in class methods', allIssues.length === 0);
+  }
 }
 
 

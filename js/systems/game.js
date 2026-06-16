@@ -108,7 +108,7 @@ export class Game {
     // and tutorial runner (the panel UI; the persisted flag bag lives on the
     // game as `this._tutorialFlag` and is read by the trigger predicates in
     // js/data/tutorial.js).
-    this.gamepad = new GamepadAdapter(input, this);
+    this.gamepad = new GamepadAdapter(this.input, this);
     this.tutorial = new Tutorial(this);
     if(state.tutorial) this.tutorial.attachSaveState(state);
     // Fresh flag bag for this run; the tutorial steps check this in their
@@ -434,6 +434,7 @@ export class Game {
         ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
         // torch glow around player
         const p=this.player;
+        const cam=this.cam;
         const grad=ctx.createRadialGradient(p.x-cam.x,p.y-cam.y,10,p.x-cam.x,p.y-cam.y,90);
         grad.addColorStop(0,'rgba(255,180,60,'+(nightAlpha*0.15)+')');
         grad.addColorStop(1,'rgba(255,180,60,0)');
