@@ -2510,6 +2510,78 @@ console.log('\n=== sprint 12 (player home + home chest + fast-travel) ===');
       }
     }
     ok('no bare this.X-field references in class methods', allIssues.length === 0);
+
+    // ---- regression: bare short-identifier references in class methods ----
+    // The `p` regression (commit 31104d9) had a shape the previous check
+    // missed: a method uses a short alias (`p`, `g`, `ctx`, `cam`, `it`,
+    // `el`, `t`, `s`, etc.) as if it were in scope, but the alias is never
+    // declared in that method. The `this.X` check only catches names assigned
+    // to a class field; the `p` / `g` / `ctx` aliases are LOCAL. This block
+    // closes that gap.
+    {
+      const KNOWN_GLOBALS = new Set([
+        'Math','JSON','Date','RegExp','Object','Array','Number','String','Boolean',
+        'Error','TypeError','ReferenceError','RangeError','SyntaxError','URIError',
+        'Promise','Set','Map','WeakMap','WeakSet','Symbol','parseInt','parseFloat',
+        'isNaN','isFinite','NaN','Infinity','undefined','null','true','false',
+        'globalThis','console',
+        'window','document','localStorage','navigator','location','history',
+        'performance','requestAnimationFrame','cancelAnimationFrame',
+        'setTimeout','setInterval','clearTimeout','clearInterval',
+        'Image','Audio','AudioContext','OffscreenCanvas','HTMLElement',
+        'Event','MouseEvent','KeyboardEvent','UIEvent',
+        'fn','cb','el','ev','e','i','j','k','n','x','y','w','h','r','t',
+        'b','d','s','v','a','c','o','f','l','m','q','u','z',
+        'tt','rs','cd','hp','mp','sp','xp','dm','dt','id','op','it',
+        'eq','txt','cfg',
+      ]);
+      function isLikelyGlobal(name){
+        if(KNOWN_GLOBALS.has(name)) return true;
+        if(/^[A-Z]/.test(name)) return true;
+        if(name.length > 3) return true;
+        return false;
+      }
+      const allBareIssues = [];
+      for(const file of files){
+        const raw = readFileSync(file, 'utf8');
+        const src = stripComments(raw);
+        const fields = findFieldNames(src);
+        for(const cls of findClasses(src)){
+          for(const method of findMethods(cls.body)){
+            const body = cls.body.split('\n').slice(method.startLine, (method.endLine || method.startLine) + 1).join('\n');
+            const locals = findLocalNames(body);
+            const re = /(?<![.\w])([a-z]\w{0,2})\.\w+/g;
+            let m;
+            const seen = new Set();
+            while((m = re.exec(body))){
+              const name = m[1];
+              if(seen.has(name)) continue;
+              seen.add(name);
+              if(isLikelyGlobal(name)) continue;
+              if(method.params.includes(name)) continue;
+              if(locals.has(name)) continue;
+              if(fields.has(name)) continue;
+              const lineInBody = body.slice(0, m.index).split('\n').length;
+              const lineText = body.split('\n')[lineInBody - 1] || '';
+              allBareIssues.push({
+                file: file.replace(jsRoot + '/', ''),
+                cls: cls.name,
+                method: method.name,
+                name,
+                lineText: lineText.trim().slice(0, 100)
+              });
+            }
+          }
+        }
+      }
+      if(allBareIssues.length > 0){
+        console.log('  ! bare short-identifier references in class methods (would throw ReferenceError when method runs):');
+        for(const i of allBareIssues){
+          console.log(`     ${i.file}  ${i.cls}.${i.method}()  bare '${i.name}.…': ${i.lineText}`);
+        }
+      }
+      ok('no bare short-identifier references in class methods', allBareIssues.length === 0);
+    }
   }
 }
 
