@@ -25,7 +25,7 @@ export class Player {
     // combat state
     this.attacking=0; this.attackCd=0; this.blocking=false;
     this.dodging=0; this.dodgeCd=0; this.invuln=0; this.dodgeDir={x:0,y:0};
-    this.spellCd={q:0,e:0,r:0};
+    this.spellCd={spell_q:0, spell_e:0, spell_r:0};
     // heat system (ranged weapons)
     this.heat=0;       // 0-100 current heat
     this.heatCap=100;  // max heat before overheat
@@ -134,7 +134,7 @@ export class Player {
     this.mp=Math.min(this.mpMax, this.mp+dt*3*this.mpRegenMul);
     if(!this.dodging) this.stam=Math.min(this.stamMax, this.stam+dt*22);
     this._handleMovement(dt, input, world, game);
-    this.blocking = input.mouseDown.right && !this.dodging && !this._stunned;
+    this.blocking = input.isDown('block') && !this.dodging && !this._stunned;
     if(!this._stunned) this._handleCombat(input, game);
 
     // heat system: decay heat when not shooting, overheat cooldown
@@ -154,7 +154,7 @@ export class Player {
     this.dodgeCd=Math.max(0,this.dodgeCd-dt);
     this.invuln=Math.max(0,this.invuln-dt);
     this.flash=Math.max(0,this.flash-dt);
-    for(const k of ['q','e','r']) this.spellCd[k]=Math.max(0,this.spellCd[k]-dt);
+    for(const k of ['spell_q','spell_e','spell_r']) this.spellCd[k]=Math.max(0,this.spellCd[k]-dt);
     if(this.attacking>0) this.attacking-=dt;
     this.dodging=Math.max(0,this.dodging-dt);
   }
@@ -168,7 +168,7 @@ export class Player {
     }
     const mv=input.moveVector();
     // start a dodge?
-    if(input.wasPressed(' ') && this.dodgeCd<=0 && this.stam>=25 && (mv.x||mv.y)){
+    if(input.wasPressed('dodge') && this.dodgeCd<=0 && this.stam>=25 && (mv.x||mv.y)){
       this.dodging=0.22; this.dodgeCd=0.6; this.invuln=0.28+this.iframeBonus; this.stam-=25;
       this.dodgeDir={...mv}; game.sfx('dodge');
       return;
@@ -190,13 +190,14 @@ export class Player {
       game.sfx(this.ranged?'fire':'swing'); game.doMeleeAttack(this);
     }
     // spells from the q/e/r loadout (data-driven)
-    const keys=['q','e','r'];
+    const slotActions = ['spell_q', 'spell_e', 'spell_r'];
     for(let i=0;i<3;i++){
-      const key=keys[i], id=this.spellSlots[i], spell=id?SPELLS[id]:null;
+      const action=slotActions[i], id=this.spellSlots[i], spell=id?SPELLS[id]:null;
       if(!spell) continue;
-      if(input.wasPressed(key) && this.spellCd[key]<=0 && this.mp>=spell.cost){
-        this.mp-=spell.cost; this.spellCd[key]=spell.cd*cdMul;
+      if(input.wasPressed(action) && this.spellCd[action]<=0 && this.mp>=spell.cost){
+        this.mp-=spell.cost; this.spellCd[action]=spell.cd*cdMul;
         game.castSpell(this, id); game.sfx(spell.sfx||'fire');
+        this.spellLastCast = action;
       }
     }
   }

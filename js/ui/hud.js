@@ -7,6 +7,7 @@ import { QUESTS } from '../data/quests.js';
 import { SPELLS, knownSpells, spellRank } from '../data/spells.js';
 import { reforgeCost, upgradeCost, canUpgrade, stripEnchantCost } from '../systems/craft.js';
 import { AMMO, AMMO_ORDER, DEFAULT_AMMO } from '../data/ammo.js';
+import { labelFor as labelForKey } from '../data/keybinds.js';
 import { drawArmorIcon, drawHelmIcon, drawShieldIcon, drawRingIcon, drawWeaponIcon } from '../sprites.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_CATS, achievementStats } from '../data/achievements.js';
 import { ENCHANTMENTS, enchantCost, enchantInfo } from '../data/enchantments.js';
@@ -201,14 +202,17 @@ export class HUD {
     btn.style.display=can?'flex':'none';
   }
 
-  // spell loadout row (q/e/r): drag to swap, click to open the picker
+  // spell loadout row (q/e/r by default): drag to swap, click to open the picker
+  // Sprint 7: shows the user's currently-bound key, not a hardcoded letter.
   _updateSpellLoadout(){
     const p=this.game.player, el=this.el.spellLoadout; if(!el) return;
-    const keys=['q','e','r'];
+    const slotActions=['spell_q','spell_e','spell_r'];
+    const bindings = (this.game.input && this.game.input.bindings) || {};
     if(el.children.length!==3){
       el.innerHTML='';
       for(let i=0;i<3;i++){ const d=document.createElement('div'); d.className='spell-slot'; d.dataset.idx=i;
-        d.innerHTML=`<span class="key">${keys[i].toUpperCase()}</span><span class="ico"></span><span class="rank"></span><div class="cd"></div>`;
+        const cap = labelForKey(bindings[slotActions[i]] || slotActions[i].slice(-1));
+        d.innerHTML=`<span class="key">${cap}</span><span class="ico"></span><span class="rank"></span><div class="cd"></div>`;
         this._enableSwapDrag(d,i,'spell');
         const sid=p.spellSlots[i]; const r=sid?spellRank(sid):null; const rk=r&&r.rank>1?`<span class="spell-rank">${r.rank}</span>`:''; d.querySelector('.rank').innerHTML=rk;
         this._bindTooltip(d, ()=>{ const sid=this.game.player.spellSlots[i];
@@ -220,7 +224,7 @@ export class HUD {
       const id=p.spellSlots[i], sp=id?SPELLS[id]:null;
       d.querySelector('.ico').textContent=sp?sp.icon:'?';
       const maxCd=sp?sp.cd:1;
-      d.querySelector('.cd').style.height=(p.spellCd[keys[i]]/maxCd*100)+'%';
+      d.querySelector('.cd').style.height=(p.spellCd[slotActions[i]]/maxCd*100)+'%';
       d.title='';
     });
   }

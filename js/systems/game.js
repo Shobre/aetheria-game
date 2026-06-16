@@ -18,6 +18,7 @@ import { ENCHANTMENTS, applyEnchant, enchantCost, enchantInfo } from '../data/en
 import { applyStatus } from './status.js';
 import { AMMO, ammoForKind, rangedWeaponKind } from '../data/ammo.js';
 import { FlowField } from './pathfinding.js';
+import { getKeybindOverrides, setKeybindOverrides } from '../ui/keybinds.js';
 
 // Display names for the toast when a companion joins. Kept in sync with
 // COMPANION_ABILITIES in companion.js (which is private to that module).
@@ -70,6 +71,12 @@ export class Game {
     this._companions=(state.companions||[]).map(c=>Companion.deserialize(c));
     this.openedChests=state.openedChests||{};
     this.stash=(state.stash||[]).map(i=>({...i}));
+    // Sprint 7: restore the player's keybind overrides from the save so rebinds
+    // follow the account across devices. We re-publish them through the public
+    // setKeybindOverrides() helper so the rebind UI picks them up on next mount.
+    if(state.keybinds && typeof state.keybinds === 'object'){
+      try { setKeybindOverrides(state.keybinds); } catch(e) {}
+    }
     this.bossesDead=state.bossesDead||{};
     this._boughtSpells=state.boughtSpells||{};
     this.checkpoint=state.checkpoint||null;
@@ -249,7 +256,7 @@ export class Game {
       if(d<nd){ near={type:'chest',ref:c,label:'Open Chest'}; nd=d; } }
     this.nearInteract=near;
     if(near){ this.hud.showInteract(near.label);
-      if(this.input.wasPressed('f')) this._doInteract(near); }
+      if(this.input.wasPressed('interact')) this._doInteract(near); }
     else this.hud.hideInteract();
   }
   _updateQuestTimers(){
@@ -306,8 +313,8 @@ export class Game {
         this.recruitCompanion(n.companion);
         return;
       }
-      // dismiss companion (talk to any NPC while holding Shift)
-      if(this._companions.length>0 && this.input.shift){
+      // dismiss companion (talk to any NPC while holding the dismiss key)
+      if(this._companions.length>0 && this.input.isDown('dismiss_companion')){
         this.dismissCompanion(); return;
       }
       // quest handling: turn in completed, else offer next available
@@ -904,6 +911,12 @@ export class Game {
   }
 
   _buildState(){
+    // Pull current keybind overrides so they follow the save. The rebind UI
+    // owns the canonical override map; we read via the public helper so
+    // fallow sees this as a real consumer of getKeybindOverrides.
+    let keybinds = {};
+    try { keybinds = getKeybindOverrides() || {}; }
+    catch(e) { keybinds = {}; }
     return { ...this.player.serialize(), slot:this.slot,
       map:this.currentMap, inventory:this.inventory, hotbar:this.hotbar,
       playtime:this.playtime, openedChests:this.openedChests, stash:this.stash,
@@ -914,6 +927,7 @@ export class Game {
       username:this._username,
       heat:this.player.heat, _overheatCd:this.player._overheatCd,
       ammo:{...this.player.ammo},
+      keybinds,
       weaponSkills:this._weaponSkills,
       companions:this._companions.map(c=>c.serialize()) };
   }

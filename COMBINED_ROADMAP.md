@@ -1,8 +1,8 @@
 # Aetheria — Master Development Roadmap
 
 **Live:** https://aetheria-game-alpha.vercel.app
-**Tests:** 700/700 pass
-**Fallow Score:** 86.5 (good) · 99 (without hotspots)
+**Tests:** 783/783 pass
+**Fallow Score:** 86.9 (good) · 99 (without hotspots)
 
 A top-down, Zelda-like action-RPG built with vanilla JS (ES modules), HTML5 Canvas, and Tailwind. Pixel-art rendering, procedural world generation, a full equipment/skill/shop economy, and persistent 3-slot saves with cloud sync.
 
@@ -192,10 +192,34 @@ When 6+ enemies chase the same player, each would otherwise run its own A*. A fl
 
 **Sprint 6 results:** 700/700 tests passing (was 675, +25 from pathfinding suite), 0 dead exports, fallow health 86.5 (good, unchanged)
 
-## ⬜ Backlog — Future Sprints
+## ✅ Sprint 7 — Complete
 
-### ⚪ Rebindable Keys
-Settings panel with click-to-rebind for all actions, stored in localStorage
+### ✅ 1. Rebindable Keys
+A full action/binding system with click-to-rebind UI. Every gameplay verb (move, dodge, attack, block, spells, hotbar, modals) is now an *action* that resolves to whatever key the player has bound. Mouse buttons (LMB/RMB) are still in the registry but exempt from rebinding — there's no good 2-button alternative in a 2-button game.
+- `js/data/keybinds.js` — `ACTIONS` registry (31 actions), `DEFAULT_BIND` (frozen), `REBINDABLE` set, `labelForKey()`, `normalizeKey()`, `mouseKey()`, `findConflict()`, `validateBindings()`
+- `Input` class refactored to be action-based: `wasPressed(actionId)`, `isDown(actionId)`, `moveVector()`. `bindings` is a live map; `rebuildKeyIndex()` rebuilds the reverse key→actions map after a rebind
+- All call sites migrated: `player.js` (dodge, block, spell_q/e/r), `game.js` (interact, dismiss_companion), `interact.js` (dismiss_companion), `main.js` (all modals, hotbar, settings, teleport, companion ability)
+- `spellCd` keys renamed from `q/e/r` to `spell_q/spell_e/spell_r` (consistent with the action system)
+
+### ✅ 2. Rebind UI in Settings
+- New "KEYBINDS" panel inside the Settings modal — `index.html` adds `#keybinds-list`, `#keybinds-reset`, `#keybinds-hint`
+- Click a key chip → it pulses orange ("listening") → next keypress becomes the binding
+- Conflicts highlighted in red via the `findConflict` helper
+- Escape cancels listening
+- "RESET DEFAULTS" button clears overrides
+
+### ✅ 3. Persistence (localStorage + cloud save)
+- Rebinds live in `localStorage[aetheria_keybinds_v1]` (set on every change)
+- `_buildState()` includes `keybinds` in the save blob via `getKeybindOverrides()`
+- `Game.start()` restores them via `setKeybindOverrides()` so the rebind UI picks them up on next mount
+- Bindings follow the player across devices (cloud-save round-trip)
+
+### ✅ 4. Hotbar shows bound key
+- HUD spell hotbar now reads `input.bindings[spell_q/e/r]` and renders `labelForKey()` on the cap, so rebinding Q to F shows "F" on the cap
+
+**Sprint 7 results:** 783/783 tests passing (was 700, +83 from keybinds suite), 0 dead exports, fallow health 86.9 (good, +0.4)
+
+## ⬜ Backlog — Future Sprints
 
 ### ⚪ Gamepad Support
 Left stick move, right stick aim, face buttons for attack/block/dodge/interact, shoulder buttons for spells
@@ -244,7 +268,7 @@ Repurpose Merchants Hut as player home with expanded storage
 
 ## Test Coverage
 
-- **Total:** 700 tests across all modules (547 → 600 → 613 → 675 → 700 after Sprints 3, 4, 5, 6)
+- **Total:** 783 tests across all modules (547 → 600 → 613 → 675 → 700 → 783 after Sprints 3, 4, 5, 6, 7)
 - **Run:** npm test (plain Node, no framework dependency)
 
-*Last updated: Sprint 6 complete (commit a209b04)*
+*Last updated: Sprint 7 complete (commit pending)*

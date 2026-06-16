@@ -1,6 +1,7 @@
 import { Input } from './systems/input.js';
 import { Game } from './systems/game.js';
 import { SaveSystem } from './systems/save.js';
+import { KeybindUI } from './ui/keybinds.js';
 
 
 import { tursoInit, tursoListSlots, tursoLoad, tursoSave, tursoDelete, tursoRegister, tursoLogin } from './systems/turso.js';
@@ -117,6 +118,21 @@ const input=new Input(canvas);
 const game=new Game(canvas,input);
 window.GAME=game;
 
+// Sprint 7: mount the keybind rebind UI inside the Settings modal.
+// Reads localStorage on mount, writes whenever a user rebinds anything.
+KeybindUI.mount({
+  input,
+  container: document.getElementById('keybinds-list'),
+  hintEl:    document.getElementById('keybinds-hint'),
+  resetBtn:  document.getElementById('keybinds-reset'),
+});
+
+// Expose the override helpers for Game to round-trip bindings through saves.
+// The rebind UI owns localStorage; Game.start() writes the loaded overrides
+// back to localStorage so the next mount picks them up. setKeybindOverrides
+// is the explicit programmatic setter (used by the rebind UI itself).
+window.__keybinds = { get: getKeybindOverrides, set: setKeybindOverrides, applyToInput: KeybindUI.applyOverridesToInput, refresh: KeybindUI.refresh };
+
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden'); }
 function fmtTime(ms){ const s=Math.floor(ms/1000),m=Math.floor(s/60); return m+'m '+(s%60)+'s'; }
@@ -157,6 +173,8 @@ async function renderSlotsWithAuth(username){
     } else {
       btn.innerHTML=`<div class="sl-title">SLOT ${slot}</div><div class="sl-empty">— EMPTY —<br><br>Click to start<br>a new game</div>`;
       btn.onclick=()=>{ const s=SaveSystem.newGameUser(username,slot); cloudSave(username,slot,s); launchUser(s,username); };
+      // Reset keybinds to whatever localStorage currently has (preserves the
+      // device's existing rebinds, in case a previous user bound them oddly).
     }
     wrap.appendChild(btn);
   }
@@ -186,7 +204,15 @@ async function cloudDelete(username, slot){
   try { await tursoDelete(username, slot); } catch(e){ console.warn('cloud delete failed', e); }
 }
 
-function launchUser(state,username){ show('game-container'); game.resize(); game.start(state); game._username=username; applySettings(); }
+function launchUser(state,username){
+  show('game-container'); game.resize();
+  // Apply saved keybind overrides BEFORE game.start() so the Input instance
+  // sees them when Player + Game read bindings in their constructors.
+  if(state && state.keybinds && typeof state.keybinds === 'object'){
+    if(window.__keybinds){ window.__keybinds.set(state.keybinds); window.__keybinds.applyToInput(); }
+  }
+  game.start(state); game._username=username; applySettings();
+}
 function launch(state){ show('game-container'); game.resize(); game.start(state); applySettings(); }
 
 // ---- settings ----
@@ -261,24 +287,49 @@ document.getElementById('town-btn').onclick=()=>{ if(game.canTeleportTown && gam
 window.addEventListener('keydown', e=>{
   if(game.running===false) return;
   const k=(e.key||'').toLowerCase();
-  if(k==='escape'){ if(anyModalOpen()) closeAll(); else openModal(settingsModal); if(game.hud) game.hud._hideTooltip(); return; }
-  // toggle modals
-  if(k==='b'){ bagModal.classList.contains('hidden')?openBag():closeModal(bagModal); }
-  if(k==='c'){ charModal.classList.contains('hidden')?openChar():closeModal(charModal); }
-  if(k==='k'){ skillsModal.classList.contains('hidden')?openSkills():closeModal(skillsModal); }
-  if(k==='j'){ questsModal.classList.contains('hidden')?openQuests():closeModal(questsModal); }
-  if(k==='y'){ achievementsModal.classList.contains('hidden')?openAchievements():closeModal(achievementsModal); }
-  if(k==='l'){
+  // Modal toggles — bound to action ids so a Settings rebind actually works.
+  if(game.input.wasPressed('settings')){
+    if(anyModalOpen()) closeAll(); else openModal(settingsModal);
+    if(game.hud) game.hud._hideTooltip(); return;
+  }
+  if(game.input.wasPressed('toggle_bag')){
+    bagModal.classList.contains('hidden')?openBag():closeModal(bagModal);
+  }
+  if(game.input.wasPressed('toggle_char')){
+    charModal.classList.contains('hidden')?openChar():closeModal(charModal);
+  }
+  if(game.input.wasPressed('toggle_skills')){
+    skillsModal.classList.contains('hidden')?openSkills():closeModal(skillsModal);
+  }
+  if(game.input.wasPressed('toggle_quests')){
+    questsModal.classList.contains('hidden')?openQuests():closeModal(questsModal);
+  }
+  if(game.input.wasPressed('toggle_achievements')){
+    achievementsModal.classList.contains('hidden')?openAchievements():closeModal(achievementsModal);
+  }
+  if(game.input.wasPressed('toggle_combat_log')){
     const cl=document.getElementById('combat-log-modal');
     if(cl.classList.contains('hidden')) openModal(cl);
     else closeModal(cl);
   }
-  if(k==='g' && !game.paused){ if(game.triggerCompanionAbility) game.triggerCompanionAbility(); }
-  if(k==='m'){ if(!game.hud) return; const fm=document.getElementById('fullmap-modal');
-    if(fm.classList.contains('hidden')){ game.hud.showFullMap(); openModal(fm); } else closeModal(fm); }
+  if(game.input.wasPressed('companion_ability') && !game.paused){
+    if(game.triggerCompanionAbility) game.triggerCompanionAbility();
+  }
+  if(game.input.wasPressed('toggle_map')){
+    if(!game.hud) return;
+    const fm=document.getElementById('fullmap-modal');
+    if(fm.classList.contains('hidden')){ game.hud.showFullMap(); openModal(fm); } else closeModal(fm);
+  }
+  if(game.input.wasPressed('teleport_town') && game.canTeleportTown && game.canTeleportTown()){
+    game.teleportToTown();
+  }
   // hotbar 1-9 (only when not in a menu)
-  if(k==='t' && game.canTeleportTown && game.canTeleportTown()) game.teleportToTown();
-  if(/^[1-9]$/.test(k) && !game.paused) game.useHotbar(parseInt(k)-1);
+  const hotbarKeys = ['1','2','3','4','5','6','7','8','9'];
+  for(let i=0;i<9;i++){
+    if(game.input.wasPressed('hotbar_' + (i+1)) && !game.paused){
+      game.useHotbar(i); break;
+    }
+  }
 });
 
 window.addEventListener('resize', ()=>game.resize());

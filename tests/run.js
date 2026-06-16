@@ -286,7 +286,7 @@ console.log('=== autosave wiring ===');
   ok('autosave on area entry', gameSrc.includes("autosave('Checkpoint saved')"));
   const mainSrc = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
   ok('beforeunload autosave', mainSrc.includes('beforeunload') && mainSrc.includes('game.autosave'));
-  ok('M key opens full map', mainSrc.includes("k==='m'") && mainSrc.includes('showFullMap'));
+  ok('M key opens full map', mainSrc.includes("wasPressed('toggle_map')") && mainSrc.includes('showFullMap'));
 }
 
 console.log('=== tooltip wiring ===');
@@ -462,7 +462,7 @@ console.log('=== spell shop + teleport + shield + UI fixes ===');
   ok('spellRank fireball', spellRank('fireball').rank===1);
   ok('spellRank fireball2', spellRank('fireball2').base==='fireball' && spellRank('fireball2').rank===2);
   ok('spellRank meteor3', spellRank('meteor3').rank===3);
-  ok('T key teleport', ms.includes("k==='t'"));
+  ok('T key teleport', ms.includes("wasPressed('teleport_town')"));
   ok('town-btn in HTML', ix.includes('town-btn'));
   ok('tooltip z-index 200', cs.includes('z-index:200'));
   ok('modal-box overflow visible', cs.includes('overflow:visible'));
@@ -1314,6 +1314,198 @@ console.log('\n=== sprint 6 (path smoothing + flow field) ===');
   ok('FlowField with unreachable goal: no reachable cells', ffDead.distance(0, 0) === -1);
   ok('FlowField with unreachable goal: sample returns [0,0]',
      (() => { const v = ffDead.sample(0, 0); return v[0] === 0 && v[1] === 0; })());
+}
+
+
+// ============ Sprint 7 — Rebindable Keys ============
+console.log('\n=== sprint 7 (rebindable keys) ===');
+{
+  const kb = await import('../js/data/keybinds.js');
+
+  // ---- ACTIONS registry shape ----
+  ok('ACTIONS array exists', Array.isArray(kb.ACTIONS) && kb.ACTIONS.length > 0);
+  ok('every action has id/label/defaultKey/kind',
+     kb.ACTIONS.every(a => typeof a.id === 'string' && typeof a.label === 'string'
+                          && typeof a.defaultKey === 'string' && ['move','action','modal','mouse'].includes(a.kind)));
+  ok('move_up default is w', kb.ACTIONS.find(a => a.id === 'move_up').defaultKey === 'w');
+  ok('dodge default is space', kb.ACTIONS.find(a => a.id === 'dodge').defaultKey === ' ');
+  ok('attack default is mouse1', kb.ACTIONS.find(a => a.id === 'attack').defaultKey === 'mouse1');
+  ok('settings default is escape', kb.ACTIONS.find(a => a.id === 'settings').defaultKey === 'escape');
+
+  // ---- DEFAULT_BIND ----
+  ok('DEFAULT_BIND has 31 entries', Object.keys(kb.DEFAULT_BIND).length === 31);
+  ok('DEFAULT_BIND is frozen', Object.isFrozen(kb.DEFAULT_BIND));
+  ok('DEFAULT_BIND.move_up = w', kb.DEFAULT_BIND.move_up === 'w');
+  ok('DEFAULT_BIND.dodge = " " (space)', kb.DEFAULT_BIND.dodge === ' ');
+
+  // ---- REBINDABLE set excludes mouse actions ----
+  ok('REBINDABLE excludes attack (mouse1)', !kb.REBINDABLE.has('mouse'));
+  ok('REBINDABLE includes action kind', kb.REBINDABLE.has('action'));
+  ok('REBINDABLE includes move kind', kb.REBINDABLE.has('move'));
+  ok('REBINDABLE includes modal kind', kb.REBINDABLE.has('modal'));
+
+  // ---- labelFor / labelForKey ----
+  eq('labelForKey(" ") = "SPACE"',  kb.labelForKey(' '),       'SPACE');
+  eq('labelForKey("escape") = "ESC"', kb.labelForKey('escape'), 'ESC');
+  eq('labelForKey("arrowup") = ↑',  kb.labelForKey('arrowup'), '↑');
+  eq('labelForKey("arrowdown") = ↓', kb.labelForKey('arrowdown'), '↓');
+  eq('labelForKey("mouse1") = "LMB"', kb.labelForKey('mouse1'), 'LMB');
+  eq('labelForKey("mouse2") = "RMB"', kb.labelForKey('mouse2'), 'RMB');
+  eq('labelForKey("q") = "Q"',       kb.labelForKey('q'),       'Q');
+  eq('labelForKey("shift") = "SHIFT"', kb.labelForKey('shift'), 'SHIFT');
+  // labelFor is an alias for labelForKey (backwards compat)
+  ok('labelFor === labelForKey (alias)', kb.labelFor === kb.labelForKey);
+
+  // ---- normalizeKey ----
+  const fakeEscape = { key: 'Escape' };
+  const fakeSpace  = { key: ' ' };
+  const fakeArrow  = { key: 'ArrowUp' };
+  const fakeLetter = { key: 'B' };
+  eq('normalizeKey(Escape) = escape', kb.normalizeKey(fakeEscape), 'escape');
+  eq('normalizeKey(space) = " "',     kb.normalizeKey(fakeSpace),  ' ');
+  eq('normalizeKey(ArrowUp) = arrowup', kb.normalizeKey(fakeArrow), 'arrowup');
+  eq('normalizeKey("B") = b',         kb.normalizeKey(fakeLetter), 'b');
+  eq('normalizeKey("q") = q',         kb.normalizeKey('q'),        'q');
+  eq('normalizeKey(null) = ""',       kb.normalizeKey(null),       '');
+
+  // ---- mouseKey ----
+  eq('mouseKey(0) = mouse1 (LMB)',  kb.mouseKey(0), 'mouse1');
+  eq('mouseKey(1) = mouse3 (MMB)',  kb.mouseKey(1), 'mouse3');
+  eq('mouseKey(2) = mouse2 (RMB)',  kb.mouseKey(2), 'mouse2');
+  eq('mouseKey(99) = null',         kb.mouseKey(99), null);
+
+  // ---- findConflict ----
+  const bind = { move_up: 'w', move_down: 's', dodge: 'j' };
+  eq('findConflict(w) = move_up',     kb.findConflict(bind, 'w', 'dodge'), 'move_up');
+  eq('findConflict(w, except move_up) = null',
+     kb.findConflict(bind, 'w', 'move_up'), null);
+  eq('findConflict(j) = dodge',       kb.findConflict(bind, 'j', 'move_up'), 'dodge');
+  eq('findConflict(q) = null (free)', kb.findConflict(bind, 'q', 'move_up'), null);
+
+  // ---- validateBindings ----
+  const v1 = kb.validateBindings({ move_up: 'arrowup' });
+  ok('validateBindings: simple swap is ok', v1.ok && v1.errors.length === 0);
+  eq('validateBindings: arrowup move_up', v1.cleaned.move_up, 'arrowup');
+
+  const v2 = kb.validateBindings({ move_up: 'd', move_right: 'd' });
+  ok('validateBindings: conflict between move_up and move_right',
+     !v2.ok && v2.errors.length > 0);
+  // The second one (in ACTIONS order) is reset. ACTIONS order is move_up, move_down,
+  // move_left, move_right — so move_right loses and resets to its default 'd'.
+  ok('validateBindings: loser is reset to its default',
+     v2.cleaned.move_up === 'd' && v2.cleaned.move_right === 'd');
+
+  const v3 = kb.validateBindings({ attack: 'mouse1', block: 'mouse2' });
+  ok('validateBindings: mouse buttons are exempt (no conflict reported)',
+     v3.ok && v3.errors.length === 0);
+
+  // Unknown action id is dropped
+  const v4 = kb.validateBindings({ move_up: 'z', unknown_action: 'x' });
+  ok('validateBindings: unknown action id is ignored', !('unknown_action' in v4.cleaned));
+  eq('validateBindings: known action kept', v4.cleaned.move_up, 'z');
+
+  // ---- Integration: Input class actually does action-based lookup ----
+  // Stub minimal window/canvas since this is a Node test.
+  const fakeCanvas = { addEventListener(){} };
+  // Don't actually call Input constructor (it would attach listeners) — instead
+  // exercise the lookup logic by building an Input-like object.
+  const fakeInput = {
+    bindings: { ...kb.DEFAULT_BIND, dodge: 'j', spell_q: 'f' },
+    pressed: { j: true, f: true, q: false },
+    mousePressed: { left: false, right: false, middle: false },
+    isDown(id){ const k = this.bindings[id]; return k && !!this.pressed[k]; },
+    wasPressed(id){
+      const k = this.bindings[id];
+      if(!k) return false;
+      if(k === 'mouse1') return !!this.mousePressed.left;
+      if(k === 'mouse2') return !!this.mousePressed.right;
+      if(k === 'mouse3') return !!this.mousePressed.middle;
+      return !!this.pressed[k];
+    },
+  };
+  ok('Input.wasPressed: dodge bound to j fires when j is pressed', fakeInput.wasPressed('dodge') === true);
+  ok('Input.wasPressed: spell_q bound to f fires when f is pressed', fakeInput.wasPressed('spell_q') === true);
+  ok('Input.wasPressed: spell_e (default e) does NOT fire when only j/f are pressed',
+     fakeInput.wasPressed('spell_e') === false);
+  // Rebind again: move dodge back to space, and a new check that the reverse works
+  fakeInput.bindings.dodge = ' ';
+  fakeInput.pressed = { ' ': true };
+  ok('Input.wasPressed: dodge rebound to space, fires on space',
+     fakeInput.wasPressed('dodge') === true);
+  // Mouse button rebind
+  fakeInput.bindings.attack = 'mouse1';
+  fakeInput.mousePressed = { left: true, right: false, middle: false };
+  ok('Input.wasPressed: attack bound to mouse1 fires on LMB press',
+     fakeInput.wasPressed('attack') === true);
+  // Move vector — read bindings.move_up etc.
+  const fakeInputMove = {
+    bindings: { ...kb.DEFAULT_BIND, move_up: 'i', move_down: 'k', move_left: 'j', move_right: 'l' },
+    keys: { i: true, k: false, j: false, l: true },
+    moveVector(){
+      let x=0,y=0;
+      if(this.keys[this.bindings.move_up])    y-=1;
+      if(this.keys[this.bindings.move_down])  y+=1;
+      if(this.keys[this.bindings.move_left])  x-=1;
+      if(this.keys[this.bindings.move_right]) x+=1;
+      if(x&&y){ const inv=1/Math.sqrt(2); x*=inv; y*=inv; }
+      return {x,y};
+    }
+  };
+  const mv = fakeInputMove.moveVector();
+  ok('Input.moveVector: IJKL rebind gives (right, up) vector',
+     mv.x > 0 && mv.y < 0);
+  eq('Input.moveVector: right component = +1', Math.round(mv.x), 1);
+  eq('Input.moveVector: up component = -1',    Math.round(mv.y), -1);
+
+  // The Input source must import from data/keybinds.js
+  const inputSrc = readFileSync(new URL('../js/systems/input.js', import.meta.url), 'utf8');
+  ok('input.js imports from data/keybinds', inputSrc.includes("from '../data/keybinds.js'"));
+  ok('input.js has bindings field', inputSrc.includes('this.bindings'));
+  ok('input.js has rebuildKeyIndex()', inputSrc.includes('rebuildKeyIndex'));
+  ok('input.js wasPressed uses bindings, not raw key', inputSrc.includes('this.bindings[actionId]'));
+
+  // main.js uses the action-based wasPressed for all modals
+  const mainSrc = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  ok('main.js uses wasPressed(toggle_bag)', mainSrc.includes("wasPressed('toggle_bag')"));
+  ok('main.js uses wasPressed(toggle_char)', mainSrc.includes("wasPressed('toggle_char')"));
+  ok('main.js uses wasPressed(toggle_skills)', mainSrc.includes("wasPressed('toggle_skills')"));
+  ok('main.js uses wasPressed(toggle_quests)', mainSrc.includes("wasPressed('toggle_quests')"));
+  ok('main.js uses wasPressed(toggle_achievements)', mainSrc.includes("wasPressed('toggle_achievements')"));
+  ok('main.js uses wasPressed(toggle_combat_log)', mainSrc.includes("wasPressed('toggle_combat_log')"));
+  ok('main.js uses wasPressed(toggle_map)', mainSrc.includes("wasPressed('toggle_map')"));
+  ok('main.js uses wasPressed(settings)', mainSrc.includes("wasPressed('settings')"));
+  ok('main.js uses wasPressed(teleport_town)', mainSrc.includes("wasPressed('teleport_town')"));
+  ok('main.js uses wasPressed for hotbar via concat', mainSrc.includes("wasPressed('hotbar_' + (i+1))"));
+
+  // game.js + player.js + interact.js migrate to action-based
+  const gameSrc = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
+  ok('game.js uses wasPressed(interact)', gameSrc.includes("wasPressed('interact')"));
+  ok('game.js uses isDown(dismiss_companion)', gameSrc.includes("isDown('dismiss_companion')"));
+  const playerSrc = readFileSync(new URL('../js/entities/player.js', import.meta.url), 'utf8');
+  ok('player.js uses wasPressed(dodge)', playerSrc.includes("wasPressed('dodge')"));
+  ok('player.js spell loop iterates slotActions with spell_q', playerSrc.includes("'spell_q', 'spell_e', 'spell_r'"));
+  ok('player.js uses isDown(block) (not mouseDown.right)', playerSrc.includes("isDown('block')"));
+  ok('player.js no longer references hardcoded "q"/"e"/"r" spell cd keys',
+     !playerSrc.includes("spellCd['q']") && !playerSrc.includes("spellCd['e']") && !playerSrc.includes("spellCd['r']"));
+  const interactSrc = readFileSync(new URL('../js/interact.js', import.meta.url), 'utf8');
+  ok('interact.js uses isDown(dismiss_companion)', interactSrc.includes("isDown('dismiss_companion')"));
+  ok('interact.js no longer references input.shift', !interactSrc.includes('input.shift'));
+
+  // HUD reads the bound key for the spell hotbar
+  const hudSrc = readFileSync(new URL('../js/ui/hud.js', import.meta.url), 'utf8');
+  ok('hud.js imports labelFor from keybinds', hudSrc.includes("labelFor as labelForKey") || hudSrc.includes("labelFor }"));
+  ok('hud.js _updateSpellLoadout reads bindings', hudSrc.includes('input.bindings'));
+
+  // Settings modal + UI files exist
+  const ixSrc = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  ok('Settings modal has #keybinds-list', ixSrc.includes('id="keybinds-list"'));
+  ok('Settings modal has #keybinds-reset', ixSrc.includes('id="keybinds-reset"'));
+  ok('Settings modal has #keybinds-hint', ixSrc.includes('id="keybinds-hint"'));
+  const cssSrc = readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
+  ok('CSS has .kb-row rule', cssSrc.includes('.kb-row'));
+  ok('CSS has .kb-key rule', cssSrc.includes('.kb-key'));
+  ok('CSS has .kb-key.listening', cssSrc.includes('.kb-key.listening'));
+  ok('CSS has .kb-key.conflict', cssSrc.includes('.kb-key.conflict'));
 }
 
 

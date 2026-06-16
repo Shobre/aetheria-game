@@ -217,6 +217,17 @@
         <label class="setting"><span>SHOW FPS</span><input type="checkbox" id="set-fps"></label>
         <label class="setting"><span>SCREEN SHAKE</span><input type="checkbox" id="set-shake" checked></label>
       </div>
+
+      <!-- Sprint 7: Keybind rebind UI -->
+      <div class="mt-6">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-[11px] text-gold">KEYBINDS</h3>
+          <button id="keybinds-reset" class="text-[9px] text-gray-400 hover:text-gold">RESET DEFAULTS</button>
+        </div>
+        <div id="keybinds-list" class="space-y-1 text-[10px] max-h-64 overflow-y-auto pr-1"></div>
+        <p id="keybinds-hint" class="text-[9px] text-gray-500 mt-2">Click a key, then press the new binding. Mouse buttons cannot be rebound.</p>
+      </div>
+
       <div class="grid grid-cols-3 gap-2 mt-6">
         <button id="save-game-btn" class="menu-btn">SAVE</button>
         <button id="quit-btn" class="menu-btn">QUIT TO MENU</button>

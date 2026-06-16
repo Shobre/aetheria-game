@@ -77,6 +77,21 @@ body{image-rendering:pixelated}
 .setting input[type=range]{width:140px;accent-color:var(--gold)}
 .setting input[type=checkbox]{width:16px;height:16px;accent-color:var(--gold)}
 
+/* Sprint 7: rebind rows in the Settings keybinds panel */
+.kb-row{display:flex;align-items:center;justify-content:space-between;padding:3px 6px;border-radius:3px}
+.kb-row:hover{background:rgba(255,255,255,0.04)}
+.kb-row .kb-label{color:#cfcfcf}
+.kb-row .kb-key{
+  display:inline-block;min-width:48px;text-align:center;
+  padding:2px 8px;border:1px solid #4a3a1a;border-radius:3px;
+  background:#1a1a2e;color:var(--gold);font-family:monospace;
+  cursor:pointer;transition:background 0.1s;
+}
+.kb-row .kb-key:hover{background:#2a2a3e}
+.kb-row .kb-key.listening{background:#ff9a6a;color:#000;animation:kb-pulse 0.6s infinite}
+.kb-row .kb-key.conflict{border-color:#f44;color:#f88}
+@keyframes kb-pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+
 .menu-btn{background:var(--gpanel2);border:2px solid var(--gold);color:#fff;
   padding:.6rem;font-size:9px;cursor:pointer;transition:.15s;font-family:inherit}
 .menu-btn:hover{background:var(--accent)}

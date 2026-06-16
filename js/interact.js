@@ -116,7 +116,7 @@ function _interactNpc(game, n){
     if(game._companions.length>=1){ game.toast('Your party is full. Dismiss your current companion first.'); return; }
     game.recruitCompanion(n.companion); return;
   }
-  if(game._companions.length>0 && game.input.shift){ game.dismissCompanion(); return; }
+  if(game._companions.length>0 && game.input.isDown('dismiss_companion')){ game.dismissCompanion(); return; }
   if(quests){
     const gs=quests.giverState(n.name);
     if(gs.turnIn.length){ quests.turnIn(gs.turnIn[0]); return; }
