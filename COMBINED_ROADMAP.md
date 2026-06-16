@@ -323,11 +323,25 @@ The existing `audio.js` already had a 3-mood system (calm/tense/boss) backed by 
 
 ### ✅ Sprite Sheet Upgrade — **SHIPPED in Sprint 11**
 
-### ⚪ Player Home / Stash Expansion
-- The existing **city bank stash** is real and works (bag↔stash transfer,
-  40-slot cap, persists in save). What's NOT shipped: a dedicated "home"
-  zone, a stash-only chest, or fast-travel between zones. Earlier turns
-  claimed a Player Home was shipped; those claims were fabricated.
+### ✅ Player Home / Stash Expansion — **SHIPPED in Sprint 12**
+- New `home` map (14×12 cozy interior, `home_calm` music) reachable from a
+  door in Aldermere City. Walk to the home door at (6, 38) in the city
+  plaza, or fast-travel from anywhere with `H`.
+- **Home Chest** with `HOME_CHEST_MAX=999` (effectively unlimited) — bypasses
+  the per-city 40-item stash cap. Reachable from the home map's interactable
+  chest, **and** from the "Home Chest" cross-link button in any city's bank
+  modal.
+- **Fast-Travel (H, rebindable):** toggle that teleports to home from any
+  map, then back to the saved `lastLocation` (one-shot recall). 10-second
+  cooldown prevents combat / farming abuse; blocked during boss fights and
+  with enemies nearby.
+- **Migration:** pre-Sprint-12 saves (no `home` field) load fine — game.js
+  defaults `homeChest` to `[]` on first load.
+- The existing **city bank stash** is unchanged and still works (bag↔stash
+  transfer, 40-slot cap, persists in save).
+
+**Sprint 12 results:** 1216 → 1289 tests (+73), fallow 87.6 → 87.7,
+0 dead-code issues. Commit 4139238.
 
 ---
 
@@ -363,7 +377,7 @@ The existing `audio.js` already had a 3-mood system (calm/tense/boss) backed by 
 ---
 
 ## Test Coverage
-- **Total:** 1216 tests across all modules (547 → 600 → 613 → 675 → 700 → 783 → 1022 → 1142 → 1216 after Sprints 3, 4, 5, 6, 7, 9, 10, 11)
+- **Total:** 1289 tests across all modules (547 → 600 → 613 → 675 → 700 → 783 → 1022 → 1142 → 1216 → 1289 after Sprints 3, 4, 5, 6, 7, 9, 10, 11, 12)
 - **Run:** npm test (plain Node, no framework dependency)
 
-*Last updated: Sprint 11 complete (commit 9d924fb)*
+*Last updated: Sprint 12 complete (commit 4139238)*
