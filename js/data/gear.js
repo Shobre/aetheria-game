@@ -32,21 +32,25 @@ export const CATALOG = {
   staff_arcane:{ name:'Arcane Staff', icon:'★', type:'weapon', price:380, sell:160, stats:{atk:7,mp:30,spelldmg:0}, ranged:true, atkSpeed:0.50, shotSpeed:6.5 },
 
   // ---- shields (def + block) ----
-  shield_wood: { name:'Wooden Shield', icon:'■', type:'shield', price:60,  sell:25,  stats:{def:3} },
-  shield_iron: { name:'Iron Shield',   icon:'■', type:'shield', price:200, sell:85,  stats:{def:7} },
+  // Icon chars are kept for HUD slot tags / tooltips; the actual visual is
+  // drawn with canvas primitives in sprites.js (drawShieldIcon).
+  shield_wood: { name:'Wooden Shield', icon:'⌂', type:'shield', price:60,  sell:25,  stats:{def:3} },
+  shield_iron: { name:'Iron Shield',   icon:'⌂', type:'shield', price:200, sell:85,  stats:{def:7} },
 
   // ---- armor (def + hp) ----
-  armor_leather:{ name:'Leather Armor', icon:'□', type:'armor', price:90,  sell:38,  stats:{def:4,hp:20} },
-  armor_chain:  { name:'Chainmail',     icon:'□', type:'armor', price:260, sell:110, stats:{def:9,hp:50} },
-  armor_mage:   { name:'Mage Robe',     icon:'□', type:'armor', price:240, sell:100, stats:{def:3,mp:40,hp:15} },
+  // Icon chars here are fallback tags only; the HUD shows canvas-rendered
+  // chest-plate silhouettes that differ by leather / chain / mage.
+  armor_leather:{ name:'Leather Armor', icon:'L', type:'armor', price:90,  sell:38,  stats:{def:4,hp:20} },
+  armor_chain:  { name:'Chainmail',     icon:'C', type:'armor', price:260, sell:110, stats:{def:9,hp:50} },
+  armor_mage:   { name:'Mage Robe',     icon:'M', type:'armor', price:240, sell:100, stats:{def:3,mp:40,hp:15} },
 
   // ---- helms ----
-  helm_iron:   { name:'Iron Helm', icon:'▲', type:'helm', price:110, sell:46, stats:{def:5,hp:15} },
+  helm_iron:   { name:'Iron Helm', icon:'H', type:'helm', price:110, sell:46, stats:{def:5,hp:15} },
 
   // ---- rings (utility) ----
-  ring_power:  { name:'Ring of Power',  icon:'○', type:'ring', price:300, sell:125, stats:{atk:5,crit:5} },
-  ring_vigor:  { name:'Ring of Vigor',  icon:'○', type:'ring', price:300, sell:125, stats:{hp:60,def:2} },
-  ring_focus:  { name:'Ring of Focus',  icon:'○', type:'ring', price:300, sell:125, stats:{mp:60,cdr:15} },
+  ring_power:  { name:'Ring of Power',  icon:'P', type:'ring', price:300, sell:125, stats:{atk:5,crit:5} },
+  ring_vigor:  { name:'Ring of Vigor',  icon:'V', type:'ring', price:300, sell:125, stats:{hp:60,def:2} },
+  ring_focus:  { name:'Ring of Focus',  icon:'F', type:'ring', price:300, sell:125, stats:{mp:60,cdr:15} },
   sword_firesword: { name:'Firesword', icon:'↑', type:'weapon', slot:'hand', atk:26, atkSpeed:1.0, crit:10, elemental:'fire', price:280, weight:4 },
 };
 

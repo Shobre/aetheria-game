@@ -6,6 +6,7 @@ import { rarityColor, rarityName, affixText } from '../data/affixes.js';
 import { QUESTS } from '../data/quests.js';
 import { SPELLS, knownSpells, spellRank } from '../data/spells.js';
 import { reforgeCost, upgradeCost, canUpgrade } from '../systems/craft.js';
+import { drawArmorIcon, drawHelmIcon, drawShieldIcon, drawRingIcon, drawWeaponIcon } from '../sprites.js';
 
 export class HUD {
   constructor(game){
@@ -220,7 +221,13 @@ export class HUD {
           c.style.borderColor=rarityColor(item);
           const ax=affixText(item); c.title=rarityName(item)+' '+item.name+(ax?' ('+ax+')':'')+(cmp?'  score '+cmp.text:''); }
         else { c.style.borderColor=''; c.title=CATALOG[item.id]?CATALOG[item.id].name:item.id; }
-        c.innerHTML=`${item.icon}<span class="qty">${item.qty>1?item.qty:''}</span>${cmpHtml}`;
+        c.innerHTML='';
+        // canvas-rendered icon for weapon/armor/helm/shield/ring; text otherwise
+        if(!this._drawGearCanvasIcon(c, item)){ c.textContent = item.icon; }
+        const qty = document.createElement('span'); qty.className='qty';
+        qty.textContent = item.qty>1?item.qty:'';
+        c.appendChild(qty);
+        if(cmpHtml) c.insertAdjacentHTML('beforeend', cmpHtml);
         const hint=item.type==='consumable'?'Click to use':'Click to equip';
         this._bindTooltip(c, ()=>this._buildItemTooltip(item,{hint}));
         c.onclick=()=>{ if(item.type==='consumable') this.game.useConsumable(item.id);
@@ -414,9 +421,24 @@ export class HUD {
       const d=document.createElement('div'); d.className='equip-slot';
       const col=it?rarityColor(it):'#cdd';
       const ax=it?affixText(it):'';
-      d.innerHTML=`<span class="slot-label">${slot.toUpperCase()}</span>
-        <span class="slot-icon">${it?it.icon:'-'}</span>
-        <span class="slot-name" style="color:${col}">${it?it.name:''}${ax?'<br><span class=\'affix-line\'>'+ax+'</span>':''}</span>`;
+      // canvas-rendered icon for armor/helm/shield/ring/weapon; text for empty
+      const iconCell = document.createElement('span');
+      iconCell.className = 'slot-icon';
+      if(it && this._drawGearCanvasIcon(iconCell, it)){
+        // canvas icon rendered; keep the empty fallback hidden
+        iconCell.textContent = '';
+      } else {
+        iconCell.textContent = it ? it.icon : '-';
+      }
+      d.appendChild(document.createElement('span'));
+      d.children[0].className = 'slot-label';
+      d.children[0].textContent = slot.toUpperCase();
+      d.appendChild(iconCell);
+      const nameCell = document.createElement('span');
+      nameCell.className = 'slot-name';
+      nameCell.style.color = col;
+      nameCell.innerHTML = (it?it.name:'')+(ax?'<br><span class="affix-line">'+ax+'</span>':'');
+      d.appendChild(nameCell);
       d.onclick=()=>{ if(it) this.game.unequip(slot); this.refreshChar(); };
       if(it) this._bindTooltip(d, ()=>this._buildItemTooltip(it,{hint:'Click to unequip'}));
       slotsDiv.appendChild(d);
@@ -436,7 +458,10 @@ export class HUD {
         const c=document.createElement('div'); c.className='inv-cell gear-cell';
         const cmp=compareItem(item,p.equipment);
         c.style.borderColor=rarityColor(item);
-        c.innerHTML=`${item.icon}${cmp?'<span class="cmp cmp-'+cmp.dir+'">'+cmp.text+'</span>':''}`;
+        c.innerHTML='';
+        if(!this._drawGearCanvasIcon(c, item)){ c.textContent = item.icon; }
+        if(cmp){ const span=document.createElement('span');
+          span.className='cmp cmp-'+cmp.dir; span.textContent=cmp.text; c.appendChild(span); }
         this._bindTooltip(c, ()=>this._buildItemTooltip(item,{hint:'Click to equip'}));
         c.onclick=()=>{ this.game.equipItem(item); this.refreshChar(); this.refreshBag(); };
         gearDiv.appendChild(c);
@@ -444,6 +469,29 @@ export class HUD {
     }
   }
   _stat(label,val){ return `<div class="stat-line"><span class="stat-label">${label}</span><span class="stat-val">${val}</span></div>`; }
+
+  // Draw a gear icon into a 24x24 canvas inside the given cell. Returns true
+  // if a canvas icon was drawn. Falls back to text otherwise (consumables
+  // like potions don't get canvas icons).
+  _drawGearCanvasIcon(cell, item){
+    const t = item.type;
+    if(t !== 'armor' && t !== 'helm' && t !== 'shield' && t !== 'ring' && t !== 'weapon') return false;
+    // clear any prior canvas so refresh doesn't pile them up
+    const existing = cell.querySelector('canvas');
+    if(existing) existing.remove();
+    const cv = document.createElement('canvas');
+    cv.width = 24; cv.height = 24;
+    cv.style.display = 'block';
+    cv.style.imageRendering = 'pixelated';
+    const ctx = cv.getContext('2d');
+    if(t === 'armor')   drawArmorIcon(ctx, 0, 0, item);
+    else if(t === 'helm')   drawHelmIcon(ctx, 0, 0, item);
+    else if(t === 'shield') drawShieldIcon(ctx, 0, 0, item);
+    else if(t === 'ring')   drawRingIcon(ctx, 0, 0, item);
+    else if(t === 'weapon') drawWeaponIcon(ctx, 0, 0, item);
+    cell.appendChild(cv);
+    return true;
+  }
 
   // ===== SKILL TREE =====
   refreshSkills(){

@@ -3,6 +3,7 @@ import { equipStats, resolveEquip } from '../data/gear.js';
 import { skillStats } from '../data/skilltree.js';
 import { tickStatuses, drawStatusPips } from '../systems/status.js';
 import { SPELLS, STARTER_SPELLS } from '../data/spells.js';
+import { drawPlayerSprite } from '../sprites.js';
 
 export class Player {
   constructor(x,y,state){
@@ -247,66 +248,215 @@ export class Player {
   die(game){ this.dead=true; game.onPlayerDeath(); }
 
   _drawBody(ctx, sx, sy, flash){
-    ctx.fillStyle = flash?'#fff':(this.invuln>0?'#fbb':'#e8623d');
-    ctx.fillRect(sx-9,sy-12,18,22);
-    ctx.fillStyle=flash?'#fff':'#f1c39a'; ctx.fillRect(sx-7,sy-20,14,11);
-    ctx.fillStyle='#2c5e34'; ctx.fillRect(sx-8,sy-23,16,5);
-    ctx.fillStyle='#11131c';
-    const ex=this.facing==='left'?-4:this.facing==='right'?2:-2;
-    ctx.fillRect(sx+ex,sy-17,2,2); ctx.fillRect(sx+ex+5,sy-17,2,2);
+    // Body is now drawn by the sprite module. Kept as a thin wrapper so the
+    // existing draw() signature still composes the body, dodge ghost, etc.
+    const bob = Math.sin(performance.now()/600) * 1.2;
+    drawPlayerSprite(ctx, sx, sy, this.facing, this.equipment, {
+      flash, invuln: this.invuln > 0, blocking: this.blocking,
+      attacking: this.attacking, attackProgress: 1 - (this.attacking / 0.18),
+      bob,
+    });
   }
+  // The slash effect: a colored arc with a weapon shape, sweeping in front of
+  // the player. The arc extends OUTWARD from the player (reach distance)
+  // rather than wrapping around the body, so each weapon has a distinct
+  // silhouette. Per-weapon weaponKind branches are preserved as a dispatcher
+  // (the test suite asserts on the `wk===` string patterns).
   _drawSlashEffect(ctx, sx, sy){
     const a=this._aim, prog=1-(this.attacking/0.18);
-    ctx.save(); ctx.translate(sx,sy);
+    const reach = this.reach || 44;
     const wk=this.weaponKind||'sword';
+    ctx.save();
+    ctx.translate(sx, sy);
     if(wk==='ranged'){
-      ctx.rotate(a); ctx.strokeStyle='rgba(200,180,140,0.5)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(36,0); ctx.stroke();
+      // ranged weapons show a short bowstring snap + bolt line at the weapon
+      this._drawRangedFx(ctx, a, prog);
     } else if(wk==='dagger'){
-      this._drawSlashArc(ctx,a,prog,-1.3,2.6,8,26,3,18,0.3,'rgba(255,255,255,${0.9})','rgba(220,220,255,${0.7})');
+      this._drawMeleeSlash(ctx, a, prog, {
+        reach: Math.max(20, reach * 0.55), sweepStart:-0.9, sweepRange: 1.8,
+        arcWidth: 3, bladeColor:'#ffffff', trailColor:'#dce4ff',
+        kind:'dagger',
+      });
     } else if(wk==='spear'){
-      this._drawSlashArc(ctx,a,prog,-0.5,1.0,12,50,3,40,0.2,'rgba(255,255,240,${0.85})',null,true);
+      this._drawMeleeSlash(ctx, a, prog, {
+        reach: reach, sweepStart:-0.35, sweepRange: 0.7,
+        arcWidth: 4, bladeColor:'#fff8e0', trailColor:null,
+        kind:'spear',
+      });
     } else if(wk==='greatsword'){
-      this._drawSlashArc(ctx,a,prog,-1.2,2.4,38,null,6,null,0.7,'rgba(255,255,255,${0.8})','rgba(200,200,255,${0.4})');
-      if(prog>0.3&&prog<0.7){
-        ctx.globalAlpha=(0.5-Math.abs(prog-0.5))*2;
-        ctx.fillStyle='#ddd';
-        ctx.beginPath(); ctx.arc(Math.cos(a+(-1.2+prog*2.4))*38,Math.sin(a+(-1.2+prog*2.4))*38,8,0,7); ctx.fill();
-        ctx.globalAlpha=1;
-      }
+      this._drawMeleeSlash(ctx, a, prog, {
+        reach: reach, sweepStart:-0.8, sweepRange: 1.6,
+        arcWidth: 7, bladeColor:'#ffffff', trailColor:'#c8d8ff',
+        kind:'greatsword',
+      });
     } else if(wk==='warhammer'){
-      this._drawSlashArc(ctx,a,prog,-1.5,3.0,34,null,7,null,0.8,'rgba(255,240,200,${0.85})',null,false,true,prog);
+      this._drawMeleeSlash(ctx, a, prog, {
+        reach: reach, sweepStart:-1.0, sweepRange: 2.0,
+        arcWidth: 8, bladeColor:'#fff0c0', trailColor:null,
+        kind:'warhammer',
+      });
     } else {
-      this._drawSlashArc(ctx,a,prog,-0.9,1.8,30,null,4,null,0.5,'rgba(255,255,255,${0.85})','rgba(200,220,255,${0.3})');
+      // default = sword
+      this._drawMeleeSlash(ctx, a, prog, {
+        reach: reach, sweepStart:-0.7, sweepRange: 1.4,
+        arcWidth: 5, bladeColor:'#ffffff', trailColor:'#c8dcff',
+        kind:'sword',
+      });
     }
     ctx.restore();
   }
-  _drawSlashArc(ctx, a, prog, sweepStart, sweepRange, radius1, radius2, lineWidth, arcRadius, arcRange, color1, color2, isSpear, isWarhammer, prog2){
-    const sweep=sweepStart+prog*sweepRange;
-    ctx.rotate(a+sweep);
-    const alpha1=1-prog;
-    ctx.strokeStyle=color1.replace('${0.9}',(0.9*alpha1).toFixed(2)).replace('${0.85}',(0.85*alpha1).toFixed(2)).replace('${0.8}',(0.8*alpha1).toFixed(2)).replace('${0.7}',(0.7*alpha1).toFixed(2)).replace('${0.4}',(0.4*alpha1).toFixed(2)).replace('${0.3}',(0.3*alpha1).toFixed(2));
-    ctx.lineWidth=lineWidth;
-    ctx.beginPath(); ctx.arc(0,0,radius1,-arcRange||0.5,arcRange||0.5); ctx.stroke();
-    if(radius2&&color2){
-      ctx.strokeStyle=color2.replace('${0.4}',(0.4*alpha1).toFixed(2)).replace('${0.3}',(0.3*alpha1).toFixed(2));
-      ctx.lineWidth=lineWidth-1;
-      ctx.beginPath(); ctx.arc(0,0,radius2,-(arcRange||0.5)*0.8,(arcRange||0.5)*0.8); ctx.stroke();
+  // Ranged fire: a quick bowstring snap and bolt line. The bolt itself is
+  // spawned as a real projectile by game.doMeleeAttack — we just show the
+  // visual here.
+  _drawRangedFx(ctx, a, prog){
+    ctx.save();
+    ctx.rotate(a);
+    ctx.strokeStyle='rgba(200,180,140,'+(0.6*(1-prog)).toFixed(2)+')';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(8, 0);
+    ctx.lineTo(8 + (1-prog)*30, 0);
+    ctx.stroke();
+    // bow flex
+    ctx.strokeStyle='rgba(120,90,40,'+(0.4*(1-prog)).toFixed(2)+')';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(8, -8);
+    ctx.quadraticCurveTo(8, 0, 8, 8);
+    ctx.stroke();
+    ctx.restore();
+  }
+  // Melee slash: a single sweeping arc that extends from the player center
+  // outward to the weapon's reach. The weapon's silhouette is drawn at the
+  // arc tip so it looks like the player is brandishing it.
+  _drawMeleeSlash(ctx, a, prog, opts){
+    const sweep = opts.sweepStart + prog * opts.sweepRange;
+    const reach = opts.reach;
+    const r = reach * 0.7;  // arc curve radius
+    const tipX = Math.cos(a + sweep) * reach;
+    const tipY = Math.sin(a + sweep) * reach;
+    const arcX = Math.cos(a + sweep) * r;
+    const arcY = Math.sin(a + sweep) * r;
+    const alpha = (1 - prog).toFixed(2);
+    // arc trail
+    ctx.save();
+    ctx.rotate(a + sweep);
+    ctx.strokeStyle = `rgba(255,255,255,${(0.85 * (1 - prog)).toFixed(2)})`;
+    ctx.lineWidth = opts.arcWidth;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    // arc from -0.4 rad to +0.4 rad around the tip
+    const ang = 0.4;
+    ctx.arc(0, 0, r, -ang, ang);
+    ctx.stroke();
+    if (opts.trailColor) {
+      ctx.strokeStyle = `rgba(200,220,255,${(0.4 * (1 - prog)).toFixed(2)})`;
+      ctx.lineWidth = Math.max(1, opts.arcWidth - 2);
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.8, -ang * 0.8, ang * 0.8);
+      ctx.stroke();
     }
-    if(isSpear){
-      ctx.fillStyle='#c8bfa0'; ctx.fillRect(radius1-6,-2,18,4);
-      ctx.fillStyle='#e8e0c0'; ctx.beginPath(); ctx.arc(radius1+12,0,3,0,7); ctx.fill();
-    } else if(isWarhammer){
-      ctx.fillStyle='#b8a080'; ctx.fillRect(radius1-6,-4,22,8);
-      if(prog2>0.4&&prog2<0.65){
-        ctx.globalAlpha=1-prog2;
-        ctx.strokeStyle='#ffcf4d'; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.arc(0,0,44+(prog2*30),-0.4,0.4); ctx.stroke();
-        ctx.globalAlpha=1;
+    // weapon silhouette at tip
+    this._drawWeaponShape(ctx, reach, opts);
+    ctx.restore();
+  }
+  // Draws a recognizable weapon shape at the tip of the slash arc.
+  // ctx is already rotated to the slash direction (pointing outward).
+  _drawWeaponShape(ctx, reach, opts){
+    const k = opts.kind;
+    const woodC = '#5a3a22';
+    const wc = opts.bladeColor;
+    ctx.save();
+    if (k === 'dagger') {
+      // tiny dagger pointing outward
+      ctx.fillStyle = woodC;
+      ctx.fillRect(reach - 6, -1.5, 4, 3);
+      ctx.fillStyle = wc;
+      ctx.fillRect(reach - 2, -1, 6, 2);
+      ctx.fillStyle = '#3a2a1a';
+      ctx.fillRect(reach - 7, -2, 2, 4);
+    } else if (k === 'spear') {
+      // shaft along the slash
+      ctx.fillStyle = woodC;
+      ctx.fillRect(0, -1, reach, 2);
+      // spearhead at the far end
+      ctx.fillStyle = '#e0d4a0';
+      ctx.beginPath();
+      ctx.moveTo(reach, -3);
+      ctx.lineTo(reach + 6, 0);
+      ctx.lineTo(reach, 3);
+      ctx.closePath();
+      ctx.fill();
+      // shaft wrap
+      ctx.fillStyle = '#3a2a1a';
+      ctx.fillRect(2, -2, 3, 4);
+    } else if (k === 'greatsword') {
+      // big two-handed blade
+      ctx.fillStyle = woodC;
+      ctx.fillRect(0, -1.5, 8, 3);
+      ctx.fillStyle = '#3a2a1a';
+      ctx.fillRect(0, -3, 10, 6);
+      ctx.fillStyle = wc;
+      ctx.fillRect(8, -2, reach - 8, 4);
+      ctx.fillStyle = '#dadada';
+      ctx.fillRect(9, -1, reach - 9, 1);
+      // pommel
+      ctx.fillStyle = '#caa050';
+      ctx.beginPath();
+      ctx.arc(0, 0, 2, 0, Math.PI * 2);
+      ctx.fill();
+      // impact sparkle when arc is near peak
+      if (prog > 0.3 && prog < 0.7) {
+        const intensity = 0.7 - Math.abs(prog - 0.5) * 1.4;
+        ctx.globalAlpha = Math.max(0, intensity);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 4; i++) {
+          const ang = (i / 4) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(ang) * 6, Math.sin(ang) * 6);
+          ctx.lineTo(Math.cos(ang) * 12, Math.sin(ang) * 12);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+    } else if (k === 'warhammer') {
+      // short shaft with a big blocky head at the tip
+      ctx.fillStyle = woodC;
+      ctx.fillRect(0, -1.5, reach - 4, 3);
+      ctx.fillStyle = '#5a5a66';
+      ctx.fillRect(reach - 6, -5, 8, 10);
+      ctx.fillStyle = '#aaaaaa';
+      ctx.fillRect(reach - 6, -5, 8, 2);
+      ctx.fillStyle = '#3a2a1a';
+      ctx.fillRect(reach - 4, -2, 2, 4);
+      // shockwave ring on peak
+      const prog2 = 1 - prog;
+      if (prog2 > 0.3 && prog2 < 0.6) {
+        ctx.globalAlpha = 1 - prog2;
+        ctx.strokeStyle = '#ffcf4d';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, reach + (1 - prog2) * 18, -0.4, 0.4);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
       }
     } else {
-      ctx.fillStyle='#ddd'; ctx.fillRect(radius1-6,-2,16,4);
+      // sword: medium blade with crossguard and pommel
+      ctx.fillStyle = woodC;
+      ctx.fillRect(0, -1, 6, 2);
+      ctx.fillStyle = '#3a2a1a';
+      ctx.fillRect(0, -3, 7, 6);
+      ctx.fillStyle = wc;
+      ctx.fillRect(6, -2, reach - 6, 4);
+      ctx.fillStyle = '#dadada';
+      ctx.fillRect(7, -1, reach - 7, 1);
+      ctx.fillStyle = '#caa050';
+      ctx.beginPath();
+      ctx.arc(0, 0, 2, 0, Math.PI * 2);
+      ctx.fill();
     }
+    ctx.restore();
   }
   _drawShield(ctx, sx, sy){
     const a=this._aim!=null?this._aim:0;

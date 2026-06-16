@@ -1,0 +1,941 @@
+// Central pixel-art sprite module for Aetheria.
+// All entity bodies, gear pieces, and HUD mini-icons are drawn here with
+// Canvas 2D primitives (fillRect / arc / stroke). No emoji, no sprite sheets.
+//
+// Coordinate convention: draw* functions receive (sx, sy) as the entity's
+// tile center on screen. Internally we offset to a 24x32 virtual sprite space
+// centered on the entity. The "feet" sit at sy, the "head" at sy-28.
+//
+// All draw functions must be self-contained — they may save/restore ctx state
+// only when they need to translate/rotate. They never mutate global state.
+
+const SW = 24;            // sprite virtual width
+const SH = 32;            // sprite virtual height
+const _body = (ctx, bx, by, sc, shirt, pants, skin) => {
+  // legs
+  ctx.fillStyle = pants;
+  ctx.fillRect(bx + 6, by + 18, 4, 8);
+  ctx.fillRect(bx + 14, by + 18, 4, 8);
+  // boots
+  ctx.fillStyle = '#1a1410';
+  ctx.fillRect(bx + 5, by + 24, 5, 4);
+  ctx.fillRect(bx + 14, by + 24, 5, 4);
+  // torso
+  ctx.fillStyle = shirt;
+  ctx.fillRect(bx + 5, by + 8, 14, 12);
+  // belt
+  ctx.fillStyle = '#3a2a1a';
+  ctx.fillRect(bx + 5, by + 18, 14, 2);
+  ctx.fillStyle = '#caa050';
+  ctx.fillRect(bx + 11, by + 18, 3, 2);
+  // head
+  ctx.fillStyle = skin;
+  ctx.fillRect(bx + 7, by + 0, 10, 10);
+  // eyes
+  ctx.fillStyle = '#1a1410';
+  ctx.fillRect(bx + 9, by + 4, 2, 2);
+  ctx.fillRect(bx + 14, by + 4, 2, 2);
+  // small shadow under feet
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.beginPath();
+  ctx.ellipse(bx + 12, by + 29, 9, 2.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  return sc; // unused, for chaining
+};
+
+// ----- NPC SPRITES -----
+// All NPCs sit on a 24x32 sprite. Differentiating features go on top of _body.
+
+function _robe(ctx, bx, by, color) {
+  // Wide floor-length robe (replaces torso + legs)
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(bx + 3, by + 8);
+  ctx.lineTo(bx + 21, by + 8);
+  ctx.lineTo(bx + 24, by + 28);
+  ctx.lineTo(bx + 0, by + 28);
+  ctx.closePath();
+  ctx.fill();
+  // trim
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.fillRect(bx + 2, by + 26, 20, 2);
+}
+
+function _crown(ctx, bx, by, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(bx + 8, by - 2, 8, 3);
+  ctx.fillRect(bx + 9, by - 4, 1, 2);
+  ctx.fillRect(bx + 12, by - 5, 2, 3);
+  ctx.fillRect(bx + 15, by - 4, 1, 2);
+}
+
+function _hood(ctx, bx, by, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(bx + 5, by + 6);
+  ctx.lineTo(bx + 19, by + 6);
+  ctx.lineTo(bx + 22, by + 14);
+  ctx.lineTo(bx + 2, by + 14);
+  ctx.closePath();
+  ctx.fill();
+  // face hole
+  ctx.fillStyle = '#2a1a14';
+  ctx.fillRect(bx + 9, by + 8, 6, 5);
+}
+
+function _staff(ctx, bx, by, orbColor) {
+  // staff held in left hand
+  ctx.fillStyle = '#5a3a22';
+  ctx.fillRect(bx - 3, by + 4, 2, 22);
+  ctx.fillStyle = orbColor;
+  ctx.beginPath();
+  ctx.arc(bx - 2, by + 3, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillRect(bx - 3, by + 2, 1, 1);
+}
+
+function _bow(ctx, bx, by) {
+  ctx.strokeStyle = '#5a3a22';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(bx + 22, by + 14, 10, -Math.PI / 2.2, Math.PI / 2.2);
+  ctx.stroke();
+  ctx.strokeStyle = '#d8d0b8';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(bx + 22, by + 4);
+  ctx.lineTo(bx + 22, by + 24);
+  ctx.stroke();
+}
+
+function _anvil(ctx, bx, by) {
+  // a small anvil icon next to the smith
+  ctx.fillStyle = '#3a3a44';
+  ctx.fillRect(bx + 22, by + 18, 6, 8);
+  ctx.fillStyle = '#5a5a66';
+  ctx.fillRect(bx + 19, by + 14, 12, 4);
+  ctx.fillStyle = '#7a3a1a';
+  ctx.fillRect(bx + 24, by + 9, 2, 5);
+}
+
+function _bottle(ctx, bx, by, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(bx + 22, by + 18, 4, 8);
+  ctx.fillStyle = '#5a3a22';
+  ctx.fillRect(bx + 23, by + 16, 2, 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillRect(bx + 22, by + 19, 1, 3);
+}
+
+function _book(ctx, bx, by) {
+  ctx.fillStyle = '#3a2a1a';
+  ctx.fillRect(bx + 20, by + 18, 8, 6);
+  ctx.fillStyle = '#e8d8a0';
+  ctx.fillRect(bx + 21, by + 19, 6, 4);
+  ctx.fillStyle = '#5a2a1a';
+  ctx.fillRect(bx + 23, by + 19, 1, 4);
+}
+
+function _coin(ctx, bx, by) {
+  ctx.fillStyle = '#ffcf4d';
+  ctx.beginPath();
+  ctx.arc(bx + 24, by + 22, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#caa050';
+  ctx.fillRect(bx + 23, by + 21, 2, 2);
+}
+
+function _quill(ctx, bx, by) {
+  ctx.strokeStyle = '#dac0a0';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(bx + 21, by + 12);
+  ctx.lineTo(bx + 26, by + 22);
+  ctx.stroke();
+  ctx.fillStyle = '#7a3a1a';
+  ctx.fillRect(bx + 20, by + 22, 3, 2);
+}
+
+function _lantern(ctx, bx, by) {
+  ctx.fillStyle = '#5a3a22';
+  ctx.fillRect(bx + 22, by + 8, 2, 14);
+  ctx.fillStyle = '#ffcf4d';
+  ctx.fillRect(bx + 20, by + 12, 6, 7);
+  ctx.fillStyle = 'rgba(255,207,77,0.35)';
+  ctx.beginPath();
+  ctx.arc(bx + 23, by + 15, 6, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+const NPC_SPRITES = {
+  // ----- Wilderness / quest NPCs -----
+  'Elder': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _body(ctx, bx, by, 0, '#5a6a3a', '#3a2a1a', '#f1c39a');
+    _hood(ctx, bx, by, '#7a5a3a');
+    _staff(ctx, bx, by, '#4dd28a');
+  },
+  'Ranger': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _body(ctx, bx, by, 0, '#2c5e34', '#3a2a1a', '#e8b88a');
+    // hood/hat
+    ctx.fillStyle = '#2a4a2a';
+    ctx.fillRect(bx + 6, by - 2, 12, 3);
+    ctx.fillRect(bx + 5, by - 1, 14, 2);
+    _bow(ctx, bx, by);
+  },
+  'Nomad': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    // desert robe
+    _robe(ctx, bx, by, '#d9b87a');
+    // head wrap
+    ctx.fillStyle = '#e8d0a0';
+    ctx.fillRect(bx + 6, by - 1, 12, 6);
+    ctx.fillStyle = '#5a2a1a';
+    ctx.fillRect(bx + 11, by - 1, 2, 6);
+    // face
+    ctx.fillStyle = '#c89060';
+    ctx.fillRect(bx + 8, by + 3, 8, 6);
+    ctx.fillStyle = '#1a1410';
+    ctx.fillRect(bx + 10, by + 5, 1, 1);
+    ctx.fillRect(bx + 13, by + 5, 1, 1);
+  },
+  'Wayfarer': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _body(ctx, bx, by, 0, '#3a5a7a', '#1a2430', '#f1c39a');
+    // winter hood
+    ctx.fillStyle = '#5a7090';
+    ctx.beginPath();
+    ctx.moveTo(bx + 5, by + 6);
+    ctx.lineTo(bx + 19, by + 6);
+    ctx.lineTo(bx + 17, by - 1);
+    ctx.lineTo(bx + 7, by - 1);
+    ctx.closePath();
+    ctx.fill();
+    _lantern(ctx, bx, by);
+  },
+  'Hermit': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _robe(ctx, bx, by, '#4a4a3a');
+    _hood(ctx, bx, by, '#3a3a2a');
+    // glowing eyes
+    ctx.fillStyle = '#ffcf4d';
+    ctx.fillRect(bx + 10, by + 10, 1, 1);
+    ctx.fillRect(bx + 13, by + 10, 1, 1);
+    _staff(ctx, bx, by, '#a45cff');
+  },
+  'Forager': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _body(ctx, bx, by, 0, '#5a7a3a', '#3a2a1a', '#f1c39a');
+    // basket
+    ctx.fillStyle = '#7a5230';
+    ctx.fillRect(bx + 21, by + 22, 7, 5);
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(bx + 21, by + 22, 7, 1);
+  },
+  'Ember Sage': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _robe(ctx, bx, by, '#7a3a1a');
+    _hood(ctx, bx, by, '#5a2a0a');
+    ctx.fillStyle = '#ff8a3a';
+    ctx.fillRect(bx + 10, by + 10, 1, 1);
+    ctx.fillRect(bx + 13, by + 10, 1, 1);
+    _staff(ctx, bx, by, '#ff5a1a');
+  },
+
+  // ----- Aldermere City NPCs -----
+  'Mayor': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _robe(ctx, bx, by, '#5a3a6a');
+    // head
+    ctx.fillStyle = '#f1c39a';
+    ctx.fillRect(bx + 7, by - 2, 10, 10);
+    ctx.fillStyle = '#1a1410';
+    ctx.fillRect(bx + 9, by + 2, 2, 2);
+    ctx.fillRect(bx + 13, by + 2, 2, 2);
+    ctx.fillStyle = '#5a3a22';
+    ctx.fillRect(bx + 7, by - 1, 10, 3);
+    // beard
+    ctx.fillStyle = '#dadada';
+    ctx.fillRect(bx + 8, by + 6, 8, 4);
+    _crown(ctx, bx, by, '#ffcf4d');
+  },
+  'Captain': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _body(ctx, bx, by, 0, '#6a3030', '#2a1a1a', '#e8b88a');
+    // helmet
+    ctx.fillStyle = '#8a8a8a';
+    ctx.fillRect(bx + 5, by - 2, 14, 6);
+    ctx.fillStyle = '#5a5a5a';
+    ctx.fillRect(bx + 7, by + 2, 2, 3);
+    ctx.fillRect(bx + 15, by + 2, 2, 3);
+    // plume
+    ctx.fillStyle = '#c83030';
+    ctx.fillRect(bx + 11, by - 5, 2, 4);
+    // sword on hip
+    ctx.fillStyle = '#aaaaaa';
+    ctx.fillRect(bx + 22, by + 14, 2, 10);
+    ctx.fillStyle = '#7a3a22';
+    ctx.fillRect(bx + 21, by + 12, 4, 2);
+  },
+  'Scholar': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _robe(ctx, bx, by, '#3a3a6a');
+    // head
+    ctx.fillStyle = '#f1c39a';
+    ctx.fillRect(bx + 7, by - 2, 10, 10);
+    ctx.fillStyle = '#1a1410';
+    ctx.fillRect(bx + 9, by + 2, 2, 2);
+    ctx.fillRect(bx + 13, by + 2, 2, 2);
+    // glasses
+    ctx.fillStyle = '#1a1410';
+    ctx.fillRect(bx + 8, by + 2, 3, 2);
+    ctx.fillRect(bx + 13, by + 2, 3, 2);
+    ctx.fillRect(bx + 11, by + 2, 2, 1);
+    _quill(ctx, bx, by);
+  },
+  'Bard': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _body(ctx, bx, by, 0, '#7a3a5a', '#3a2a1a', '#f1c39a');
+    // lute
+    ctx.fillStyle = '#7a5230';
+    ctx.fillRect(bx + 21, by + 14, 5, 8);
+    ctx.fillStyle = '#3a2a1a';
+    ctx.beginPath();
+    ctx.arc(bx + 23, by + 22, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // hat
+    ctx.fillStyle = '#5a2a3a';
+    ctx.beginPath();
+    ctx.moveTo(bx + 5, by - 1);
+    ctx.lineTo(bx + 19, by - 1);
+    ctx.lineTo(bx + 14, by - 6);
+    ctx.lineTo(bx + 10, by - 6);
+    ctx.closePath();
+    ctx.fill();
+    // feather
+    ctx.fillStyle = '#ff5a5a';
+    ctx.fillRect(bx + 14, by - 8, 1, 4);
+  },
+  'Banker': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _robe(ctx, bx, by, '#1a1a2a');
+    // head
+    ctx.fillStyle = '#f1c39a';
+    ctx.fillRect(bx + 7, by - 2, 10, 10);
+    ctx.fillStyle = '#1a1410';
+    ctx.fillRect(bx + 9, by + 2, 2, 2);
+    ctx.fillRect(bx + 13, by + 2, 2, 2);
+    // monocle
+    ctx.strokeStyle = '#ffcf4d';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(bx + 14, by + 3, 2, 0, Math.PI * 2);
+    ctx.stroke();
+    _coin(ctx, bx, by);
+  },
+
+  // ----- Shopkeepers -----
+  'Smith Garon': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _body(ctx, bx, by, 0, '#5a3a1a', '#3a2a1a', '#d8a070');
+    // leather apron
+    ctx.fillStyle = '#7a4a2a';
+    ctx.fillRect(bx + 4, by + 8, 16, 12);
+    ctx.fillStyle = '#5a2a1a';
+    ctx.fillRect(bx + 4, by + 18, 16, 2);
+    // hammer in hand
+    ctx.fillStyle = '#5a3a22';
+    ctx.fillRect(bx + 22, by + 8, 2, 14);
+    ctx.fillStyle = '#7a7a7a';
+    ctx.fillRect(bx + 20, by + 6, 6, 5);
+    _anvil(ctx, bx, by);
+  },
+  'Forge': (ctx, sx, sy, bob) => {
+    // the forge itself, not a person — small anvil + glowing core
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    ctx.fillStyle = '#3a3a44';
+    ctx.fillRect(bx + 4, by + 16, 16, 12);
+    ctx.fillStyle = '#5a5a66';
+    ctx.fillRect(bx + 1, by + 12, 22, 4);
+    ctx.fillStyle = '#ff8a3a';
+    ctx.fillRect(bx + 6, by + 18, 12, 8);
+    ctx.fillStyle = '#ffcf4d';
+    ctx.fillRect(bx + 8, by + 20, 8, 4);
+  },
+  'Mira the Alchemist': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _robe(ctx, bx, by, '#3a5a3a');
+    // hood
+    _hood(ctx, bx, by, '#1a3a1a');
+    // face
+    ctx.fillStyle = '#f1c39a';
+    ctx.fillRect(bx + 9, by + 8, 6, 5);
+    ctx.fillStyle = '#1a1410';
+    ctx.fillRect(bx + 10, by + 10, 1, 1);
+    ctx.fillRect(bx + 13, by + 10, 1, 1);
+    _bottle(ctx, bx, by, '#3b8be8');
+  },
+  'Archmage Vael': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _robe(ctx, bx, by, '#4a2a6a');
+    _hood(ctx, bx, by, '#3a1a5a');
+    // glowing eyes
+    ctx.fillStyle = '#a45cff';
+    ctx.fillRect(bx + 10, by + 10, 1, 1);
+    ctx.fillRect(bx + 13, by + 10, 1, 1);
+    // star on robe
+    ctx.fillStyle = '#ffcf4d';
+    ctx.fillRect(bx + 11, by + 16, 2, 2);
+    ctx.fillRect(bx + 10, by + 17, 4, 1);
+    ctx.fillRect(bx + 10, by + 18, 1, 1);
+    ctx.fillRect(bx + 13, by + 18, 1, 1);
+    _staff(ctx, bx, by, '#a45cff');
+  },
+  'Trader Pol': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _body(ctx, bx, by, 0, '#5a5a3a', '#3a2a1a', '#e8b88a');
+    // cap
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(bx + 5, by - 1, 14, 4);
+    ctx.fillStyle = '#ffcf4d';
+    ctx.fillRect(bx + 9, by - 2, 6, 2);
+    // backpack
+    ctx.fillStyle = '#7a5230';
+    ctx.fillRect(bx + 0, by + 10, 4, 10);
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(bx + 0, by + 10, 4, 1);
+    _coin(ctx, bx, by);
+  },
+  'Merchant': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _body(ctx, bx, by, 0, '#5a3a5a', '#3a2a1a', '#f1c39a');
+    // coin purse
+    ctx.fillStyle = '#caa050';
+    ctx.beginPath();
+    ctx.arc(bx + 22, by + 22, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#7a5230';
+    ctx.fillRect(bx + 21, by + 19, 2, 2);
+  },
+
+  // ----- Fallback -----
+  'default': (ctx, sx, sy, bob) => {
+    const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+    _body(ctx, bx, by, 0, '#7a5a3a', '#3a2a1a', '#f1c39a');
+  },
+};
+
+// Dispatch an NPC sprite by name. Unknown names fall through to default.
+export function drawNPCSprite(ctx, name, sx, sy, bob = 0) {
+  const fn = NPC_SPRITES[name] || NPC_SPRITES.default;
+  fn(ctx, sx, sy, bob);
+}
+
+// ----- GEAR COLORS -----
+
+function armorColor(armorItem) {
+  if (!armorItem) return null;
+  const id = armorItem.id || '';
+  if (id.includes('chain')) return '#6a7a8a';
+  if (id.includes('mage')) return '#4a2a6a';
+  if (id.includes('leather')) return '#7a5a3a';
+  return '#5a6a3a';
+}
+
+function helmColor(helmItem) {
+  if (!helmItem) return null;
+  const id = helmItem.id || '';
+  if (id.includes('iron')) return '#6a6a6a';
+  return '#7a6a5a';
+}
+
+function shieldColor(shieldItem) {
+  if (!shieldItem) return null;
+  const id = shieldItem.id || '';
+  if (id.includes('iron')) return '#7a8a9a';
+  return '#8a6a3a';
+}
+
+function weaponColor(weaponItem) {
+  if (!weaponItem) return null;
+  const id = weaponItem.id || '';
+  if (id.includes('flame')) return '#e84a2a';
+  if (id.includes('frost')) return '#80c0ff';
+  if (id.includes('staff')) return '#6a3a1a';
+  if (id.includes('bow') || id.includes('crossbow')) return '#8a6a3a';
+  if (id.includes('warhammer')) return '#7a7a7a';
+  if (id === 'greatsword') return '#b0b0b0';
+  if (id.includes('halberd') || id.includes('spear')) return '#a08060';
+  if (id.includes('dagger')) return '#c0c0c0';
+  if (id.includes('sword')) return '#a0a0a0';
+  return '#aaaaaa';
+}
+
+// ----- PLAYER SPRITE -----
+// Draws the player body with equipped gear visible. The weapon is carried on
+// the back. Shield is NOT drawn here — _drawShield in player.js handles it
+// during the block. The attack slash is NOT drawn here — _drawSlashEffect in
+// player.js handles that.
+//
+// facing: 'down'|'up'|'left'|'right'
+// attackProgress: 0..1, 0 = just finished, 1 = ready to swing. We tilt the
+// weapon back as the attack starts to give a visual windup.
+// blocking, bob, invuln, flash: cosmetic states.
+export function drawPlayerSprite(ctx, sx, sy, facing, equipment, opts = {}) {
+  const { flash = false, invuln = false, blocking = false, attacking = 0,
+          attackProgress = 0, bob = 0 } = opts;
+  const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+  const armor = equipment && equipment.armor ? equipment.armor : null;
+  const helm = equipment && equipment.helm ? equipment.helm : null;
+  const weapon = equipment && equipment.weapon ? equipment.weapon : null;
+
+  // base shirt color reflects armor
+  const shirt = armorColor(armor) || '#5a6a3a';
+  const shirtDark = armor ? '#2a1a14' : '#3a2a1a';
+  const pants = armor ? '#3a3024' : '#3a2a1a';
+  const skin = flash ? '#fff' : '#f1c39a';
+
+  // legs + boots
+  ctx.fillStyle = pants;
+  ctx.fillRect(bx + 6, by + 18, 4, 8);
+  ctx.fillRect(bx + 14, by + 18, 4, 8);
+  ctx.fillStyle = '#1a1410';
+  ctx.fillRect(bx + 5, by + 24, 5, 4);
+  ctx.fillRect(bx + 14, by + 24, 5, 4);
+  // torso (armor-tinted)
+  ctx.fillStyle = shirt;
+  ctx.fillRect(bx + 5, by + 8, 14, 12);
+  // chainmail cross-hatch detail
+  if (armor && (armor.id || '').includes('chain')) {
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    for (let y = by + 9; y < by + 19; y += 3) {
+      for (let x = bx + 6; x < bx + 18; x += 3) {
+        if ((x + y) % 6 === 0) ctx.fillRect(x, y, 1, 1);
+      }
+    }
+  } else if (armor && (armor.id || '').includes('mage')) {
+    // robe with gold trim
+    ctx.fillStyle = '#ffcf4d';
+    ctx.fillRect(bx + 5, by + 8, 1, 12);
+    ctx.fillRect(bx + 18, by + 8, 1, 12);
+    ctx.fillStyle = '#a45cff';
+    ctx.fillRect(bx + 10, by + 12, 4, 4);
+  }
+  // belt
+  ctx.fillStyle = shirtDark;
+  ctx.fillRect(bx + 5, by + 18, 14, 2);
+  ctx.fillStyle = '#caa050';
+  ctx.fillRect(bx + 11, by + 18, 3, 2);
+  // head (skin)
+  ctx.fillStyle = skin;
+  ctx.fillRect(bx + 7, by + 0, 10, 10);
+  // hair tuft on top
+  ctx.fillStyle = '#5a3a22';
+  ctx.fillRect(bx + 8, by - 2, 8, 3);
+  // eyes (direction-aware)
+  ctx.fillStyle = flash ? '#fff' : '#1a1410';
+  let ex1, ex2;
+  if (facing === 'left')  { ex1 = 7;  ex2 = 7;  }
+  else if (facing === 'right') { ex1 = 16; ex2 = 16; }
+  else { ex1 = 9; ex2 = 14; }
+  ctx.fillRect(bx + ex1, by + 4, 2, 2);
+  ctx.fillRect(bx + ex2, by + 4, 2, 2);
+  // mouth
+  ctx.fillStyle = '#7a3a2a';
+  if (facing !== 'up') ctx.fillRect(bx + 10, by + 7, 4, 1);
+  // helm overlay (drawn after head so it covers the top)
+  if (helm) {
+    const hc = helmColor(helm);
+    ctx.fillStyle = hc;
+    ctx.fillRect(bx + 5, by - 1, 14, 7);
+    // visor slit
+    ctx.fillStyle = '#0a0a14';
+    ctx.fillRect(bx + 8, by + 3, 8, 2);
+    // crest
+    ctx.fillStyle = '#c83030';
+    ctx.fillRect(bx + 11, by - 4, 2, 4);
+  }
+  // invulnerability shimmer
+  if (invuln) {
+    ctx.fillStyle = 'rgba(255,255,200,0.5)';
+    ctx.fillRect(bx + 4, by + 0, 1, 4);
+    ctx.fillRect(bx + 19, by + 8, 1, 4);
+    ctx.fillRect(bx + 2, by + 16, 1, 3);
+  }
+  // shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.beginPath();
+  ctx.ellipse(bx + 12, by + 29, 9, 2.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // weapon on back (or in hand during attack windup)
+  if (weapon) _drawWeaponOnPlayer(ctx, bx, by, weapon, facing, attacking, attackProgress);
+}
+
+// Render the equipped weapon carried on the player's back. During an attack
+// we tilt it forward to give a "drawing the sword" feel.
+function _drawWeaponOnPlayer(ctx, bx, by, weapon, facing, attacking, prog) {
+  const wid = weapon.id || '';
+  const wc = weaponColor(weapon) || '#aaaaaa';
+  const woodC = '#5a3a22';
+  // windup: rotate from "on back" to "raised" during the first half of attack
+  const wind = attacking > 0 ? (1 - prog) : 0;
+  ctx.save();
+  if (wid.includes('bow') || wid.includes('crossbow')) {
+    // bow slung diagonally across the back
+    ctx.strokeStyle = woodC; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(bx + 12, by + 8, 11, -Math.PI / 2.5, Math.PI / 2.5);
+    ctx.stroke();
+    ctx.strokeStyle = '#d8d0b8'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(bx + 12, by - 3);
+    ctx.lineTo(bx + 12, by + 19);
+    ctx.stroke();
+  } else if (wid.includes('staff')) {
+    // long staff on the back
+    ctx.fillStyle = woodC;
+    ctx.save();
+    ctx.translate(bx + 22, by + 4);
+    ctx.rotate(0.45);
+    ctx.fillRect(-1, 0, 2, 30);
+    ctx.restore();
+    ctx.fillStyle = '#a45cff';
+    ctx.beginPath();
+    ctx.arc(bx + 22, by + 4, 3, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (wid.includes('spear') || wid === 'halberd') {
+    // spear/halberd diagonal on back
+    ctx.save();
+    ctx.translate(bx + 14, by + 26);
+    ctx.rotate(-0.5);
+    ctx.fillStyle = woodC;
+    ctx.fillRect(-1, 0, 2, 28);
+    ctx.fillStyle = wc;
+    if (wid === 'halberd') {
+      // axe head
+      ctx.beginPath();
+      ctx.moveTo(1, 0);
+      ctx.lineTo(7, 3);
+      ctx.lineTo(7, 9);
+      ctx.lineTo(1, 8);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // spear tip
+      ctx.beginPath();
+      ctx.moveTo(0, -4);
+      ctx.lineTo(3, 0);
+      ctx.lineTo(-3, 0);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  } else if (wid === 'warhammer') {
+    // warhammer on back, big head at top
+    ctx.save();
+    ctx.translate(bx + 8, by + 4);
+    ctx.rotate(0.15);
+    ctx.fillStyle = woodC;
+    ctx.fillRect(-1, 0, 2, 26);
+    ctx.fillStyle = '#5a5a66';
+    ctx.fillRect(-5, -4, 10, 6);
+    ctx.fillStyle = wc;
+    ctx.fillRect(-5, -4, 10, 2);
+    ctx.restore();
+  } else if (wid === 'greatsword') {
+    // greatsword on back, big two-handed blade
+    ctx.save();
+    ctx.translate(bx + 8, by + 6);
+    ctx.rotate(0.2);
+    ctx.fillStyle = woodC;
+    ctx.fillRect(-1, 0, 2, 14);
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(-4, 13, 8, 2);
+    ctx.fillStyle = wc;
+    ctx.fillRect(-2, 15, 4, 18);
+    ctx.fillStyle = '#dadada';
+    ctx.fillRect(-1, 16, 1, 16);
+    ctx.restore();
+  } else if (wid.includes('dagger')) {
+    // dagger at belt on the right hip
+    ctx.fillStyle = woodC;
+    ctx.fillRect(bx + 19, by + 16, 2, 4);
+    ctx.fillStyle = wc;
+    ctx.fillRect(bx + 19, by + 13, 2, 5);
+  } else {
+    // sword (default) — on the back, tip up over right shoulder
+    ctx.save();
+    ctx.translate(bx + 16, by + 28);
+    ctx.rotate(-0.35);
+    ctx.fillStyle = woodC;
+    ctx.fillRect(-1, 0, 2, 12);
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(-3, 11, 6, 2);
+    ctx.fillStyle = wc;
+    ctx.fillRect(-2, 13, 4, 12);
+    ctx.fillStyle = '#dadada';
+    ctx.fillRect(-1, 14, 1, 10);
+    // pommel
+    ctx.fillStyle = '#caa050';
+    ctx.beginPath();
+    ctx.arc(0, 12, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+// ----- GEAR ICONS for the HUD -----
+// Each function draws a small (24x24) gear icon at (x, y) top-left corner.
+// The render target is the HUD slot-icon span (24x24 box). We use canvas
+// because the canvas-drawn sprites scale crisply and look uniform across
+// the in-world bodies and the equipment panel.
+
+function _box(ctx, x, y, w, h, fill, stroke) {
+  ctx.fillStyle = fill;
+  ctx.fillRect(x, y, w, h);
+  if (stroke) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  }
+}
+
+export function drawArmorIcon(ctx, x, y, armorItem) {
+  const c = armorColor(armorItem) || '#7a7a7a';
+  // chest plate silhouette
+  ctx.fillStyle = c;
+  ctx.fillRect(x + 4, y + 4, 16, 14);
+  // shoulder caps
+  ctx.fillRect(x + 2, y + 5, 3, 5);
+  ctx.fillRect(x + 19, y + 5, 3, 5);
+  // neckline
+  ctx.fillStyle = '#1a1410';
+  ctx.fillRect(x + 10, y + 4, 4, 2);
+  // center seam
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(x + 11, y + 4, 1, 14);
+  // detail based on type
+  if (armorItem) {
+    if ((armorItem.id || '').includes('chain')) {
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      for (let yy = y + 6; yy < y + 18; yy += 2) {
+        for (let xx = x + 4; xx < x + 20; xx += 2) {
+          if ((xx + yy) % 4 === 0) ctx.fillRect(xx, yy, 1, 1);
+        }
+      }
+    } else if ((armorItem.id || '').includes('mage')) {
+      ctx.fillStyle = '#ffcf4d';
+      ctx.fillRect(x + 4, y + 4, 1, 14);
+      ctx.fillRect(x + 19, y + 4, 1, 14);
+      ctx.fillStyle = '#a45cff';
+      ctx.beginPath();
+      ctx.moveTo(x + 12, y + 7);
+      ctx.lineTo(x + 15, y + 12);
+      ctx.lineTo(x + 12, y + 17);
+      ctx.lineTo(x + 9, y + 12);
+      ctx.closePath();
+      ctx.fill();
+    } else if ((armorItem.id || '').includes('leather')) {
+      ctx.fillStyle = '#3a2a1a';
+      ctx.fillRect(x + 7, y + 8, 2, 2);
+      ctx.fillRect(x + 15, y + 8, 2, 2);
+      ctx.fillRect(x + 11, y + 12, 2, 2);
+      // belt line
+      ctx.fillStyle = '#5a3a22';
+      ctx.fillRect(x + 4, y + 14, 16, 2);
+    }
+  }
+  // border
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
+}
+
+export function drawHelmIcon(ctx, x, y, helmItem) {
+  const c = helmColor(helmItem) || '#8a8a8a';
+  // dome
+  ctx.fillStyle = c;
+  ctx.fillRect(x + 4, y + 8, 16, 8);
+  ctx.fillRect(x + 6, y + 6, 12, 2);
+  ctx.fillRect(x + 8, y + 4, 8, 2);
+  // visor slit
+  ctx.fillStyle = '#0a0a14';
+  ctx.fillRect(x + 6, y + 11, 12, 2);
+  // nose guard
+  ctx.fillStyle = c;
+  ctx.fillRect(x + 11, y + 11, 2, 3);
+  // crest
+  ctx.fillStyle = '#c83030';
+  ctx.fillRect(x + 11, y + 2, 2, 4);
+  // border
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
+}
+
+export function drawShieldIcon(ctx, x, y, shieldItem) {
+  const c = shieldColor(shieldItem) || '#8a6a3a';
+  // heater shield silhouette
+  ctx.fillStyle = c;
+  ctx.beginPath();
+  ctx.moveTo(x + 5, y + 4);
+  ctx.lineTo(x + 19, y + 4);
+  ctx.lineTo(x + 19, y + 13);
+  ctx.lineTo(x + 12, y + 21);
+  ctx.lineTo(x + 5, y + 13);
+  ctx.closePath();
+  ctx.fill();
+  // rim
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // boss (center)
+  ctx.fillStyle = '#caa050';
+  ctx.beginPath();
+  ctx.arc(x + 12, y + 11, 2, 0, Math.PI * 2);
+  ctx.fill();
+  // detail based on type
+  if (shieldItem && (shieldItem.id || '').includes('iron')) {
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(x + 11, y + 6, 1, 9);
+  } else {
+    // wood grain
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.fillRect(x + 9, y + 7, 6, 1);
+    ctx.fillRect(x + 10, y + 15, 4, 1);
+  }
+}
+
+export function drawRingIcon(ctx, x, y, ringItem) {
+  const c = ringItem ? '#ffcf4d' : '#aaaaaa';
+  // band
+  ctx.strokeStyle = c;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(x + 12, y + 14, 7, 0, Math.PI * 2);
+  ctx.stroke();
+  // gem
+  ctx.fillStyle = ringItem ? '#a45cff' : '#7a7a7a';
+  ctx.beginPath();
+  ctx.arc(x + 12, y + 6, 3, 0, Math.PI * 2);
+  ctx.fill();
+  // gem facet
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillRect(x + 11, y + 5, 1, 1);
+  // border
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
+}
+
+// ----- WEAPON ICON for the HUD -----
+// Draws a 24x24 weapon icon. weaponItem is the resolved item or catalog id.
+// Most callers will pass the item object; we look up .id. Returns true.
+export function drawWeaponIcon(ctx, x, y, weaponItem) {
+  const wid = (weaponItem && weaponItem.id) || (typeof weaponItem === 'string' ? weaponItem : '');
+  const wc = weaponColor(weaponItem) || '#aaaaaa';
+  const woodC = '#5a3a22';
+  ctx.save();
+  if (wid.includes('bow') || wid.includes('crossbow')) {
+    // bow + arrow
+    ctx.strokeStyle = woodC; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x + 9, y + 12, 8, -Math.PI / 2.3, Math.PI / 2.3);
+    ctx.stroke();
+    ctx.strokeStyle = '#d8d0b8'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + 9, y + 4);
+    ctx.lineTo(x + 9, y + 20);
+    ctx.stroke();
+    // arrow
+    ctx.fillStyle = '#7a5230';
+    ctx.fillRect(x + 12, y + 11, 8, 2);
+    ctx.fillStyle = '#aaaaaa';
+    ctx.beginPath();
+    ctx.moveTo(x + 20, y + 9);
+    ctx.lineTo(x + 22, y + 12);
+    ctx.lineTo(x + 20, y + 15);
+    ctx.closePath();
+    ctx.fill();
+  } else if (wid.includes('staff')) {
+    ctx.fillStyle = woodC;
+    ctx.fillRect(x + 11, y + 6, 2, 16);
+    ctx.fillStyle = '#a45cff';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 5, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(x + 10, y + 3, 1, 1);
+  } else if (wid.includes('spear')) {
+    ctx.fillStyle = woodC;
+    ctx.fillRect(x + 11, y + 6, 2, 16);
+    ctx.fillStyle = wc;
+    ctx.beginPath();
+    ctx.moveTo(x + 12, y + 1);
+    ctx.lineTo(x + 16, y + 7);
+    ctx.lineTo(x + 8, y + 7);
+    ctx.closePath();
+    ctx.fill();
+  } else if (wid === 'halberd') {
+    ctx.fillStyle = woodC;
+    ctx.fillRect(x + 11, y + 6, 2, 16);
+    ctx.fillStyle = wc;
+    ctx.beginPath();
+    ctx.moveTo(x + 12, y + 1);
+    ctx.lineTo(x + 18, y + 4);
+    ctx.lineTo(x + 18, y + 9);
+    ctx.lineTo(x + 12, y + 7);
+    ctx.closePath();
+    ctx.fill();
+  } else if (wid === 'warhammer') {
+    ctx.fillStyle = woodC;
+    ctx.fillRect(x + 11, y + 10, 2, 12);
+    ctx.fillStyle = '#5a5a66';
+    ctx.fillRect(x + 6, y + 4, 12, 7);
+    ctx.fillStyle = wc;
+    ctx.fillRect(x + 6, y + 4, 12, 2);
+  } else if (wid === 'greatsword') {
+    ctx.fillStyle = woodC;
+    ctx.fillRect(x + 11, y + 12, 2, 8);
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(x + 8, y + 11, 8, 2);
+    ctx.fillStyle = wc;
+    ctx.fillRect(x + 10, y + 2, 4, 10);
+    ctx.fillStyle = '#dadada';
+    ctx.fillRect(x + 11, y + 3, 1, 8);
+    ctx.fillStyle = '#caa050';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 20, 2, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (wid.includes('dagger')) {
+    ctx.fillStyle = woodC;
+    ctx.fillRect(x + 11, y + 12, 2, 8);
+    ctx.fillStyle = wc;
+    ctx.fillRect(x + 10, y + 4, 4, 9);
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(x + 8, y + 12, 8, 2);
+  } else {
+    // sword (default)
+    ctx.fillStyle = woodC;
+    ctx.fillRect(x + 11, y + 12, 2, 8);
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(x + 8, y + 11, 8, 2);
+    ctx.fillStyle = wc;
+    ctx.fillRect(x + 10, y + 4, 4, 9);
+    ctx.fillStyle = '#dadada';
+    ctx.fillRect(x + 11, y + 5, 1, 7);
+    ctx.fillStyle = '#caa050';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 20, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // border
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
+  ctx.restore();
+  return true;
+}

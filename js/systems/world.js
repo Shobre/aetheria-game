@@ -1,5 +1,6 @@
 // World: generic biome/dungeon/house generator driven by map definitions.
 import { MAPS } from '../data/maps.js';
+import { drawNPCSprite } from '../sprites.js';
 export const TILE = 32;
 
 // tile ids (internal - no external consumers, so not exported)
@@ -317,9 +318,23 @@ export class World {
     }
     for(const n of this.npcs){
       const sx=n.x*TILE-cam.x, sy=n.y*TILE-cam.y;
-      ctx.font='24px "Segoe UI Symbol","Arial Unicode MS",sans-serif'; ctx.textAlign='center';
-      ctx.fillText(n.icon, sx+16, sy+26);
-      if(n.shop){ ctx.font='10px "Segoe UI Symbol","Arial Unicode MS",sans-serif'; ctx.fillText('◆', sx+24, sy+6); }
+      const bob=Math.sin(performance.now()/600 + n.x*0.1 + n.y*0.1) * 1.5;
+      drawNPCSprite(ctx, n.name, sx+16, sy+16, bob);
+      // shop/craft/bank glow ring so the player can spot a service NPC at a glance
+      if(n.shop || n.craft || n.bank){
+        const t=performance.now()/300;
+        ctx.strokeStyle=`rgba(255,207,77,${0.4+0.4*Math.sin(t)})`;
+        ctx.lineWidth=1.5;
+        ctx.beginPath();
+        ctx.arc(sx+16, sy+16, 17, 0, Math.PI*2);
+        ctx.stroke();
+      }
+      // small name tag above the sprite
+      ctx.font='8px "Press Start 2P",monospace';
+      ctx.textAlign='center';
+      ctx.textBaseline='alphabetic';
+      ctx.fillStyle='rgba(255,230,160,0.85)';
+      ctx.fillText(n.name, sx+16, sy-12);
     }
   }
 
