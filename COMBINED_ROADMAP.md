@@ -1,8 +1,8 @@
 # Aetheria — Master Development Roadmap
 
 **Live:** https://aetheria-game-alpha.vercel.app
-**Tests:** 1142/1142 pass
-**Fallow Score:** 87.4 (good) · 99 (without hotspots)
+**Tests:** 1216/1216 pass
+**Fallow Score:** 87.6 (good) · 99 (without hotspots)
 
 A top-down, Zelda-like action-RPG built with vanilla JS (ES modules), HTML5 Canvas, and Tailwind. Pixel-art rendering, procedural world generation, a full equipment/skill/shop economy, and persistent 3-slot saves with cloud sync.
 
@@ -296,12 +296,32 @@ The existing `audio.js` already had a 3-mood system (calm/tense/boss) backed by 
 **Sprint 10 results:** 1024 → 1142 tests (+118), fallow 87.3 → 87.4,
 0 dead-code issues. Commit f0f2444.
 
-## ⬜ Backlog — Future Sprints
-### ⚪ Sprite Sheet Upgrade
-- The existing sprite system is a 979-line canvas-primitive module
-  (`js/sprites.js`) that draws NPCs/player/companions directly. The
-  architecture is clean enough that swapping to real PNG sprite sheets
-  is mostly a manifest change. No work has been done on this yet.
+## ✅ Sprint 11 — Complete
+
+### Sprite Sheet Upgrade — **SHIPPED**
+- New atlas pipeline: declarative manifest (`js/data/sprite-atlas.js`) +
+  loader + cache + draw helper (`js/systems/sprite-atlas.js`).
+- Two **real** PNG atlases on disk (144×160 NPC, 144×64 enemies), generated
+  by a deterministic Python/PIL build script from the same color palette
+  as the canvas-primitive code. No external assets, no network, no
+  licensing. Regenerate any time with `python3 scripts/build-sprite-atlases.py`.
+- `drawNPCSprite` (js/sprites.js) tries the atlas first; canvas-primitive
+  fallback only on the first frame after load (or when the toggle is off).
+- Enemy `draw()` split into `_atlasDrawn` (base body from atlas + cosmetic
+  RGBA tint overlay for hit-flash / lunge telegraph / freeze) and the
+  original 17-type canvas-primitive code, kept verbatim as `_drawCanvas`.
+- Settings: new "SPRITE SHEETS" checkbox (default ON, persisted to
+  localStorage as `aetheria_atlases_v1`).
+- Scope note: the player sprite's equipment-variation logic is unchanged
+  — its 200+ lines of chainmail / mage-robe / helm / weapon-on-back
+  variants are not a clean manifest swap. Future sprints can add
+  player-sprite atlases one variant at a time without touching the loader.
+
+**Sprint 11 results:** 1142 → 1216 tests (+74), fallow 87.4 → 87.6,
+0 dead-code issues. Commit 9d924fb.
+### ✅ Procedural Music Overhaul — **SHIPPED in Sprint 9**
+
+### ✅ Sprite Sheet Upgrade — **SHIPPED in Sprint 11**
 
 ### ⚪ Player Home / Stash Expansion
 - The existing **city bank stash** is real and works (bag↔stash transfer,
@@ -343,7 +363,7 @@ The existing `audio.js` already had a 3-mood system (calm/tense/boss) backed by 
 ---
 
 ## Test Coverage
-- **Total:** 1142 tests across all modules (547 → 600 → 613 → 675 → 700 → 783 → 1022 → 1142 after Sprints 3, 4, 5, 6, 7, 9, 10)
+- **Total:** 1216 tests across all modules (547 → 600 → 613 → 675 → 700 → 783 → 1022 → 1142 → 1216 after Sprints 3, 4, 5, 6, 7, 9, 10, 11)
 - **Run:** npm test (plain Node, no framework dependency)
 
-*Last updated: Sprint 10 complete (commit f0f2444)*
+*Last updated: Sprint 11 complete (commit 9d924fb)*
