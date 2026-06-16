@@ -5,7 +5,7 @@ import { HUD } from '../ui/hud.js';
 import { Audio } from './audio.js';
 import { SaveSystem } from './save.js';
 import { MAPS, MAP_LEVEL } from '../data/maps.js';
-import { CATALOG, makeItem, EQUIP_SLOTS } from '../data/gear.js';
+import { CATALOG, makeItem, EQUIP_SLOTS, resolveEquip } from '../data/gear.js';
 import { SKILLS, canLearn } from '../data/skilltree.js';
 import { Boss, BOSSES } from '../entities/boss.js';
 import { QuestLog } from './quests.js';

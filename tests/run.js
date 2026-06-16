@@ -2582,6 +2582,104 @@ console.log('\n=== sprint 12 (player home + home chest + fast-travel) ===');
       }
       ok('no bare short-identifier references in class methods', allBareIssues.length === 0);
     }
+
+    // ---- regression: missing imports of multi-character identifiers ----
+    // The previous two checks catch *local-scope* bugs (a `this.X` or
+    // short alias used without declaration). This one catches *module-scope*
+    // bugs: a file uses an identifier that is exported from some other file
+    // but never imported here. The classic shape is `game.js` calling
+    // `resolveEquip(...)` without adding it to its `import { ... } from
+    // '../data/gear.js'` line — fallow cannot catch this because
+    // `resolveEquip` is exported AND used in 5 other files, so it is not
+    // "dead".  Fall 2026-06-16: this exact bug shipped to production.
+    {
+      // Build the set of all exports from every file in js/
+      const exportRe = /(?:export\s+(?:async\s+)?function\s+(\w+))|(?:export\s+class\s+(\w+))|(?:export\s+(?:const|let|var)\s+(\w+))|(?:export\s*\{([^}]+)\})/g;
+      const exportsByName = new Map(); // name -> [file, ...]
+      for(const file of files){
+        const raw = readFileSync(file, 'utf8');
+        for(const m of raw.matchAll(exportRe)){
+          for(let g of [m[1], m[2], m[3]]){
+            if(!g) continue;
+            if(!exportsByName.has(g)) exportsByName.set(g, []);
+            exportsByName.get(g).push(file);
+          }
+          const list = m[4];
+          if(list){
+            for(const part of list.split(',')){
+              const n = part.trim().split(/\s+as\s+/).pop().trim();
+              if(!n) continue;
+              if(!exportsByName.has(n)) exportsByName.set(n, []);
+              exportsByName.get(n).push(file);
+            }
+          }
+        }
+      }
+      // For each file, parse its imports and look for used-but-not-imported names
+      const importRe = /import\s*(?:\{([^}]+)\}|(\w+))\s*from\s*['"][^'"]+['"]/g;
+      const callRe = /\b([A-Za-z_$][\w$]*)\s*\(/g;
+      const methodRe = /\b([A-Za-z_$][\w$]*)\s*\.\s*([A-Za-z_$][\w$]*)/g;
+      const newRe = /\bnew\s+([A-Z]\w*)\b/g;
+      const missingImports = [];
+      for(const file of files){
+        const raw = readFileSync(file, 'utf8');
+        const imports = new Set();
+        for(const m of raw.matchAll(importRe)){
+          const list = m[1] || m[2];
+          if(!list) continue;
+          for(const part of list.split(',')){
+            const n = part.trim().split(/\s+as\s+/).pop().trim();
+            if(n) imports.add(n);
+          }
+        }
+        // Strip comments and string contents (so identifiers inside strings
+        // or comments don't trigger false positives).
+        let body = raw;
+        body = body.replace(/\/\*[\s\S]*?\*\//g, '');
+        body = body.replace(/\/\/[^\n]*/g, '');
+        body = body.replace(/import\s+[\s\S]*?from\s*['"][^'"]+['"];?/g, '');
+        body = body.replace(/'[^'\\\n]*(?:\\.[^'\\\n]*)*'/g, "''");
+        body = body.replace(/"[^"\\\n]*(?:\\.[^"\\\n]*)*"/g, '""');
+        body = body.replace(/`[^`]*`/g, '``');
+        const used = new Set();
+        for(const m of body.matchAll(callRe)){
+          const n = m[1];
+          if(n && n.length >= 4) used.add(n);
+        }
+        for(const m of body.matchAll(newRe)){
+          const n = m[1];
+          if(n) used.add(n);
+        }
+        // For method-receiver names, only flag PascalCase (likely a class
+        // instance variable typed via JSDoc) and not `this` / lowercase locals.
+        for(const m of body.matchAll(methodRe)){
+          const n = m[1];
+          if(!n || n === 'this' || n === 'self') continue;
+          if(/^[A-Z]/.test(n)) used.add(n);
+        }
+        for(const n of used){
+          if(imports.has(n)) continue;
+          if(!exportsByName.has(n)) continue;
+          // Exported from somewhere. If exported from THIS file, it's a
+          // local declaration (function/class in same file) — fine.
+          const exporters = exportsByName.get(n);
+          const exportedHere = exporters.some(e => e === file);
+          if(exportedHere) continue;
+          missingImports.push({
+            file: file.replace(jsRoot + '/', ''),
+            name: n,
+            exporters: exporters.map(e => e.replace(jsRoot + '/', '')),
+          });
+        }
+      }
+      if(missingImports.length > 0){
+        console.log('  ! missing imports of multi-character identifiers (would throw ReferenceError at runtime):');
+        for(const i of missingImports){
+          console.log(`     ${i.file}  uses '${i.name}' (exported from ${i.exporters.join(', ')}) but never imports it`);
+        }
+      }
+      ok('no missing imports of multi-character identifiers', missingImports.length === 0);
+    }
   }
 }
 
