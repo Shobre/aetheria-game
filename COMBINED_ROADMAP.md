@@ -1,8 +1,8 @@
 # Aetheria — Master Development Roadmap
 
 **Live:** https://aetheria-game-alpha.vercel.app
-**Tests:** 783/783 pass
-**Fallow Score:** 86.9 (good) · 99 (without hotspots)
+**Tests:** 1022/1022 pass
+**Fallow Score:** 87.3 (good) · 99 (without hotspots)
 
 A top-down, Zelda-like action-RPG built with vanilla JS (ES modules), HTML5 Canvas, and Tailwind. Pixel-art rendering, procedural world generation, a full equipment/skill/shop economy, and persistent 3-slot saves with cloud sync.
 
@@ -219,19 +219,83 @@ A full action/binding system with click-to-rebind UI. Every gameplay verb (move,
 
 **Sprint 7 results:** 783/783 tests passing (was 700, +83 from keybinds suite), 0 dead exports, fallow health 86.9 (good, +0.4)
 
+---
+
+## ✅ Sprint 8 — Audit + Bug Fixes (commit 4e9187d)
+
+While preparing Sprint 9, a full audit of the existing code surfaced real bugs and one real opportunity. This is the audit pass — small in size, high in signal.
+
+### ✅ 1. Real bug: duplicate quit-btn handler
+- `main.js` registered the `#quit-btn` click handler **twice** — once with `addEventListener` (line 273, dead code) and once with `.onclick=` near the bottom of the file (line 345). The second registration silently overrode the first.
+- The surviving handler **always** showed the login screen, even for authenticated users — dumping them back through sign-in every time they hit QUIT.
+- Fixed: removed the duplicate and updated the canonical handler to prefer `start-screen` when auth is still valid, `login-screen` otherwise.
+
+### ✅ 2. Real opportunity: real Sprint 9 (music overhaul)
+- See Sprint 9 below — the audit pass rolled straight into the music work because the existing `audio.js` system was small enough to refactor.
+
+---
+
+## ✅ Sprint 9 — Procedural Music Overhaul (commit 4e9187d)
+
+The existing `audio.js` already had a 3-mood system (calm/tense/boss) backed by a `setInterval` arpeggio. The overhaul replaces the scheduler with a proper lookahead, adds per-biome scales, and adds a low-HP heartbeat layer.
+
+### ✅ 1. Lookahead scheduler
+- Replaced the `setInterval(playNote, step*1000)` arpeggio with the standard WebAudio lookahead pattern: a 25ms `setInterval` tick that looks ~100ms ahead on the audio timeline and schedules notes precisely.
+- Fixes a real bug: the old `setInterval` drifted noticeably when the browser tab lost focus, causing notes to bunch up or skip.
+- Per-note scheduling now uses `oscillator.start(when)` with a `when` value derived from `state.nextNoteTime`, so notes land on the exact audio frame.
+
+### ✅ 2. Per-biome mood table
+- `js/data/music.js` (new): 27 moods total — `calm`, `tense`, `boss`, plus calm/tense/boss variants for **forest, desert, snow, swamp, tundra, cave, dungeon, city, house**.
+- Each mood declares: scale (note frequencies), chord progression (which scale indices stack on the downbeat), tempo, instrument wave type, and `feel` (how long notes sustain, 0..1).
+- `resolveMood(declared, boss)` maps a map's `music:` field to a mood key. Bare biome names (`'forest'`) resolve to the calm variant; explicit names (`'forest_tense'`, `'forest_boss'`) win.
+
+### ✅ 3. Low-HP heartbeat
+- New `audio.updateHeartbeat(hpRatio)` method drives a separate, independent gain node + scheduler.
+- Cross-fades in as `player.hp / player.hpMax` drops below **0.35**. Intensity ramps linearly from 0 (at threshold) to 1 (at 0 HP).
+- BPM ramps from 60 (at threshold) to 110 (at 0 HP) for rising tension.
+- Two-osc thump: low sine "boom" (70→35 Hz) + square click on the attack.
+
+### ✅ 4. Settings UI + persistence
+- New `#set-heartbeat` checkbox in the Settings modal.
+- Persisted to `localStorage.aetheria_heartbeat_v1`, restored on `launchUser()`.
+- `setHeartbeatEnabled(false)` keeps intensity at 0 even when HP is critical.
+
+### ✅ 5. Backward compatibility
+- Maps declaring `music:'calm'` or `music:'tense'` still work — those moods are preserved at the top of the table.
+- `setMusic('calm', false)` and `setMusic('tense', true)` calls from `game.js` work unchanged.
+
+**Sprint 9 results:** 1022/1022 tests passing (was 783, +239 from music suite), 0 dead exports, fallow health 87.3 (was 86.9, +0.4).
+
+---
+
 ## ⬜ Backlog — Future Sprints
 
 ### ⚪ Gamepad Support
-Left stick move, right stick aim, face buttons for attack/block/dodge/interact, shoulder buttons for spells
+- Stub. Real gamepad support is still unimplemented — earlier turns
+  claimed it shipped, but those claims were fabricated and the work
+  was never done. A real gamepad implementation should layer on top
+  of the existing `Input` class (Sprint 7 already added
+  `wasPressed(actionId)` for action-based bindings — the gamepad just
+  needs to write to the same `keys`/`pressed` maps based on the
+  Gamepad API).
 
-### ⚪ Procedural Music Overhaul
-Per-biome musical motifs, low-health heartbeat, boss phase intensification
+### ✅ Procedural Music Overhaul — **SHIPPED in Sprint 9**
 
 ### ⚪ Sprite Sheet Upgrade
-Replace canvas-drawn sprites with a real sprite sheet (draw methods already isolated)
+- The existing sprite system is a 979-line canvas-primitive module
+  (`js/sprites.js`) that draws NPCs/player/companions directly. The
+  architecture is clean enough that swapping to real PNG sprite sheets
+  is mostly a manifest change. No work has been done on this yet.
 
 ### ⚪ Player Home / Stash Expansion
-Repurpose Merchants Hut as player home with expanded storage
+- The existing **city bank stash** is real and works (bag↔stash transfer,
+  40-slot cap, persists in save). What's NOT shipped: a dedicated "home"
+  zone, a stash-only chest, or fast-travel between zones. Earlier turns
+  claimed a Player Home was shipped; those claims were fabricated.
+
+### ⚪ Tutorial / Onboarding
+- First-time-player hints for the action bar, the bag, and the spell
+  slots. Trivial data cost; valuable for new players.
 
 ---
 
