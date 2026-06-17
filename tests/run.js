@@ -2245,6 +2245,52 @@ console.log('\n=== sprint 12 (player home + home chest + fast-travel) ===');
   ok('main.js single combined import from keybinds.js',
      /import\s*\{[^}]*\bKeybindUI\b[^}]*\bgetKeybindOverrides\b[^}]*\bsetKeybindOverrides\b[^}]*\}\s*from\s*['"]\.\/ui\/keybinds\.js['"]/.test(mainSrc));
 
+  // ---- api/ CommonJS modules load cleanly under ESM (Sprint 13b regression guard) ----
+  // The api/ directory hosts Vercel serverless functions. They are written
+  // as CommonJS (require/module.exports) and depend on Node's default
+  // "type: commonjs" behaviour for `.js` files. If anyone ever flips
+  // package.json to "type": "module" — even just to silence a cosmetic ESM
+  // warning, as Sprint 13 did — every /api/* route starts returning 500
+  // because Node refuses to load CJS syntax from a module-typed package.
+  // The error on the server is `require is not defined`; on the client
+  // side it's a 500 with `FUNCTION_INVOCATION_FAILED`. This check loads
+  // each api/*.js file via dynamic `import()` (the same path Vercel takes
+  // when the route is hit) and reports any failure as a test failure.
+  // If the project is ever converted fully to ESM and the api/ files
+  // move to ESM too, this check should be removed.
+  console.log('\n=== api/ CommonJS serverless-function loadability ===');
+  {
+    const apiFiles = ['auth', 'db', 'saves', 'setup'].map(n => `api/${n}.js`);
+    let loaded = 0;
+    let failed = 0;
+    const failures = [];
+    for(const f of apiFiles){
+      try {
+        // Use file:// URL so the import is absolute regardless of cwd
+        const url = 'file://' + path.resolve(import.meta.dirname, '..', f);
+        await import(url);
+        loaded++;
+      } catch(e) {
+        failed++;
+        failures.push({ file: f, err: (e.message || String(e)).split('\n')[0] });
+      }
+    }
+    if(failed > 0){
+      console.log('  ! api/ files failed to load (would 500 on Vercel):');
+      for(const fail of failures){
+        console.log(`     ${fail.file}: ${fail.err}`);
+      }
+      console.log('  → Fix: either revert package.json to no "type" field, OR rename');
+      console.log('     api/*.js to api/*.cjs (the build.cjs pattern in this repo).');
+    }
+    // One ok() per file (clear failure attribution) plus a summary ok().
+    for(const f of apiFiles){
+      const broken = failures.some(x => x.file === f);
+      ok(`api/${f.split('/').pop()} loads as ESM`, !broken);
+    }
+    ok('all api/ files load cleanly (no Vercel 500s)', failed === 0);
+  }
+
   // ---- ESLint `no-undef` check (Sprint 13 — defense-in-depth) ----
   // Run ESLint programmatically on the project's source tree. This catches
   // any reference to an undeclared identifier — the bug shape behind all
