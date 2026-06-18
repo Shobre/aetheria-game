@@ -328,6 +328,15 @@ export class World {
     // from each portal to the nearest carved room. Without this, the portal
     // sits as a 1-tile walkable pocket surrounded by WALL (the `_genRooms`
     // fill). The L-corridor matches the style used between rooms above.
+    //
+    // Sprint 19: after carving portal corridors, BFS from the spawn tile and
+    // identify any chest/NPC that ended up on a walkable-but-unreachable tile
+    // (a pocket cut off by WALL). Carve an L-corridor from each isolated
+    // feature to the nearest reachable walkable tile so the player can always
+    // collect every chest and talk to every NPC. The audit (audit_maps.py)
+    // caught these on `cave`, `dungeon1`, and `dungeon2` where chest coords
+    // landed in wall pockets because `_genRooms` only carves rooms + room-to-
+    // room corridors — chests/NPCs placed by map def aren't on any room.
     if(this.biome === 'dungeon' || this.biome === 'cave'){
       const rooms = this._rooms || [];
       for(const p of (this.def.portals||[])){
@@ -350,6 +359,48 @@ export class World {
         const cornerY = best.cy;
         if(this.map[cornerY] && this.map[cornerY][best.cx] !== undefined){
           this.map[cornerY][best.cx] = T.PATH;
+        }
+      }
+
+      // Sprint 19: reachability sweep for chests + NPCs. A chest declared in
+      // maps.js at (x, y) gets that tile set to FLOOR, but if `_genRooms`
+      // didn't carve a room or corridor at that tile, it sits as a 1-tile
+      // pocket of FLOOR surrounded by WALL — walkable but unreachable. Carve
+      // a 1-tile-wide L-corridor from each unreachable chest/NPC to the
+      // nearest reachable walkable tile.
+      const spawnTile = this._findSpawnTile();
+      if(spawnTile){
+        const reachable = this._floodReachable(spawnTile.x, spawnTile.y);
+        const features = [];
+        for(const c of (this.def.chests||[])) features.push({x:c.x, y:c.y});
+        for(const n of (this.def.npcs||[])) features.push({x:n.x, y:n.y});
+        for(const f of features){
+          if(!this._inBounds(f.x, f.y)) continue;
+          if(this.map[f.y][f.x] === undefined) continue;
+          if(SOLID.has(this.map[f.y][f.x])) continue; // solid tiles are caught by a different gate
+          if(reachable.has(`${f.x},${f.y}`)) continue;
+          // Find nearest reachable walkable tile (the target for our corridor)
+          let target = null, bestD = Infinity;
+          for(let yy = 0; yy < this.rows; yy++){
+            for(let xx = 0; xx < this.cols; xx++){
+              if(!reachable.has(`${xx},${yy}`)) continue;
+              const d = Math.abs(xx - f.x) + Math.abs(yy - f.y);
+              if(d < bestD){ bestD = d; target = {x:xx, y:yy}; }
+            }
+          }
+          if(!target) continue;
+          // L-corridor from feature to target (horizontal then vertical).
+          // Matches the visual style of the room-to-room corridors.
+          for(let x = Math.min(f.x, target.x); x <= Math.max(f.x, target.x); x++){
+            if(this.map[f.y] && this.map[f.y][x] !== undefined) this.map[f.y][x] = T.PATH;
+          }
+          for(let y = Math.min(f.y, target.y); y <= Math.max(f.y, target.y); y++){
+            if(this.map[y] && this.map[y][target.x] !== undefined) this.map[y][target.x] = T.PATH;
+          }
+          // Corner of the L must be PATH too.
+          if(this.map[target.y] && this.map[target.y][target.x] !== undefined){
+            this.map[target.y][target.x] = T.PATH;
+          }
         }
       }
     }
@@ -511,6 +562,74 @@ export class World {
    * @param {*} def - raw map definition (same shape as MAPS[id])
    * @returns {{x:number, y:number}[]}
    */
+  // Pick the spawn tile used by `_placeFeatures` for reachability analysis.
+  // Mirrors the logic in Game.loadMap: try the first portal's destination,
+  // then fall back to (1, 1). Returns null if no walkable tile exists.
+  /**
+   * Return a sensible spawn tile for reachability BFS during world
+   * generation. Used by the Sprint 19 corridor-carve pass for chests/NPCs
+   * that landed on isolated walkable pockets.
+   * @returns {{x:number, y:number}|null}
+   */
+  _findSpawnTile(){
+    // First portal's destination (matches what Game.loadMap does)
+    const portals = this.def.portals || [];
+    if(portals.length){
+      const p = portals[0];
+      if(this._inBounds(p.tx, p.ty) && this.map[p.ty] && this.map[p.ty][p.tx] !== undefined){
+        return {x: p.tx, y: p.ty};
+      }
+    }
+    // Fall back to the first room centre (dungeon/cave biomes carve rooms)
+    if(this._rooms && this._rooms.length) return {x: this._rooms[0].cx, y: this._rooms[0].cy};
+    // Last resort: scan the whole map for any walkable tile
+    for(let y = 0; y < this.rows; y++){
+      for(let x = 0; x < this.cols; x++){
+        if(this.map[y] && this.map[y][x] !== undefined && !SOLID.has(this.map[y][x])){
+          return {x, y};
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * True if (x, y) is a tile coord within the map bounds.
+   * @param {number} x
+   * @param {number} y
+   * @returns {boolean}
+   */
+  _inBounds(x, y){
+    return x >= 0 && y >= 0 && x < this.cols && y < this.rows;
+  }
+
+  /**
+   * BFS flood fill of walkable tiles starting from (sx, sy). Returns a Set
+   * of "x,y" string keys for O(1) membership checks.
+   * @param {number} sx
+   * @param {number} sy
+   * @returns {Set<string>}
+   */
+  _floodReachable(sx, sy){
+    const out = new Set();
+    if(!this._inBounds(sx, sy)) return out;
+    if(!this.map[sy] || this.map[sy][sx] === undefined) return out;
+    if(SOLID.has(this.map[sy][sx])) return out;
+    const stack = [[sx, sy]];
+    while(stack.length){
+      const [x, y] = stack.pop();
+      const key = `${x},${y}`;
+      if(out.has(key)) continue;
+      if(!this._inBounds(x, y)) continue;
+      const row = this.map[y];
+      if(!row || row[x] === undefined) continue;
+      if(SOLID.has(row[x])) continue;
+      out.add(key);
+      stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
+    }
+    return out;
+  }
+
   reservedZones(def){
     const out=[];
     if(!def) return out;

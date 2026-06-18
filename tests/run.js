@@ -655,7 +655,15 @@ console.log('=== elites + biome bosses ===');
   // trigger range (26px) of any portal.
   const worldSrc = readFileSync(new URL('../js/systems/world.js', import.meta.url), 'utf8');
   ok('_placeFeatures carves corridors to portals in dungeon/cave biomes',
-     /Sprint 17:.*?corridor[\s\S]{0,800}this\.biome === 'dungeon' \|\| this\.biome === 'cave'/.test(worldSrc));
+     /Sprint 17:.*?corridor[\s\S]{0,3000}this\.biome === 'dungeon' \|\| this\.biome === 'cave'/.test(worldSrc));
+  // Sprint 19: also carve corridors from unreachable chests/NPCs to the
+  // main reachable region. audit_maps.py caught `cave`, `dungeon1`, and
+  // `dungeon2` with chests in wall pockets because `_genRooms` doesn't
+  // carve at the chest's exact (x, y) coords.
+  ok('_placeFeatures BFS-floods reachable tiles to find isolated features',
+     /_floodReachable\(/.test(worldSrc));
+  ok('_placeFeatures carves corridor from unreachable chest to nearest reachable tile',
+     /_floodReachable\(spawnTile\.x, spawnTile\.y\)[\s\S]{0,1500}features\.push/.test(worldSrc));
   const gameSrc2 = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
   ok('loadMap pushes spawn point away from portal tiles',
      /Sprint 17:.*portal tile[\s\S]{0,500}PORTAL_PUSH/.test(gameSrc2) ||
