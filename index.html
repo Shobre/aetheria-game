@@ -215,41 +215,45 @@
   <!-- SETTINGS MODAL -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal-box max-w-md">
-      <div class="flex justify-between items-center mb-4">
+      <div class="flex justify-between items-center mb-4 flex-none">
         <h2 class="text-lg text-gold">SETTINGS</h2>
         <button data-close="settings-modal" class="text-xl text-gray-400 hover:text-gold">×</button>
       </div>
-      <div class="space-y-4 text-[10px]">
-        <label class="setting"><span>MUSIC</span><input type="range" id="set-music" min="0" max="100" value="40"></label>
-        <label class="setting"><span>SFX</span><input type="range" id="set-sfx" min="0" max="100" value="70"></label>
-        <label class="setting"><span>SHOW FPS</span><input type="checkbox" id="set-fps"></label>
-        <label class="setting"><span>SCREEN SHAKE</span><input type="checkbox" id="set-shake" checked></label>
-        <label class="setting" title="Low-HP heartbeat layer kicks in under 35% HP. Sprint 9.">
-          <span>HEARTBEAT</span><input type="checkbox" id="set-heartbeat" checked>
-        </label>
-        <label class="setting" title="Use PNG sprite sheets for NPCs and enemies (auto-fallback to canvas). Sprint 11.">
-          <span>SPRITE SHEETS</span><input type="checkbox" id="set-atlases" checked>
-        </label>
-      </div>
-
-      <!-- Sprint 7: Keybind rebind UI -->
-      <div class="mt-6">
-        <div class="flex justify-between items-center mb-2">
-          <h3 class="text-[11px] text-gold">KEYBINDS</h3>
-          <button id="keybinds-reset" class="text-[9px] text-gray-400 hover:text-gold">RESET DEFAULTS</button>
+      <div class="modal-scroll">
+        <div class="space-y-4 text-[10px]">
+          <label class="setting"><span>MUSIC</span><input type="range" id="set-music" min="0" max="100" value="40"></label>
+          <label class="setting"><span>SFX</span><input type="range" id="set-sfx" min="0" max="100" value="70"></label>
+          <label class="setting"><span>SHOW FPS</span><input type="checkbox" id="set-fps"></label>
+          <label class="setting"><span>SCREEN SHAKE</span><input type="checkbox" id="set-shake" checked></label>
+          <label class="setting" title="Low-HP heartbeat layer kicks in under 35% HP. Sprint 9.">
+            <span>HEARTBEAT</span><input type="checkbox" id="set-heartbeat" checked>
+          </label>
+          <label class="setting" title="Use PNG sprite sheets for NPCs and enemies (auto-fallback to canvas). Sprint 11.">
+            <span>SPRITE SHEETS</span><input type="checkbox" id="set-atlases" checked>
+          </label>
         </div>
-        <div id="keybinds-list" class="space-y-1 text-[10px] max-h-64 overflow-y-auto pr-1"></div>
-        <p id="keybinds-hint" class="text-[9px] text-gray-500 mt-2">Click a key, then press the new binding. Mouse buttons cannot be rebound.</p>
+
+        <!-- Sprint 7: Keybind rebind UI -->
+        <div class="mt-6">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-[11px] text-gold">KEYBINDS</h3>
+            <button id="keybinds-reset" class="text-[9px] text-gray-400 hover:text-gold">RESET DEFAULTS</button>
+          </div>
+          <!-- max-h-56 keeps the rebind list short; the modal itself scrolls if the
+               page is even smaller. -->
+          <div id="keybinds-list" class="space-y-1 text-[10px] max-h-56 overflow-y-auto pr-1"></div>
+          <p id="keybinds-hint" class="text-[9px] text-gray-500 mt-2">Click a key, then press the new binding. Mouse buttons cannot be rebound.</p>
+        </div>
+
+        <!-- Sprint 10: tutorial reset -->
+        <div class="mt-4 flex justify-between items-center">
+          <span class="text-[10px] text-gray-400">TUTORIAL</span>
+          <button id="tutorial-reset" class="text-[9px] text-gray-400 hover:text-gold">SHOW TUTORIAL ON NEXT LAUNCH</button>
+        </div>
+        <p class="text-[9px] text-gray-500 mt-1">Gamepad support is automatic. Plug in a controller and the on-screen keys update to match.</p>
       </div>
 
-      <!-- Sprint 10: tutorial reset -->
-      <div class="mt-4 flex justify-between items-center">
-        <span class="text-[10px] text-gray-400">TUTORIAL</span>
-        <button id="tutorial-reset" class="text-[9px] text-gray-400 hover:text-gold">SHOW TUTORIAL ON NEXT LAUNCH</button>
-      </div>
-      <p class="text-[9px] text-gray-500 mt-1">Gamepad support is automatic. Plug in a controller and the on-screen keys update to match.</p>
-
-      <div class="grid grid-cols-3 gap-2 mt-6">
+      <div class="grid grid-cols-3 gap-2 mt-6 flex-none">
         <button id="save-game-btn" class="menu-btn">SAVE</button>
         <button id="quit-btn" class="menu-btn">QUIT TO MENU</button>
         <button id="logout-btn" class="menu-btn">LOGOUT</button>

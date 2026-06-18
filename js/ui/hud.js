@@ -253,7 +253,14 @@ export class HUD {
   // picker overlay: pick any known spell for slot QER[i]
   _openSpellPicker(slotIdx){
     const p=this.game.player, picker=this.el.spellPicker; if(!picker) return;
-    const known=knownSpells(p.skills);
+    // Merge starter spells + skill-unlocked + spellpower-gated (from knownSpells)
+    // with spells the player has bought at the merchant (_boughtSpells).
+    // Previously this only used knownSpells(p.skills) which silently excluded
+    // anything the player paid gold for — so learned spells were un-equippable.
+    const known = [...new Set([
+      ...knownSpells(p.skills),
+      ...Object.keys(this.game._boughtSpells || {}),
+    ])];
     picker.innerHTML=`<div class="picker-title">Assign spell to slot ${'QER'[slotIdx]}</div>`;
     known.forEach(id=>{ const sp=SPELLS[id]; if(!sp) return;
       const d=document.createElement('div'); d.className='spell-picker-item'+(p.spellSlots[slotIdx]===id?' active':'');

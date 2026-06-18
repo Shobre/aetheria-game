@@ -668,116 +668,108 @@ export function drawPlayerSprite(ctx, sx, sy, facing, equipment, opts = {}) {
   }
 }
 
-// Render the equipped weapon carried on the player's back. During an attack
-// we tilt it forward to give a "drawing the sword" feel.
+// Render the equipped weapon. Two visual modes:
+//   - Idle (attacking <= 0): held in the player's hand, angled naturally for the
+//     current facing (tip down/forward toward where they're looking).
+//   - Attacking (attacking > 0): drawn at the slash-arc tip via _drawSlashEffect
+//     in player.js, so we draw nothing here to avoid double-rendering.
+// The previous version drew the weapon "on the back" anchored at (bx+16, by+28)
+// with the blade pointing down — which made the sword look like a tail dangling
+// out of the character's feet. The fix below anchors the weapon at the hand
+// (roughly bx+18, by+18 for a right-handed grip) and rotates it so the blade
+// points in the player's facing direction.
 function _drawWeaponOnPlayer(ctx, bx, by, weapon, facing, attacking, prog) {
+  // During an attack the slash effect in player.js draws the weapon at the
+  // arc tip — drawing it here too would cause double-rendering.
+  if (attacking > 0) return;
   const wid = weapon.id || '';
   const wc = weaponColor(weapon) || '#aaaaaa';
   const woodC = '#5a3a22';
-  // windup: rotate from "on back" to "raised" during the first half of attack
-  const wind = attacking > 0 ? (1 - prog) : 0;
+  // Hand anchor: mid-right of body for 'right', mid-left for 'left',
+  // mid-bottom for 'down', mid-back for 'up'. We rotate the blade from this
+  // anchor in facing direction so it looks gripped, not levitating.
+  let hx, hy, baseAngle;
+  switch (facing) {
+    case 'left':  hx = bx + 4;  hy = by + 18; baseAngle = Math.PI;        break;
+    case 'right': hx = bx + 20; hy = by + 18; baseAngle = 0;             break;
+    case 'up':    hx = bx + 12; hy = by + 22; baseAngle = -Math.PI / 2;   break;
+    case 'down':
+    default:      hx = bx + 16; hy = by + 22; baseAngle =  Math.PI / 2;   break;
+  }
   ctx.save();
+  ctx.translate(hx, hy);
+  ctx.rotate(baseAngle);
   if (wid.includes('bow') || wid.includes('crossbow')) {
-    // bow slung diagonally across the back
+    // short bow held horizontally — grip in hand, limbs curl away from body
     ctx.strokeStyle = woodC; ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(bx + 12, by + 8, 11, -Math.PI / 2.5, Math.PI / 2.5);
+    ctx.arc(-3, 0, 9, -Math.PI / 3, Math.PI / 3);
     ctx.stroke();
     ctx.strokeStyle = '#d8d0b8'; ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(bx + 12, by - 3);
-    ctx.lineTo(bx + 12, by + 19);
+    ctx.moveTo(2, -7);
+    ctx.lineTo(2, 7);
     ctx.stroke();
   } else if (wid.includes('staff')) {
-    // long staff on the back
+    // long staff held diagonally, orb-end pointing forward
     ctx.fillStyle = woodC;
-    ctx.save();
-    ctx.translate(bx + 22, by + 4);
-    ctx.rotate(0.45);
-    ctx.fillRect(-1, 0, 2, 30);
-    ctx.restore();
+    ctx.fillRect(-1, 0, 2, 18);
     ctx.fillStyle = '#a45cff';
     ctx.beginPath();
-    ctx.arc(bx + 22, by + 4, 3, 0, Math.PI * 2);
+    ctx.arc(18, 0, 3, 0, Math.PI * 2);
     ctx.fill();
-  } else if (wid.includes('spear') || wid === 'halberd') {
-    // spear/halberd diagonal on back
-    ctx.save();
-    ctx.translate(bx + 14, by + 26);
-    ctx.rotate(-0.5);
+  } else if (wid === 'halberd' || wid.includes('spear')) {
+    // spear/halberd held forward, long shaft with tip/axe head at far end
     ctx.fillStyle = woodC;
-    ctx.fillRect(-1, 0, 2, 28);
+    ctx.fillRect(-1, 0, 2, 18);
     ctx.fillStyle = wc;
     if (wid === 'halberd') {
-      // axe head
       ctx.beginPath();
-      ctx.moveTo(1, 0);
-      ctx.lineTo(7, 3);
-      ctx.lineTo(7, 9);
-      ctx.lineTo(1, 8);
-      ctx.closePath();
+      ctx.moveTo(16, -3); ctx.lineTo(22, 0); ctx.lineTo(22, 6); ctx.lineTo(16, 5); ctx.closePath();
       ctx.fill();
     } else {
-      // spear tip
       ctx.beginPath();
-      ctx.moveTo(0, -4);
-      ctx.lineTo(3, 0);
-      ctx.lineTo(-3, 0);
-      ctx.closePath();
+      ctx.moveTo(18, -3); ctx.lineTo(21, 0); ctx.lineTo(18, 3); ctx.closePath();
       ctx.fill();
     }
-    ctx.restore();
   } else if (wid === 'warhammer') {
-    // warhammer on back, big head at top
-    ctx.save();
-    ctx.translate(bx + 8, by + 4);
-    ctx.rotate(0.15);
-    ctx.fillStyle = woodC;
-    ctx.fillRect(-1, 0, 2, 26);
-    ctx.fillStyle = '#5a5a66';
-    ctx.fillRect(-5, -4, 10, 6);
-    ctx.fillStyle = wc;
-    ctx.fillRect(-5, -4, 10, 2);
-    ctx.restore();
-  } else if (wid === 'greatsword') {
-    // greatsword on back, big two-handed blade
-    ctx.save();
-    ctx.translate(bx + 8, by + 6);
-    ctx.rotate(0.2);
+    // warhammer: short shaft + big blocky head at far end
     ctx.fillStyle = woodC;
     ctx.fillRect(-1, 0, 2, 14);
-    ctx.fillStyle = '#3a2a1a';
-    ctx.fillRect(-4, 13, 8, 2);
+    ctx.fillStyle = '#5a5a66';
+    ctx.fillRect(13, -4, 7, 8);
     ctx.fillStyle = wc;
-    ctx.fillRect(-2, 15, 4, 18);
-    ctx.fillStyle = '#dadada';
-    ctx.fillRect(-1, 16, 1, 16);
-    ctx.restore();
-  } else if (wid.includes('dagger')) {
-    // dagger at belt on the right hip
+    ctx.fillRect(13, -4, 7, 2);
+  } else if (wid === 'greatsword') {
+    // greatsword: long blade + crossguard, held out at angle
     ctx.fillStyle = woodC;
-    ctx.fillRect(bx + 19, by + 16, 2, 4);
-    ctx.fillStyle = wc;
-    ctx.fillRect(bx + 19, by + 13, 2, 5);
-  } else {
-    // sword (default) — on the back, tip up over right shoulder
-    ctx.save();
-    ctx.translate(bx + 16, by + 28);
-    ctx.rotate(-0.35);
-    ctx.fillStyle = woodC;
-    ctx.fillRect(-1, 0, 2, 12);
+    ctx.fillRect(-1, 0, 2, 5);
     ctx.fillStyle = '#3a2a1a';
-    ctx.fillRect(-3, 11, 6, 2);
+    ctx.fillRect(-2, 5, 6, 2);
     ctx.fillStyle = wc;
-    ctx.fillRect(-2, 13, 4, 12);
+    ctx.fillRect(-1, 7, 3, 16);
     ctx.fillStyle = '#dadada';
-    ctx.fillRect(-1, 14, 1, 10);
-    // pommel
+    ctx.fillRect(0, 8, 1, 14);
     ctx.fillStyle = '#caa050';
-    ctx.beginPath();
-    ctx.arc(0, 12, 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    ctx.beginPath(); ctx.arc(0, 4, 2, 0, Math.PI * 2); ctx.fill();
+  } else if (wid.includes('dagger')) {
+    // dagger: short grip + stubby blade
+    ctx.fillStyle = woodC;
+    ctx.fillRect(-1, 0, 2, 4);
+    ctx.fillStyle = wc;
+    ctx.fillRect(-1, 4, 3, 7);
+  } else {
+    // default sword (one-handed): grip + crossguard + blade
+    ctx.fillStyle = woodC;
+    ctx.fillRect(-1, 0, 2, 5);
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(-3, 4, 6, 2);
+    ctx.fillStyle = wc;
+    ctx.fillRect(-1, 6, 3, 13);
+    ctx.fillStyle = '#dadada';
+    ctx.fillRect(0, 7, 1, 11);
+    ctx.fillStyle = '#caa050';
+    ctx.beginPath(); ctx.arc(0, 4, 2, 0, Math.PI * 2); ctx.fill();
   }
   ctx.restore();
 }
