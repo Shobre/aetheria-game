@@ -14,8 +14,10 @@ body{image-rendering:pixelated}
    preserved everywhere a button / interactable lives (skill node, item
    slot, etc.) — those rules are below. The SVG crosshair is a 24px circle
    with a cross and a center dot, drawn in the gold accent so it sits on
-   top of any biome palette. */
-html,body{cursor:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><circle cx='12' cy='12' r='9' fill='none' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='12' y1='2' x2='12' y2='8' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='12' y1='16' x2='12' y2='22' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='2' y1='12' x2='8' y2='12' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='16' y1='12' x2='22' y2='12' stroke='%23ffcf4d' stroke-width='1.5'/><circle cx='12' cy='12' r='1.5' fill='%23ffcf4d'/></svg>") 12 12, crosshair}
+   top of any biome palette. The crosshair is scoped to the in-game canvas
+   ONLY — title, login, and load-game screens keep the default OS cursor so
+   they don't look like the player is aiming at a menu. */
+#game-container{cursor:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><circle cx='12' cy='12' r='9' fill='none' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='12' y1='2' x2='12' y2='8' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='12' y1='16' x2='12' y2='22' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='2' y1='12' x2='8' y2='12' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='16' y1='12' x2='22' y2='12' stroke='%23ffcf4d' stroke-width='1.5'/><circle cx='12' cy='12' r='1.5' fill='%23ffcf4d'/></svg>") 12 12, crosshair}
 #game-canvas{cursor:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><circle cx='12' cy='12' r='9' fill='none' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='12' y1='2' x2='12' y2='8' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='12' y1='16' x2='12' y2='22' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='2' y1='12' x2='8' y2='12' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='16' y1='12' x2='22' y2='12' stroke='%23ffcf4d' stroke-width='1.5'/><circle cx='12' cy='12' r='1.5' fill='%23ffcf4d'/></svg>") 12 12, crosshair}
 
 /* loader */

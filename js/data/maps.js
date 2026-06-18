@@ -2,6 +2,70 @@
 // chests, npcs. Enemies spawn ONCE on map load (no endless waves).
 // Portals connect maps; entering one loads the target map at the given spawn.
 
+/**
+ * @typedef {Object} PortalDef
+ * @property {number} x
+ * @property {number} y
+ * @property {string} to
+ * @property {number} tx
+ * @property {number} ty
+ * @property {string} label
+ * @property {boolean} [door]
+ */
+/**
+ * @typedef {Object} NPCDef
+ * @property {number} x
+ * @property {number} y
+ * @property {string} name
+ * @property {string} icon
+ * @property {string[]} lines
+ */
+/**
+ * @typedef {Object} ChestDef
+ * @property {number} x
+ * @property {number} y
+ * @property {{type:string,id?:string,amount?:number,qty?:number}} loot
+ */
+/**
+ * @typedef {Object} EnemySpawn
+ * @property {number} count
+ * @property {string[]} types
+ */
+/**
+ * @typedef {Object} HomeChestDef
+ * @property {number} x
+ * @property {number} y
+ * @property {number} w
+ * @property {number} h
+ * @property {string} name
+ */
+/**
+ * @typedef {{type:string,x:number,y:number}} EnemyInstance
+ * Volcano uses explicit per-instance placement instead of a spawn pool.
+ */
+/**
+ * @typedef {{x:number,y:number,type?:string,solid?:boolean}} DecorInstance
+ * Volcano declares decor inline; other biomes generate it procedurally.
+ */
+/**
+ * @typedef {Object} MapDef
+ * @property {string} [id]
+ * @property {string} name
+ * @property {string} biome
+ * @property {number} cols
+ * @property {number} rows
+ * @property {number} seed
+ * @property {string} [music]
+ * @property {EnemySpawn|EnemyInstance[]} [enemies]
+ * @property {EnemyInstance[]} [enemies2]
+ * @property {PortalDef[]} [portals]
+ * @property {NPCDef[]} [npcs]
+ * @property {ChestDef[]} [chests]
+ * @property {HomeChestDef} [homeChest]
+ * @property {Object} [pal]
+ * @property {DecorInstance[]} [decor]
+ */
+
 export const MAPS = {
   // ===================== OVERWORLD HUB (green meadow) =====================
   meadow: {

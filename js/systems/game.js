@@ -62,6 +62,13 @@ export class Game {
     this._dayTime=0; this._dayLen=120; // day/night cycle (seconds)
     this._weaponSkills={}; // {sword:0, axe:0, spear:0, bow:0, staff:0}
     this._companions=[]; // active companions
+    // Debug hooks: expose raw data catalogs so Playwright audit scripts can
+    // iterate every map / boss without parsing the source files. Read-only —
+    // we never mutate these from runtime code.
+    /** @type {Record<string, import('../data/maps.js').MapDef>} */
+    this.maps = /** @type {*} */ (MAPS);
+    this.bosses = BOSSES;
+    this.mapLevel = MAP_LEVEL;
     // Sprint 6: flow field for pathfinding. Recomputed when the player crosses
     // a tile boundary — a single BFS replaces N parallel A* runs across enemies.
     this._flowField=null; this._flowGoal={x:0,y:0}; this._flowRecomputeT=0;

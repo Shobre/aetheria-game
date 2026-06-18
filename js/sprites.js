@@ -697,15 +697,19 @@ function _drawWeaponOnPlayer(ctx, bx, by, weapon, facing, attacking, prog) {
   const wc = weaponColor(weapon) || '#aaaaaa';
   const woodC = '#5a3a22';
   // Hand anchor: mid-right of body for 'right', mid-left for 'left',
-  // mid-bottom for 'down', mid-back for 'up'. We rotate the blade from this
-  // anchor in facing direction so it looks gripped, not levitating.
+  // mid-back for 'up'. For 'left'/'right' the blade is angled forward-down
+  // (45° off vertical) so it looks gripped in the player's hand, not levitating
+  // horizontally like a pole. The previous version used 0°/180° for left/right
+  // — the sword was a horizontal bar sticking straight out of the player's
+  // side, which read as "holding the sword to the side" instead of "holding a
+  // sword at the hip, blade down-forward".
   let hx, hy, baseAngle;
   switch (facing) {
-    case 'left':  hx = bx + 4;  hy = by + 18; baseAngle = Math.PI;        break;
-    case 'right': hx = bx + 20; hy = by + 18; baseAngle = 0;             break;
-    case 'up':    hx = bx + 12; hy = by + 22; baseAngle = -Math.PI / 2;   break;
+    case 'left':  hx = bx + 4;  hy = by + 18; baseAngle =  Math.PI + Math.PI/4; break;
+    case 'right': hx = bx + 20; hy = by + 18; baseAngle =         - Math.PI/4; break;
+    case 'up':    hx = bx + 12; hy = by + 22; baseAngle = -Math.PI / 2;        break;
     case 'down':
-    default:      hx = bx + 16; hy = by + 22; baseAngle =  Math.PI / 2;   break;
+    default:      hx = bx + 16; hy = by + 22; baseAngle =  Math.PI / 2;        break;
   }
   ctx.save();
   ctx.translate(hx, hy);

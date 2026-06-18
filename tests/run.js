@@ -10,6 +10,7 @@ import { STATUS, applyStatus, hasStatus, tickStatuses } from '../js/systems/stat
 import { MOODS, resolveMood, DEFAULT_MOOD } from '../js/data/music.js';
 import { Audio } from '../js/systems/audio.js';
 import { readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 let pass = 0, fail = 0;
@@ -590,16 +591,46 @@ console.log('=== elites + biome bosses ===');
   ok('mouth only drawn when facing down',
      /if \(facing === 'down'\) ctx\.fillRect\(bx \+ 10, by \+ 7, 4, 1\)/.test(spriteSrc));
 
-  // ===== Sprint 18: crosshair cursor on the game canvas =====
-  // History: html/body/#game-canvas had cursor:auto. The fix applies a custom
-  // SVG crosshair (gold circle + cross + center dot) to all three, while
-  // leaving the existing pointer rules on buttons / interactables intact.
-  ok('html/body have crosshair cursor',
-     /html,body\s*\{[^}]*cursor:url\([^)]*svg/.test(cssSrc));
+  // ===== Sprint 19: crosshair cursor scoped to in-game only =====
+  // History: Sprint 18 put the SVG crosshair on html/body so it showed on
+  // the title screen and load-game screen too — looked like the player was
+  // aiming at a menu. Now scoped to #game-container / #game-canvas only;
+  // title + login + load-game screens show the default OS cursor.
+  ok('#game-container has crosshair cursor',
+     /#game-container\s*\{[^}]*cursor:url\([^)]*svg/.test(cssSrc));
   ok('#game-canvas has crosshair cursor',
      /#game-canvas\s*\{[^}]*cursor:url\([^)]*svg/.test(cssSrc));
+  ok('html/body no longer have crosshair cursor (title/login menus use default)',
+     !/html,body\s*\{[^}]*cursor:url/.test(cssSrc));
   ok('crosshair SVG uses gold accent (#ffcf4d)',
      /cursor:url\([^)]*%23ffcf4d/.test(cssSrc));
+
+  // ===== Sprint 19: sword held diagonally, not horizontal =====
+  // History: Sprint 17 anchored the sword at the hand for left/right facings,
+  // but used baseAngle=0 / PI — the blade stuck straight out to the side
+  // like a pole. User said it looked like the character was "holding the
+  // sword to the side". Fix: rotate left/right by ±PI/4 so the blade points
+  // forward-down at 45°, like a one-handed grip.
+  ok('sword left facing uses diagonal forward-down (PI + PI/4)',
+     /case 'left':[\s\S]*?baseAngle\s*=\s*Math\.PI\s*\+\s*Math\.PI\/4/.test(spriteSrc));
+  ok('sword right facing uses diagonal forward-down (-PI/4)',
+     /case 'right':[\s\S]*?baseAngle\s*=\s*-\s*Math\.PI\/4/.test(spriteSrc));
+
+  // ===== Sprint 19: Game exposes MAPS catalog for runtime audit =====
+  // The reachability audit (scripts/audit_maps.py) needs to enumerate every
+  // map without parsing source files. Game.maps now exposes the raw MAPS
+  // object as a debug hook (read-only).
+  ok('Game constructor exposes this.maps',
+     /this\.maps\s*=/.test(gameSrc));
+
+  // ===== Sprint 19: scripts/audit_maps.py covers every map =====
+  // The audit must iterate all maps and check reachability + items-in-walls
+  // + isolated regions. If a future contributor adds a map but the audit
+  // script doesn't include it, this guard fires.
+  ok('audit_maps.py exists', existsSync(path.join(import.meta.dirname, '..', 'scripts/audit_maps.py')));
+  ok('audit_maps.py iterates GAME.maps',
+     readFileSync(path.join(import.meta.dirname, '..', 'scripts/audit_maps.py'), 'utf8')
+       .includes('window.GAME.maps'));
 
   // ===== Sprint 18: enemy HP bar must always render =====
   // History: enemy.js drew the HP bar only when hp < hpMax (a thin red sliver).
