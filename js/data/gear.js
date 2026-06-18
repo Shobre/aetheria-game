@@ -32,6 +32,7 @@
  * @property {number}   [qty]       - stack qty (consumable/ammo)
  * @property {string}   [enchant]   - enchantment kind (scroll consumables)
  * @property {string}   [elemental] - elemental type (fire/ice/lightning/poison/holy)
+ * @property {number}   [weight]    - weapon weight (heavier = slower swing)
  * @property {(g: any) => void} [use] - consumable use callback (receives Game)
  */
 
@@ -51,6 +52,7 @@
  * @property {RarityId}   [rarity]
  * @property {string}     [baseName]
  * @property {{label: string, key: string, val: number}[]} [affixes]
+ * @property {import('./enchantments.js').EnchantKind} [enchant] - bound to weapon (Sprint 4+)
  */
 
 /**
@@ -130,7 +132,11 @@ export const CATALOG = {
   ring_power:  { name:'Ring of Power',  icon:'P', type:'ring', price:300, sell:125, stats:{atk:5,crit:5} },
   ring_vigor:  { name:'Ring of Vigor',  icon:'V', type:'ring', price:300, sell:125, stats:{hp:60,def:2} },
   ring_focus:  { name:'Ring of Focus',  icon:'F', type:'ring', price:300, sell:125, stats:{mp:60,cdr:15} },
-  sword_firesword: { name:'Firesword', icon:'↑', type:'weapon', slot:'hand', atk:26, atkSpeed:1.0, crit:10, elemental:'fire', price:280, weight:4 },
+  // Removed `slot:'hand'` — leftover from an earlier schema; no ItemDef
+  // reader uses it and it broke the ItemDef typecheck. The weapon slot
+  // is determined by `type:'weapon'`. Also moved `atk` into `stats` to
+  // match every other weapon in the catalog.
+  sword_firesword: { name:'Firesword', icon:'↑', type:'weapon', atkSpeed:1.0, stats:{atk:26,crit:10}, elemental:'fire', price:280, sell:120, weight:4 },
 };
 
 export const EQUIP_SLOTS = /** @type {EquipSlot[]} */ (['weapon','shield','armor','helm','ring']);

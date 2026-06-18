@@ -38,8 +38,19 @@ import { ACTIONS } from './keybinds.js';
  */
 
 // A few common trigger patterns get named so the steps below stay readable.
-/** @type {Record<string, (game: any) => boolean>} */
-const T = {
+// Some are curried (factory takes a parameter), some are direct. We type the
+// value as a more permissive trigger-builder union so TypeScript doesn't
+// reject the curried shape when assigning to a record slot expecting a
+// plain `(game) => boolean` function.
+const T = /** @type {{
+  movedPx:    (px: number) => (game: any) => boolean,
+  attackedN:  (n: number)   => (game: any) => boolean,
+  pickedUp:   ()            => (game: any) => boolean,
+  openedBag:  ()            => (game: any) => boolean,
+  castSpell:  ()            => (game: any) => boolean,
+  reachedCity:()            => (game: any) => boolean,
+  spokeNpc:   ()            => (game: any) => boolean,
+}} */ ({
   // Player has moved at least `px` total from spawn.
   movedPx: (px) => (game) => !!(game.player) && (game.player._totalMoved || 0) >= px,
   // Player has attacked at least N times.
@@ -54,7 +65,7 @@ const T = {
   reachedCity: () => (game) => game.currentMap === 'city',
   // Player has talked to an NPC (game.tutorialFlag.spokeNpc).
   spokeNpc: () => (game) => !!(game._tutorialFlag && game._tutorialFlag.spokeNpc),
-};
+});
 
 export const TUTORIAL_STEPS = [
   {

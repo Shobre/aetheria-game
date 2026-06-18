@@ -15,7 +15,7 @@
  * @property {'bow'|'crossbow'} forKind
  * @property {number} atkBonus
  * @property {number} qtyPerPack
- * @property {string} [statusOnHit]   - status effect ('burn', etc.)
+ * @property {import('../systems/status.js').StatusId} [statusOnHit]   - status effect ('burn', etc.)
  * @property {number} [statusDur]      - duration (seconds)
  */
 

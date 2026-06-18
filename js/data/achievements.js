@@ -14,6 +14,7 @@
  * @typedef {'combat'|'exploration'|'collection'|'quests'|'secrets'} AchievementCat
  *
  * @typedef {Object} AchievementDef
+ * @property {string}         [id]   - the key into ACHIEVEMENTS (auto-injected at load)
  * @property {AchievementCat} cat
  * @property {string}         name
  * @property {string}         icon   - single Unicode char

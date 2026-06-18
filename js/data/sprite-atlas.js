@@ -22,11 +22,11 @@
 //   - The first row is the fallback "default" sprite.
 
 /**
- * @typedef {Object} AtlasFrame
- * @property {number} 0 - row (top=0)
- * @property {number} 1 - col (left=0)
- * @property {number} 2 - frame width (px)
- * @property {number} 3 - frame height (px)
+ * Frame coordinates in the atlas PNG: [row, col, width, height]. The four
+ * numbers are positional (you read them as `frame[0]` etc.) — JSDoc can't
+ * express numeric-key tuples, so we type as `[number, number, number, number]`
+ * which TS validates with a 4-element tuple constraint.
+ * @typedef {[number, number, number, number]} AtlasFrame
  */
 
 /**
@@ -129,6 +129,7 @@ export function lookupFrame(atlasId, frameName){
 // test suite to assert on shape.
 /** @returns {Record<string, string[]>} */
 export function listAllFrames(){
+  /** @type {Record<string, string[]>} */
   const out = {};
   for(const a of SPRITE_ATLASES){
     out[a.id] = Object.keys(a.frames);

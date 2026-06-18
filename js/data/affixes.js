@@ -60,7 +60,7 @@ export function rollRarity(rng = Math.random, luck = 0){
 // Given a base item (from makeItem) produce a rarity-decorated copy with rolled affixes.
 // Mutates+returns the item. Safe to call on equippables only.
 /**
- * @param {import('./gear.js').Item|null|undefined} item
+ * @param {import('./gear.js').Item} item
  * @param {string} rarityId
  * @param {() => number} [rng]
  * @returns {import('./gear.js').Item|null|undefined}
@@ -68,7 +68,7 @@ export function rollRarity(rng = Math.random, luck = 0){
 export function applyRarity(item, rarityId, rng = Math.random){
   if(!item || item.type === 'consumable') return item;
   const R = RARITY[rarityId] || RARITY.common;
-  item.rarity = rarityId;
+  item.rarity = /** @type {import('./gear.js').RarityId} */ (rarityId);
   item.stats = item.stats ? { ...item.stats } : {};
   // scale base stats by rarity multiplier (rounded, min original)
   for(const k in item.stats){
