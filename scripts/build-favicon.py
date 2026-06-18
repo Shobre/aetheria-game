@@ -12,14 +12,12 @@ Regenerate if assets/favicon.svg changes.
 """
 
 import os
-import re
 import xml.etree.ElementTree as ET
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SVG_PATH = os.path.join(ROOT, 'assets', 'favicon.svg')
 
-# Output paths (project root — Vercel serves from there)
 PNG_32_PATH = os.path.join(ROOT, 'favicon-32x32.png')
 PNG_180_PATH = os.path.join(ROOT, 'apple-touch-icon.png')
 ICO_PATH = os.path.join(ROOT, 'favicon.ico')
@@ -33,8 +31,7 @@ def parse_svg_to_pixels(svg_path):
     viewbox = root.get('viewBox', '0 0 32 32').split()
     vw, vh = int(float(viewbox[2])), int(float(viewbox[3]))
 
-    # Default background: read from the first full-canvas rect, or fall back to dark navy.
-    pixels = [[(26, 26, 46)] * vw for _ in range(vh)]  # #1a1a2e
+    pixels = [[(26, 26, 46)] * vw for _ in range(vh)]
 
     for elem in root:
         tag = elem.tag.split('}')[-1]
@@ -47,7 +44,6 @@ def parse_svg_to_pixels(svg_path):
         fill = elem.get('fill', '#000000')
         opacity = float(elem.get('opacity', 1.0))
 
-        # Parse hex fill
         if fill.startswith('#'):
             fill = fill[1:]
             if len(fill) == 3:
@@ -61,7 +57,6 @@ def parse_svg_to_pixels(svg_path):
                 px, py = x + dx, y + dy
                 if 0 <= px < vw and 0 <= py < vh:
                     if opacity < 1.0:
-                        # Alpha-blend onto existing pixel
                         er, eg, eb = pixels[py][px]
                         pixels[py][px] = (
                             int(er * (1 - opacity) + r * opacity),
@@ -75,7 +70,6 @@ def parse_svg_to_pixels(svg_path):
 
 
 def pixels_to_image(pixels, vw, vh, size):
-    """Rasterize a 2D pixel array at `size`x`size` using nearest-neighbor (crisp)."""
     img = Image.new('RGB', (size, size), (26, 26, 46))
     px = img.load()
     scale = size / vw
@@ -97,17 +91,14 @@ def main():
     pixels, vw, vh = parse_svg_to_pixels(SVG_PATH)
     print(f'Parsed SVG: {vw}x{vh} grid')
 
-    # 32x32 PNG
     img32 = pixels_to_image(pixels, vw, vh, 32)
     img32.save(PNG_32_PATH, 'PNG', optimize=True)
     print(f'Wrote {PNG_32_PATH}')
 
-    # 180x180 PNG (Apple touch icon)
     img180 = pixels_to_image(pixels, vw, vh, 180)
     img180.save(PNG_180_PATH, 'PNG', optimize=True)
     print(f'Wrote {PNG_180_PATH}')
 
-    # Multi-resolution ICO: 16/32/48
     img16 = pixels_to_image(pixels, vw, vh, 16)
     img32 = pixels_to_image(pixels, vw, vh, 32)
     img48 = pixels_to_image(pixels, vw, vh, 48)
