@@ -161,7 +161,7 @@ export class Game {
       // elite chance scales with map difficulty (scale); harder maps breed champions
       const eliteChance=Math.min(0.22, 0.05*scale);
       const elite = rand()<eliteChance ? rollEliteMod(rand) : null;
-      const e=new Enemy(pos.x,pos.y,t,scale,elite); e.spawnIdx=i; this.enemies.push(e);
+      const e=new Enemy(pos.x,pos.y,t,scale,elite); this.enemies.push(e);
     }
     // checkpoint: dying returns you to this area at this entry point
     this.checkpoint={ map:mapId, tx, ty };
@@ -635,7 +635,7 @@ export class Game {
   spawnAdd(x,y,type){
     x=Math.max(40,Math.min(this.world.w-40,x)); y=Math.max(40,Math.min(this.world.h-40,y));
     if(this.world.isSolid(x,y)) return;
-    const e=new Enemy(x,y,type,(MAP_SCALE[this.currentMap]||1)); e.spawnIdx=-1; this.enemies.push(e);
+    const e=new Enemy(x,y,type,(MAP_SCALE[this.currentMap]||1)); this.enemies.push(e);
     this.spawnParticles(x,y,'#a45cff',10);
   }
   // boss defeat: rewards, drop, persist, quest hook
