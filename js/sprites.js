@@ -1087,3 +1087,416 @@ export function drawWeaponIcon(ctx, x, y, weaponItem) {
   ctx.restore();
   return true;
 }
+
+// ----- CONSUMABLE ICONS for the HUD -----
+// Sprint 20: every consumable / ammo / scroll gets a hand-drawn 24x24 canvas
+// icon. Previously these fell back to a single Unicode glyph (♥, ☀, ❄, …)
+// which the user reported looked identical between items and didn't convey
+// what the item actually was. Now each consumable has its own silhouette.
+//
+// All icons render inside a 24x24 box at (x, y). The caller (HUD) clears
+// any prior canvas child before appending the new one (see _drawGearCanvasIcon).
+
+/**
+ * Draw a 24x24 health-potion flask icon (small) at (x, y).
+ * Red liquid in a clear bottle — narrower than the Greater Potion.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x - top-left x
+ * @param {number} y - top-left y
+ * @returns {void}
+ */
+export function drawPotionIcon(ctx, x, y) {
+  // neck + cork
+  ctx.fillStyle = '#5a3a22';
+  ctx.fillRect(x + 10, y + 3, 4, 3);
+  // bottle body (rounded rectangle)
+  ctx.fillStyle = '#9adcdc';
+  ctx.beginPath();
+  ctx.moveTo(x + 7, y + 7);
+  ctx.lineTo(x + 17, y + 7);
+  ctx.lineTo(x + 17, y + 9);
+  ctx.quadraticCurveTo(x + 19, y + 11, x + 19, y + 14);
+  ctx.lineTo(x + 19, y + 18);
+  ctx.quadraticCurveTo(x + 19, y + 21, x + 16, y + 21);
+  ctx.lineTo(x + 8, y + 21);
+  ctx.quadraticCurveTo(x + 5, y + 21, x + 5, y + 18);
+  ctx.lineTo(x + 5, y + 14);
+  ctx.quadraticCurveTo(x + 5, y + 11, x + 7, y + 9);
+  ctx.closePath();
+  ctx.fill();
+  // red liquid (most of the bottle)
+  ctx.fillStyle = '#e8413c';
+  ctx.beginPath();
+  ctx.moveTo(x + 7, y + 11);
+  ctx.lineTo(x + 17, y + 11);
+  ctx.lineTo(x + 17, y + 18);
+  ctx.quadraticCurveTo(x + 17, y + 21, x + 14, y + 21);
+  ctx.lineTo(x + 10, y + 21);
+  ctx.quadraticCurveTo(x + 7, y + 21, x + 7, y + 18);
+  ctx.closePath();
+  ctx.fill();
+  // shimmer highlight on the glass
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillRect(x + 7, y + 9, 1, 5);
+  // border
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
+}
+
+/**
+ * Draw a 24x24 greater-potion flask icon at (x, y). Wider bottle, deeper red,
+ * gold sparkle to mark it as a stronger brew.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @returns {void}
+ */
+export function drawGreaterPotionIcon(ctx, x, y) {
+  // neck + cork (wider)
+  ctx.fillStyle = '#5a3a22';
+  ctx.fillRect(x + 9, y + 3, 6, 3);
+  // gold ring on the neck (signals "greater")
+  ctx.fillStyle = '#caa050';
+  ctx.fillRect(x + 8, y + 6, 8, 1);
+  // bottle body (rounded rectangle, wider than the small potion)
+  ctx.fillStyle = '#c8eaea';
+  ctx.beginPath();
+  ctx.moveTo(x + 6, y + 7);
+  ctx.lineTo(x + 18, y + 7);
+  ctx.lineTo(x + 18, y + 9);
+  ctx.quadraticCurveTo(x + 20, y + 11, x + 20, y + 14);
+  ctx.lineTo(x + 20, y + 18);
+  ctx.quadraticCurveTo(x + 20, y + 21, x + 17, y + 21);
+  ctx.lineTo(x + 7, y + 21);
+  ctx.quadraticCurveTo(x + 4, y + 21, x + 4, y + 18);
+  ctx.lineTo(x + 4, y + 14);
+  ctx.quadraticCurveTo(x + 4, y + 11, x + 6, y + 9);
+  ctx.closePath();
+  ctx.fill();
+  // rich crimson liquid
+  ctx.fillStyle = '#b81e2a';
+  ctx.beginPath();
+  ctx.moveTo(x + 6, y + 11);
+  ctx.lineTo(x + 18, y + 11);
+  ctx.lineTo(x + 18, y + 18);
+  ctx.quadraticCurveTo(x + 18, y + 21, x + 15, y + 21);
+  ctx.lineTo(x + 9, y + 21);
+  ctx.quadraticCurveTo(x + 6, y + 21, x + 6, y + 18);
+  ctx.closePath();
+  ctx.fill();
+  // sparkle
+  ctx.fillStyle = '#ffea8a';
+  ctx.fillRect(x + 13, y + 13, 2, 2);
+  ctx.fillRect(x + 12, y + 14, 1, 1);
+  ctx.fillRect(x + 14, y + 15, 1, 1);
+  // highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.fillRect(x + 6, y + 9, 1, 5);
+  // border
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
+}
+
+/**
+ * Draw a 24x24 mana-ether flask icon at (x, y). Tall thin bottle, blue liquid.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @returns {void}
+ */
+export function drawEtherIcon(ctx, x, y) {
+  // cork
+  ctx.fillStyle = '#5a3a22';
+  ctx.fillRect(x + 10, y + 2, 4, 3);
+  // tall narrow bottle
+  ctx.fillStyle = '#bce0e8';
+  ctx.beginPath();
+  ctx.moveTo(x + 9, y + 5);
+  ctx.lineTo(x + 15, y + 5);
+  ctx.lineTo(x + 15, y + 8);
+  ctx.quadraticCurveTo(x + 17, y + 10, x + 17, y + 14);
+  ctx.lineTo(x + 17, y + 19);
+  ctx.quadraticCurveTo(x + 17, y + 22, x + 14, y + 22);
+  ctx.lineTo(x + 10, y + 22);
+  ctx.quadraticCurveTo(x + 7, y + 22, x + 7, y + 19);
+  ctx.lineTo(x + 7, y + 14);
+  ctx.quadraticCurveTo(x + 7, y + 10, x + 9, y + 8);
+  ctx.closePath();
+  ctx.fill();
+  // blue mana
+  ctx.fillStyle = '#3a78d0';
+  ctx.beginPath();
+  ctx.moveTo(x + 9, y + 10);
+  ctx.lineTo(x + 15, y + 10);
+  ctx.lineTo(x + 15, y + 19);
+  ctx.quadraticCurveTo(x + 15, y + 22, x + 12, y + 22);
+  ctx.lineTo(x + 12, y + 22);
+  ctx.quadraticCurveTo(x + 9, y + 22, x + 9, y + 19);
+  ctx.closePath();
+  ctx.fill();
+  // sparkle
+  ctx.fillStyle = '#aedaff';
+  ctx.fillRect(x + 11, y + 14, 2, 2);
+  // highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillRect(x + 9, y + 7, 1, 7);
+  // border
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
+}
+
+/**
+ * Draw a 24x24 elixir flask icon at (x, y). Gold trim, purple liquid — the
+ * most potent brew in the catalog.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @returns {void}
+ */
+export function drawElixirIcon(ctx, x, y) {
+  // ornate stopper
+  ctx.fillStyle = '#caa050';
+  ctx.fillRect(x + 9, y + 2, 6, 4);
+  ctx.fillStyle = '#5a3a22';
+  ctx.fillRect(x + 11, y + 4, 2, 2);
+  // ornate bottle (gold-trimmed flask)
+  ctx.fillStyle = '#3a2050';
+  ctx.beginPath();
+  ctx.moveTo(x + 7, y + 6);
+  ctx.lineTo(x + 17, y + 6);
+  ctx.lineTo(x + 17, y + 9);
+  ctx.quadraticCurveTo(x + 19, y + 11, x + 19, y + 14);
+  ctx.lineTo(x + 19, y + 18);
+  ctx.quadraticCurveTo(x + 19, y + 21, x + 16, y + 21);
+  ctx.lineTo(x + 8, y + 21);
+  ctx.quadraticCurveTo(x + 5, y + 21, x + 5, y + 18);
+  ctx.lineTo(x + 5, y + 14);
+  ctx.quadraticCurveTo(x + 5, y + 11, x + 7, y + 9);
+  ctx.closePath();
+  ctx.fill();
+  // gold rim accent
+  ctx.strokeStyle = '#caa050';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // purple liquid
+  ctx.fillStyle = '#a45cff';
+  ctx.beginPath();
+  ctx.moveTo(x + 7, y + 11);
+  ctx.lineTo(x + 17, y + 11);
+  ctx.lineTo(x + 17, y + 18);
+  ctx.quadraticCurveTo(x + 17, y + 21, x + 14, y + 21);
+  ctx.lineTo(x + 10, y + 21);
+  ctx.quadraticCurveTo(x + 7, y + 21, x + 7, y + 18);
+  ctx.closePath();
+  ctx.fill();
+  // two sparkles
+  ctx.fillStyle = '#ffea8a';
+  ctx.fillRect(x + 10, y + 14, 2, 2);
+  ctx.fillRect(x + 14, y + 17, 1, 1);
+  // border
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
+}
+
+/**
+ * Draw a 24x24 bomb icon at (x, y). Round black sphere with a fuse.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @returns {void}
+ */
+export function drawBombIcon(ctx, x, y) {
+  // fuse spark
+  ctx.fillStyle = '#ffea8a';
+  ctx.fillRect(x + 14, y + 2, 2, 2);
+  ctx.fillStyle = '#ff8a30';
+  ctx.fillRect(x + 13, y + 3, 1, 1);
+  // fuse (curved)
+  ctx.strokeStyle = '#5a3a22';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x + 13, y + 4);
+  ctx.quadraticCurveTo(x + 16, y + 5, x + 14, y + 6);
+  ctx.stroke();
+  // bomb body (round, almost full box)
+  ctx.fillStyle = '#1a1a20';
+  ctx.beginPath();
+  ctx.arc(x + 12, y + 14, 8, 0, Math.PI * 2);
+  ctx.fill();
+  // highlight (top-left)
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.beginPath();
+  ctx.arc(x + 9, y + 11, 3, 0, Math.PI * 2);
+  ctx.fill();
+  // band around the equator
+  ctx.fillStyle = '#3a3a44';
+  ctx.fillRect(x + 4, y + 13, 16, 1);
+  // border
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
+}
+
+/**
+ * Draw a 24x24 scroll icon at (x, y) tinted by element. Used for the five
+ * enchantment scrolls (fire / ice / lightning / poison / holy).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @param {string} element - one of 'fire'|'ice'|'lightning'|'poison'|'holy'
+ * @returns {void}
+ */
+export function drawScrollIcon(ctx, x, y, element) {
+  const tint = ({
+    fire:      { body:'#f4d0a8', seal:'#ff6020', glow:'#ffaa30' },
+    ice:       { body:'#dfeaf8', seal:'#3a78d0', glow:'#aedaff' },
+    lightning: { body:'#f0e8b8', seal:'#caa050', glow:'#ffea30' },
+    poison:    { body:'#d4e8c0', seal:'#5a8a3a', glow:'#9aff5f' },
+    holy:      { body:'#f8e8c0', seal:'#ffcf4d', glow:'#fff0a0' },
+  })[element] || { body:'#e8e0c0', seal:'#caa050', glow:'#ffea8a' };
+  // scroll body (rolled parchment)
+  ctx.fillStyle = tint.body;
+  ctx.fillRect(x + 4, y + 6, 16, 14);
+  // rolled ends (left & right cylinders)
+  ctx.fillStyle = '#d8c890';
+  ctx.fillRect(x + 3, y + 5, 2, 16);
+  ctx.fillRect(x + 19, y + 5, 2, 16);
+  ctx.fillStyle = '#5a3a22';
+  ctx.fillRect(x + 3, y + 5, 2, 1);
+  ctx.fillRect(x + 3, y + 20, 2, 1);
+  ctx.fillRect(x + 19, y + 5, 2, 1);
+  ctx.fillRect(x + 19, y + 20, 2, 1);
+  // writing lines
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(x + 6, y + 9, 12, 1);
+  ctx.fillRect(x + 6, y + 12, 10, 1);
+  ctx.fillRect(x + 6, y + 15, 12, 1);
+  // element seal (round, centred, with a sparkle)
+  ctx.fillStyle = tint.seal;
+  ctx.beginPath();
+  ctx.arc(x + 12, y + 17, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = tint.glow;
+  ctx.fillRect(x + 11.5, y + 16.5, 1, 1);
+  // border
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
+}
+
+/**
+ * Draw a 24x24 arrow icon at (x, y) tinted by material (wood / iron / fire).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @param {string} material - 'wood'|'iron'|'fire'
+ * @returns {void}
+ */
+export function drawArrowIcon(ctx, x, y, material) {
+  const head = material === 'iron' ? '#9aa6c0' : material === 'fire' ? '#ff6020' : '#caa050';
+  const shaft = material === 'iron' ? '#3a2a1a' : material === 'fire' ? '#7a3a1a' : '#7a5230';
+  const fletch = material === 'fire' ? '#ffaa30' : '#fff0a0';
+  // shaft
+  ctx.fillStyle = shaft;
+  ctx.fillRect(x + 5, y + 11, 12, 2);
+  // arrowhead (triangle pointing left)
+  ctx.fillStyle = head;
+  ctx.beginPath();
+  ctx.moveTo(x + 4, y + 12);
+  ctx.lineTo(x + 8, y + 9);
+  ctx.lineTo(x + 8, y + 15);
+  ctx.closePath();
+  ctx.fill();
+  // fletching (right end)
+  ctx.fillStyle = fletch;
+  ctx.fillRect(x + 17, y + 9, 2, 6);
+  ctx.fillStyle = '#1a1410';
+  ctx.fillRect(x + 16, y + 9, 1, 6);
+  // fire glow
+  if(material === 'fire'){
+    ctx.fillStyle = 'rgba(255, 200, 80, 0.5)';
+    ctx.beginPath();
+    ctx.arc(x + 6, y + 12, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // border
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
+}
+
+/**
+ * Draw a 24x24 crossbow-bolt icon at (x, y) tinted by material.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @param {string} material - 'wood'|'iron'
+ * @returns {void}
+ */
+export function drawBoltIcon(ctx, x, y, material) {
+  const head = material === 'iron' ? '#9aa6c0' : '#caa050';
+  const shaft = material === 'iron' ? '#3a2a1a' : '#7a5230';
+  const fletch = material === 'iron' ? '#9adcdc' : '#fff0a0';
+  // thicker shaft (bolts are sturdier than arrows)
+  ctx.fillStyle = shaft;
+  ctx.fillRect(x + 6, y + 11, 11, 2);
+  // pyramid head (square bolt head, not a triangle)
+  ctx.fillStyle = head;
+  ctx.fillRect(x + 4, y + 9, 3, 6);
+  ctx.fillRect(x + 3, y + 10, 1, 4);
+  // fletching (shorter than arrow)
+  ctx.fillStyle = fletch;
+  ctx.fillRect(x + 17, y + 9, 3, 6);
+  ctx.fillStyle = '#1a1410';
+  ctx.fillRect(x + 17, y + 9, 1, 6);
+  // notch
+  ctx.fillStyle = '#1a1410';
+  ctx.fillRect(x + 16, y + 11, 1, 2);
+  // border
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
+}
+
+/**
+ * Dispatch helper — looks up the item id and calls the matching draw*Icon.
+ * Returns true if a canvas icon was drawn, false to fall back to text.
+ * @param {HTMLCanvasElement|CanvasRenderingContext2D} ctxOrTarget
+ * @param {HTMLDivElement} cell - host element used when the caller wants
+ *   the canvas appended to a slot div
+ * @param {*} item
+ * @returns {boolean}
+ */
+export function drawConsumableIcon(ctxOrTarget, cell, item) {
+  if(!item) return false;
+  const id = item.id || '';
+  // Resolve a 2D context — the sprite functions accept (ctx, x, y[, extra]).
+  // Cell is unused here (caller already created the canvas); we draw into
+  // the supplied ctx at (0, 0). Caller sizes the canvas to 24x24.
+  const ctx = /** @type {CanvasRenderingContext2D} */ (ctxOrTarget);
+  if(id === 'potion'){ drawPotionIcon(ctx, 0, 0); return true; }
+  if(id === 'potion_l'){ drawGreaterPotionIcon(ctx, 0, 0); return true; }
+  if(id === 'ether'){ drawEtherIcon(ctx, 0, 0); return true; }
+  if(id === 'elixir'){ drawElixirIcon(ctx, 0, 0); return true; }
+  if(id === 'bomb'){ drawBombIcon(ctx, 0, 0); return true; }
+  if(id.startsWith('scroll_')){
+    const el = id.replace('scroll_', '');
+    drawScrollIcon(ctx, 0, 0, el);
+    return true;
+  }
+  if(id.startsWith('arrow_')){
+    const mat = id.replace('arrow_', '');
+    drawArrowIcon(ctx, 0, 0, mat);
+    return true;
+  }
+  if(id.startsWith('bolt_')){
+    const mat = id.replace('bolt_', '');
+    drawBoltIcon(ctx, 0, 0, mat);
+    return true;
+  }
+  return false;
+}

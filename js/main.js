@@ -323,10 +323,14 @@ document.getElementById('log-btn').onclick=()=>{ const cl=document.getElementByI
   if(cl.classList.contains('hidden')) openModal(cl); else closeModal(cl); };
 document.querySelectorAll('[data-close]').forEach(b=>{ const el = /** @type {HTMLElement} */ (b); el.onclick=()=>closeModal(document.getElementById(/** @type {string} */ (el.dataset.close))); });
 document.getElementById('shop-close').onclick=()=>closeModal(shopModal);
-document.getElementById('save-game-btn').onclick=()=>{
+document.getElementById('save-game-btn').onclick=async ()=>{
   const uname=game._username;
-  if(uname){ cloudSave(uname, game.slot, game._buildState()); }
+  if(uname){ await cloudSave(uname, game.slot, game._buildState()); }
   else game.save();
+  // Always show a notification — cloudSave() doesn't toast on its own
+  // (it might be saving locally if the network is down), so this catches
+  // both paths. The user reported "no notification when manually saving".
+  game.toast('Game Saved!');
 };
 // Sprint 10: tutorial reset button. Clears both the localStorage flag and
 // the in-memory tutorial, so the next Game.start() will run it from the top.
@@ -349,6 +353,19 @@ document.getElementById('logout-btn').addEventListener('click', ()=>{
     /** @type {HTMLInputElement|null} */ (document.getElementById('login-user')).value='';
     /** @type {HTMLInputElement|null} */ (document.getElementById('login-pass')).value='';
   }
+});
+// Sprint 20: also wire the start-screen logout button. No confirm dialog —
+// the user is already on the load-game screen with no in-progress game,
+// so the only state to lose is the auth token (recoverable by signing in
+// again). Keeping it one-click keeps the UX fast.
+document.getElementById('start-logout-btn').addEventListener('click', ()=>{
+  if(game && game.running) game.quitToMenu();
+  localStorage.removeItem('aetheria_auth');
+  show('login-screen');
+  const lu = /** @type {HTMLInputElement|null} */ (document.getElementById('login-user'));
+  const lp = /** @type {HTMLInputElement|null} */ (document.getElementById('login-pass'));
+  if(lu) lu.value = '';
+  if(lp) lp.value = '';
 });
 document.getElementById('respawn-btn').onclick=()=>game.respawn();
 document.getElementById('town-btn').onclick=()=>{ if(game.canTeleportTown && game.canTeleportTown()) game.teleportToTown(); };

@@ -8,7 +8,7 @@ import { SPELLS, knownSpells, spellRank } from '../data/spells.js';
 import { reforgeCost, upgradeCost, canUpgrade, stripEnchantCost } from '../systems/craft.js';
 import { AMMO, AMMO_ORDER, DEFAULT_AMMO } from '../data/ammo.js';
 import { labelFor as labelForKey } from '../data/keybinds.js';
-import { drawArmorIcon, drawHelmIcon, drawShieldIcon, drawRingIcon, drawWeaponIcon } from '../sprites.js';
+import { drawArmorIcon, drawHelmIcon, drawShieldIcon, drawRingIcon, drawWeaponIcon, drawConsumableIcon } from '../sprites.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_CATS, achievementStats } from '../data/achievements.js';
 import { ENCHANTMENTS, enchantCost, enchantInfo } from '../data/enchantments.js';
 
@@ -641,7 +641,11 @@ export class HUD {
   // like potions don't get canvas icons).
   _drawGearCanvasIcon(cell, item){
     const t = item.type;
-    if(t !== 'armor' && t !== 'helm' && t !== 'shield' && t !== 'ring' && t !== 'weapon') return false;
+    // Sprint 20: now handles consumable/ammo in addition to equipment.
+    // The dispatch helper returns true when a matching icon was drawn, so
+    // the caller can skip the text-glyph fallback below.
+    if(t !== 'armor' && t !== 'helm' && t !== 'shield' && t !== 'ring' && t !== 'weapon'
+       && t !== 'consumable' && t !== 'ammo') return false;
     // clear any prior canvas so refresh doesn't pile them up
     const existing = /** @type {HTMLCanvasElement|null} */ (cell.querySelector('canvas'));
     if(existing) existing.remove();
@@ -655,6 +659,11 @@ export class HUD {
     else if(t === 'shield') drawShieldIcon(ctx, 0, 0, item);
     else if(t === 'ring')   drawRingIcon(ctx, 0, 0, item);
     else if(t === 'weapon') drawWeaponIcon(ctx, 0, 0, item);
+    else if(t === 'consumable' || t === 'ammo'){
+      if(!drawConsumableIcon(ctx, cell, item)){
+        // unknown id, leave the canvas blank so the fallback text below shows
+      }
+    }
     cell.appendChild(cv);
     return true;
   }

@@ -632,18 +632,78 @@ console.log('=== elites + biome bosses ===');
      readFileSync(path.join(import.meta.dirname, '..', 'scripts/audit_maps.py'), 'utf8')
        .includes('window.GAME.maps'));
 
-  // ===== Sprint 18: enemy HP bar must always render =====
-  // History: enemy.js drew the HP bar only when hp < hpMax (a thin red sliver).
-  // Fixed enemies showed no health state at all. Now the bar always renders with
-  // a dark track, gold border, and a red fill scaled to hp/hpMax.
-  ok('enemy HP bar renders unconditionally',
-     /\/\/ hp bar\b[\s\S]{0,500}const barW = this\.r \* 2 \+ 2/.test(enemySrc2));
+  // ===== Sprint 20: enemy HP bar always renders (atlas + canvas paths) =====
+  // History: Sprint 18 patched the canvas-primitive path only. Atlas-rendered
+  // enemies (the default) got NO HP bar, so the user reported "enemies still
+  // show no health bars when damaged". Fix: extracted HP bar into _drawHpBar
+  // and call it from `draw` so it runs on BOTH atlas and canvas paths.
+  ok('enemy HP bar renders unconditionally via _drawHpBar helper',
+     /_drawHpBar\([\s\S]{0,200}const barW = this\.r \* 2 \+ 2/.test(enemySrc2));
+  ok('Enemy draw() calls _drawHpBar regardless of atlas',
+     /_atlasDrawn[\s\S]{0,800}_drawHpBar\(ctx, sx, sy\)/.test(enemySrc2));
   ok('enemy HP bar fill is always solid red',
      /const flashAmt[\s\S]{0,200}fillStyle = flashAmt > 0/.test(enemySrc2) ||
      /ctx\.fillStyle = flashAmt > 0 \?[^;]+;\s*ctx\.fillStyle = '#e8413c'/.test(enemySrc2));
   ok('Enemy has alertFlash field set in constructor and on hit',
      /this\.alertFlash=0/.test(enemySrc2) &&
      /this\.alertFlash=0\.35/.test(enemySrc2));
+
+  // ===== Sprint 20: enemy facing direction =====
+  // History: enemies used the same sprite regardless of which way they were
+  // facing. Now _atlasDrawn and _drawCanvas flip the sprite horizontally
+  // when this.face.x is negative (moving/looking left).
+  ok('enemy atlas path flips horizontally when facing left',
+     /this\.face && this\.face\.x < -0\.2[\s\S]{0,200}ctx\.scale\(-1, 1\)/.test(enemySrc2));
+  ok('enemy canvas-primitive path uses scale(-1, 1) when facing left',
+     /const flipX = this\.face && this\.face\.x < -0\.2/.test(enemySrc2));
+
+  // ===== Sprint 20: close-range melee widens arc =====
+  // History: at point-blank range the mouse cursor rarely lines up with the
+  // enemy's angle perfectly, so the swing arc check missed and the enemy
+  // felt "undamageable". Now the arc widens to a full circle within the
+  // enemy's contact radius.
+  ok('_hitTargetInArc widens arc to PI at point-blank range',
+     /d <= p\.r \+ e\.r \+ 4[\s\S]{0,200}effectiveArc = Math\.PI/.test(gameSrc));
+  ok('near-contact range lerps arc toward full circle',
+     /d <= p\.r \+ e\.r \+ 20[\s\S]{0,300}effectiveArc = arc \+ \(Math\.PI - arc\)/.test(gameSrc));
+
+  // ===== Sprint 20: manual save toast =====
+  // History: save-game-btn called cloudSave() for signed-in users, which
+  // didn't toast. Local path did. So signed-in users got a silent save.
+  const mainSrc2 = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  ok('save-game-btn toasts "Game Saved!" for both local + cloud paths',
+     /save-game-btn[\s\S]{0,500}game\.toast\('Game Saved!'\)/.test(mainSrc2));
+
+  // ===== Sprint 20: logout button on load-game screen =====
+  // History: logout only existed in the in-game pause menu. Signed-in users
+  // who quit to the start screen had no way to sign out from there.
+  ok('start-logout-btn exists in index.html',
+     /id="start-logout-btn"/.test(readFileSync(new URL('../index.html', import.meta.url), 'utf8')));
+  ok('start-logout-btn wired in main.js to remove auth + show login',
+     /start-logout-btn[\s\S]{0,400}removeItem\('aetheria_auth'\)/.test(mainSrc2));
+
+  // ===== Sprint 20: consumable icons drawn via canvas =====
+  // History: potions/scrolls/ammo fell back to a single Unicode glyph that
+  // looked identical between items. Now each consumable has its own canvas
+  // icon in sprites.js, and the HUD routes consumable + ammo through the
+  // same _drawGearCanvasIcon path.
+  ok('drawPotionIcon defined (red flask)',
+     /export function drawPotionIcon\(/.test(spriteSrc));
+  ok('drawGreaterPotionIcon defined (wider red flask with gold trim)',
+     /export function drawGreaterPotionIcon\(/.test(spriteSrc));
+  ok('drawEtherIcon defined (tall thin blue flask)',
+     /export function drawEtherIcon\(/.test(spriteSrc));
+  ok('drawElixirIcon defined (gold-trimmed purple flask)',
+     /export function drawElixirIcon\(/.test(spriteSrc));
+  ok('drawBombIcon defined (round black sphere with fuse)',
+     /export function drawBombIcon\(/.test(spriteSrc));
+  ok('drawScrollIcon defined (parchment + element seal)',
+     /export function drawScrollIcon\(/.test(spriteSrc));
+  ok('drawArrowIcon + drawBoltIcon defined (wood/iron/fire variants)',
+     /export function drawArrowIcon\(/.test(spriteSrc) &&
+     /export function drawBoltIcon\(/.test(spriteSrc));
+  ok('HUD _drawGearCanvasIcon handles consumable + ammo types',
+     /t === 'consumable' \|\| t === 'ammo'/.test(readFileSync(new URL('../js/ui/hud.js', import.meta.url), 'utf8')));
 
   // ===== Sprint 18: Forgotten Crypt portal corridor =====
   // History: _genRooms filled the entire dungeon with WALL except for 6-9

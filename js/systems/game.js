@@ -525,7 +525,23 @@ export class Game {
     if(d>=reach+e.r) return;
     const ang=Math.atan2(dy,dx);
     let diff=Math.abs(((ang-p._aim+Math.PI)%(2*Math.PI))-Math.PI);
-    if(diff>=arc) return;
+    // Sprint 20: at point-blank range (within the player's reach), the
+    // sword swing arc widens towards 360°. When the enemy is literally
+    // touching the player, the player should always land the hit — there's
+    // no way to "miss" an enemy that's on top of you. Without this, an
+    // enemy that gets pushed into the player by its own collision with
+    // other enemies (or by the player's forward step) ends up un-targetable
+    // because the mouse cursor doesn't perfectly track the enemy's angle.
+    let effectiveArc = arc;
+    if(d <= p.r + e.r + 4){
+      // Point-blank: full circle (any swing direction hits)
+      effectiveArc = Math.PI;
+    } else if(d <= p.r + e.r + 20){
+      // Near-contact: widen the arc progressively as distance shrinks
+      const t = 1 - (d - (p.r + e.r + 4)) / 16;
+      effectiveArc = arc + (Math.PI - arc) * Math.max(0, Math.min(1, t));
+    }
+    if(diff>=effectiveArc) return;
     let dmg=p.atk*p.dmgMul;
     const crit=Math.random()*100<p.crit;
     if(crit) dmg*=2;

@@ -663,8 +663,45 @@ export class Enemy {
     } else {
       this._drawCanvas(ctx, sx, sy, bob);
     }
-    // Floating HP pip above the body for champions / bosses (skipped on
-    // the atlas path so it never double-draws).
+    // HP bar — drawn UNCONDITIONALLY on both atlas and canvas-primitive
+    // paths. Sprint 18 only patched _drawCanvas, so atlas-rendered enemies
+    // (which is most of them when the atlas is enabled — the default) had
+    // no visible HP bar. The user saw enemies with full HP at 100% and
+    // assumed the bar was broken.
+    this._drawHpBar(ctx, sx, sy);
+  }
+
+  /**
+   * HP bar drawn above the enemy head, dark track + gold border + red fill
+   * scaled to hp/hpMax. Always shown so the player can see the enemy state.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} sx - screen x (world x - cam.x)
+   * @param {number} sy - screen y (world y - cam.y)
+   * @returns {void}
+   */
+  _drawHpBar(ctx, sx, sy){
+    const barW = this.r * 2 + 2;
+    const barX = sx - this.r - 1;
+    const barY = sy - this.r - 8;
+    const frac = Math.max(0, Math.min(1, this.hp / Math.max(1, this.hpMax)));
+    ctx.fillStyle = '#000';
+    ctx.fillRect(barX, barY, barW, 4);
+    // gold border accent (1px)
+    ctx.fillStyle = '#caa050';
+    ctx.fillRect(barX, barY - 1, barW, 1);
+    ctx.fillRect(barX, barY + 4, barW, 1);
+    ctx.fillRect(barX - 1, barY - 1, 1, 6);
+    ctx.fillRect(barX + barW, barY - 1, 1, 6);
+    // damage-taken tint: if the enemy just took damage, briefly flash the bar
+    // brighter; otherwise the steady-state fill is solid red.
+    const flashAmt = Math.max(0, this.alertFlash || 0);
+    ctx.fillStyle = flashAmt > 0 ? `rgba(255, 255, 200, ${0.7 * flashAmt})` : '#e8413c';
+    ctx.fillRect(barX + 1, barY + 1, Math.max(0, (barW - 2) * frac), 2);
+    // alert indicator when actively hunting the player
+    if(this.alert>2.5){ ctx.fillStyle='#ffe24d'; ctx.font='bold 12px monospace'; ctx.textAlign='center';
+      ctx.fillText('!', sx, sy-this.r-10); }
+    if(this.elite){ ctx.fillStyle=this.eliteMod.aura; ctx.font='bold 9px monospace'; ctx.textAlign='center';
+      ctx.fillText(this.eliteMod.label, sx, sy-this.r-16); }
   }
 
   // Sprint 11: atlas-aware base body draw. Returns true if the atlas took
@@ -672,8 +709,24 @@ export class Enemy {
   // colored overlay on top of the atlas frame.
   _atlasDrawn(ctx, sx, sy, bob){
     if(!isUsingAtlases()) return false;
-    const drew = drawImageFromAtlas(ctx, 'enemies', this.type, sx, sy, { bob });
-    if(!drew) return false;
+    // Sprint 20: face the direction the enemy is moving/looking.
+    // `this.face` is a unit vector (set by chase/AI). If it's pointing
+    // left we flip the sprite horizontally around its centre; if it's
+    // pointing up/down we don't flip (no clean way without a separate
+    // sprite, and the bob already conveys vertical motion).
+    let flipX = false;
+    if(this.face && this.face.x < -0.2) flipX = true;
+    if(flipX){
+      ctx.save();
+      ctx.translate(sx, 0);
+      ctx.scale(-1, 1);
+      const drew = drawImageFromAtlas(ctx, 'enemies', this.type, 0, sy, { bob });
+      ctx.restore();
+      if(!drew) return false;
+    } else {
+      const drew = drawImageFromAtlas(ctx, 'enemies', this.type, sx, sy, { bob });
+      if(!drew) return false;
+    }
     // Cosmetic overlays. We tint the frame if hit-frozen, hit-flash, or
     // telegraphing — keeps the canonical visual signals (frosted blue,
     // pure white, strobe red) without losing the new sprite art.
@@ -701,6 +754,18 @@ export class Enemy {
     let c=this.hitFlash>0?'#fff':(this.frozen>0?'#9fd8ff':this.color);
     // telegraph flash (lunge windup)
     if(this.lungeState==='telegraph'){ c=Math.floor(performance.now()/80)%2?'#ff5050':this.color; }
+    // Sprint 20: face the direction the enemy is moving. When `this.face.x`
+    // is negative (moving left) we flip the whole body horizontally around
+    // its centre so the sprite mirrors — boar's snout moves to the other
+    // side, archer's bow swaps sides, etc. Vertical facing (up/down) keeps
+    // the existing pose since the bob already conveys vertical motion.
+    const flipX = this.face && this.face.x < -0.2;
+    if(flipX){
+      ctx.save();
+      ctx.translate(sx, 0);
+      ctx.scale(-1, 1);
+      sx = 0;
+    }
     const t=this.type;
     if(t==='slime'){
       ctx.fillStyle=c; ctx.beginPath(); ctx.ellipse(sx,sy+bob,this.r,this.r-bob*0.5,0,0,7); ctx.fill();
@@ -872,33 +937,9 @@ export class Enemy {
       ctx.fillStyle=c; ctx.fillRect(sx-this.r,sy-this.r+bob,this.r*2,this.r*2);
       ctx.fillStyle='#ffcf4d'; ctx.fillRect(sx-6,sy-5+bob,3,3); ctx.fillRect(sx+3,sy-5+bob,3,3);
     }
-    // hp bar — always rendered so the player can see how much health a mob has.
-    // Previous behaviour only drew the bar once hp < hpMax (a tiny red sliver),
-    // which gave enemies no visible health state at full HP. Now: dark track +
-    // gold border + red fill scaled to current HP / HPmax. A 1px outline keeps
-    // the bar readable on any biome.
-    const barW = this.r * 2 + 2;
-    const barX = sx - this.r - 1;
-    const barY = sy - this.r - 8;
-    const frac = Math.max(0, Math.min(1, this.hp / Math.max(1, this.hpMax)));
-    ctx.fillStyle = '#000';
-    ctx.fillRect(barX, barY, barW, 4);
-    // gold border accent (1px)
-    ctx.fillStyle = '#caa050';
-    ctx.fillRect(barX, barY - 1, barW, 1);
-    ctx.fillRect(barX, barY + 4, barW, 1);
-    ctx.fillRect(barX - 1, barY - 1, 1, 6);
-    ctx.fillRect(barX + barW, barY - 1, 1, 6);
-    // damage-taken tint: if the enemy just took damage, briefly flash the bar
-    // brighter; otherwise the steady-state fill is solid red.
-    const flashAmt = Math.max(0, this.alertFlash || 0);
-    ctx.fillStyle = flashAmt > 0 ? `rgba(255, 255, 200, ${0.7 * flashAmt})` : '#e8413c';
-    ctx.fillRect(barX + 1, barY + 1, Math.max(0, (barW - 2) * frac), 2);
-    // alert indicator when actively hunting the player
-    if(this.alert>2.5){ ctx.fillStyle='#ffe24d'; ctx.font='bold 12px monospace'; ctx.textAlign='center';
-      ctx.fillText('!', sx, sy-this.r-10); }
-    if(this.elite){ ctx.fillStyle=this.eliteMod.aura; ctx.font='bold 9px monospace'; ctx.textAlign='center';
-      ctx.fillText(this.eliteMod.label, sx, sy-this.r-16); }
+    if(flipX) ctx.restore();
+    // HP bar is drawn by the caller (draw) via _drawHpBar — runs on both
+    // atlas and canvas-primitive paths so it never gets missed.
     drawStatusPips(this,ctx,sx,sy);
   }
 }

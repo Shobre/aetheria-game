@@ -86,6 +86,14 @@
     <div class="w-full max-w-2xl">
       <h2 class="text-xs text-gray-300 mb-4 text-center tracking-widest">SELECT SAVE SLOT</h2>
       <div id="save-slots" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+      <!-- Sprint 20: explicit Log Out button on the load-game screen.
+           Previously logout was only reachable from the in-game pause
+           menu, so signed-in users who quit to the start screen had to
+           re-open the game and pause just to sign out. Now a single
+           click on the start screen signs them out and returns to login. -->
+      <div class="mt-6 text-center">
+        <button id="start-logout-btn" class="menu-btn text-[10px]">LOG OUT</button>
+      </div>
     </div>
 
     <div class="mt-10 text-[8px] md:text-[10px] text-gray-500 leading-relaxed text-center max-w-lg">
