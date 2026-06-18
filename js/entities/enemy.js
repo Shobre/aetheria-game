@@ -672,6 +672,11 @@ export class Projectile {
     this.aoe=opts.aoe||0; this.status=opts.status||null;
     this.statusDur=opts.statusDur||0;  // Sprint 5: ammo elemental duration override
     this.chain=opts.chain||0; this.crit=opts.crit||false; this.lifesteal=opts.lifesteal||0;
+    // Sprint 15: store the homing factor so mage/boss projectiles actually
+    // home. Before this, opts.homing was passed by callers but the constructor
+    // never copied it into this.homing, so the update() check on line 681
+    // always evaluated false (projectiles flew straight).
+    this.homing=opts.homing||0;
     this.hitSet=null; this.dead=false; this.trail=[];
   }
   update(dt, world, enemies, game){

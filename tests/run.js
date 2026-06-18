@@ -1179,6 +1179,16 @@ console.log('\n=== sprint 5 (ammo / quiver) ===');
   eq('wood arrow has no status', woodProj.status, null);
   ok('wood arrow has no statusDur', !woodProj.statusDur);
 
+  // ---- Projectile stores opts.homing (Sprint 15 fix) ----
+  // Sprint 4 added homing logic in update() ('if(this.homing && ...)') but the
+  // constructor never copied opts.homing into this.homing, so the check was
+  // always false — mage/boss projectiles flew straight. This test pins the
+  // fix so the bug doesn't regress.
+  const homingProj = new Projectile(0, 0, 0, { speed: 1, dmg: 5, homing: 0.08 });
+  eq('homing Projectile stores homing factor', homingProj.homing, 0.08);
+  const noHomingProj = new Projectile(0, 0, 0, { speed: 1, dmg: 5 });
+  eq('non-homing Projectile defaults homing to 0', noHomingProj.homing, 0);
+
   // ---- save.newGame starts the player with ammo ----
   // Mock localStorage for the test environment
   const origLS = globalThis.localStorage;
