@@ -299,7 +299,7 @@ export const MAPS = {
   },
   volcano_depths: {
     id:'volcano_depths', name:'Magma Core', cols:40, rows:40, seed:778, biome:'volcano',
-    pal:{ fa:'#2a0a00', fb:'#3a1a0a', pa:'#5a2a1a', pb:'#6a3a2a', wd:'#1a0a00', wl:'#7a3a1a', liquid:'#8a1a0a', liquid:'#9a2a1a' },
+    pal:{ fa:'#2a0a00', fb:'#3a1a0a', pa:'#5a2a1a', pb:'#6a3a2a', wd:'#1a0a00', wl:'#7a3a1a', liquid:'#8a1a0a', liquid2:'#9a2a1a' },
     npcs:[],
     portals:[
       { x:20, y:38, to:'volcano', tx:20, ty:3 },
