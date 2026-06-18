@@ -3,7 +3,32 @@
 // of wasPressed('q') so a rebind in Settings actually works.
 import { DEFAULT_BIND, normalizeKey, mouseKey } from '../data/keybinds.js';
 
+/**
+ * @typedef {Record<string, string>} BindingsMap
+ *   action id -> bound key (lowercased; 'mouse1'/'mouse2'/'mouse3' for buttons)
+ *
+ * @typedef {Record<string, boolean>} KeyState
+ *
+ * @typedef {{left:boolean, right:boolean, middle:boolean}} MouseButtonState
+ *
+ * @typedef {{x:number, y:number, worldX:number, worldY:number}} MousePos
+ *
+ * @typedef {Object} InputState
+ * Input instance state.
+ * @property {HTMLCanvasElement} canvas
+ * @property {KeyState}    keys     - currently held keys (lowercase e.key strings)
+ * @property {KeyState}    pressed  - edge-triggered this frame
+ * @property {MousePos}    mouse
+ * @property {MouseButtonState} mouseDown
+ * @property {MouseButtonState} mousePressed
+ * @property {BindingsMap} bindings
+ * @property {Record<string, string[]>} _keyToActions
+ */
+
 export class Input {
+  /**
+   * @param {HTMLCanvasElement} canvas
+   */
   constructor(canvas){
     this.canvas = canvas;
     this.keys = {};            // current held keys (lowercase, e.key strings)
@@ -19,9 +44,14 @@ export class Input {
   }
 
   // After mutating this.bindings, call this so wasPressed() resolves the new map.
+  /** @returns {Record<string, string[]>} */
   rebuildKeyIndex(){
     return this._rebuildKeyIndex();
   }
+  /**
+   * @private
+   * @returns {Record<string, string[]>}
+   */
   _rebuildKeyIndex(){
     // Reverse map: key -> array of actionIds. (Multiple actions can share a
     // key if the conflict-validation pass didn't catch it, or if the user
@@ -32,8 +62,10 @@ export class Input {
       if(!k) continue;
       (this._keyToActions[k] = this._keyToActions[k] || []).push(id);
     }
+    return this._keyToActions;
   }
 
+  /** @private @returns {void} */
   _bind(){
     window.addEventListener('keydown', e=>{
       const k = normalizeKey(e);
@@ -73,6 +105,7 @@ export class Input {
   }
 
   // movement vector from the 4 move_* bindings (default: WASD)
+  /** @returns {{x:number, y:number}} */
   moveVector(){
     let x=0,y=0;
     if(this.keys[this.bindings.move_up])    y-=1;
@@ -85,6 +118,10 @@ export class Input {
 
   // Was the given ACTION pressed this frame? Translates via this.bindings.
   // Pass an action id (e.g. 'dodge', 'spell_q', 'toggle_bag'), NOT a raw key.
+  /**
+   * @param {string} actionId
+   * @returns {boolean}
+   */
   wasPressed(actionId){
     const k = this.bindings[actionId];
     if(!k) return false;
@@ -96,12 +133,20 @@ export class Input {
 
   // Was the given RAW key pressed this frame? Used by main.js (modal toggles
   // dispatched outside the action system — those go through this instead).
+  /**
+   * @param {string} k
+   * @returns {boolean}
+   */
   wasKeyPressed(k){
     return !!this.pressed[String(k || '').toLowerCase()];
   }
 
   // Is the given ACTION currently held? For continuous-state checks (rare;
   // the action-based path is preferred for held keys via .isDown).
+  /**
+   * @param {string} actionId
+   * @returns {boolean}
+   */
   isDown(actionId){
     const k = this.bindings[actionId];
     if(!k) return false;
@@ -112,6 +157,7 @@ export class Input {
   }
 
   // call at end of each frame to clear edge triggers
+  /** @returns {void} */
   lateUpdate(){
     this.pressed = {};
     this.mousePressed = { left:false, right:false, middle:false };

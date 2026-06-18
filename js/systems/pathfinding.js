@@ -14,6 +14,21 @@
 // (If TILE ever changes, this constant must change too.)
 const TILE = 32;
 
+/**
+ * @typedef {Object} Waypoint
+ * @property {number} x
+ * @property {number} y
+ *
+ * @typedef {(x1:number, y1:number, x2:number, y2:number) => boolean} HasLoS
+ *
+ * @typedef {Object} FlowFieldState
+ * FlowField instance state.
+ * @property {number}    cols
+ * @property {number}    rows
+ * @property {Int16Array} dist   - per-tile distance to goal; -1 = unreachable
+ * @property {Float32Array} vec  - per-tile unit vector toward goal (x,y pairs)
+ */
+
 // ---- path smoothing (line-of-sight pull) ----
 // Input:  array of {x, y} world-coord waypoints (tile centers), first = start
 // Output: shortened array. Greedy: from waypoint 0, jump to the farthest
@@ -27,6 +42,11 @@ const TILE = 32;
 //
 // `hasLoS` is injected (normally `world.hasLineOfSight`) so this stays
 // pure and testable.
+/**
+ * @param {Waypoint[]|null|undefined} waypoints
+ * @param {HasLoS} hasLoS
+ * @returns {Waypoint[]|null}
+ */
 export function smoothPath(waypoints, hasLoS) {
   if(!waypoints || waypoints.length < 3) return waypoints ? waypoints.slice() : null;
   const out = [waypoints[0]];
@@ -57,6 +77,13 @@ export function smoothPath(waypoints, hasLoS) {
 // Reused when many enemies chase the same player — a single BFS beats N
 // parallel A* runs.
 export class FlowField {
+  /**
+   * @param {(x:number,y:number) => boolean} blocked - tile predicate
+   * @param {number} cols
+   * @param {number} rows
+   * @param {number} goalX  - world-coord x of the goal
+   * @param {number} goalY  - world-coord y of the goal
+   */
   // blocked(x, y) -> bool: tile at (x, y) is solid
   // cols, rows: grid dimensions
   // goalX, goalY: world-coord target; converted to tile coords internally
@@ -71,6 +98,13 @@ export class FlowField {
     this._buildVectors();
   }
 
+  /**
+   * @private
+   * @param {(x:number,y:number) => boolean} blocked
+   * @param {number} gx
+   * @param {number} gy
+   * @returns {void}
+   */
   _bfs(blocked, gx, gy){
     const cols = this.cols, rows = this.rows, dist = this.dist;
     if(blocked(gx, gy)) return;  // unreachable goal
@@ -93,6 +127,7 @@ export class FlowField {
     }
   }
 
+  /** @private @returns {void} */
   _buildVectors(){
     const cols = this.cols, rows = this.rows, dist = this.dist, vec = this.vec;
     for(let y = 0; y < rows; y++){
@@ -126,6 +161,11 @@ export class FlowField {
 
   // World-coord sample: returns [dx, dy] (length 0 if unreachable/goal).
   // Most callers want this rather than sampling tile-by-tile.
+  /**
+   * @param {number} wx  - world x
+   * @param {number} wy  - world y
+   * @returns {[number, number]}
+   */
   sample(wx, wy){
     const tx = Math.max(0, Math.min(this.cols - 1, Math.floor(wx / TILE)));
     const ty = Math.max(0, Math.min(this.rows - 1, Math.floor(wy / TILE)));
@@ -134,6 +174,11 @@ export class FlowField {
     return [this.vec[k*2], this.vec[k*2 + 1]];
   }
 
+  /**
+   * @param {number} wx
+   * @param {number} wy
+   * @returns {boolean}
+   */
   isReachable(wx, wy){
     const tx = Math.max(0, Math.min(this.cols - 1, Math.floor(wx / TILE)));
     const ty = Math.max(0, Math.min(this.rows - 1, Math.floor(wy / TILE)));
@@ -142,6 +187,11 @@ export class FlowField {
 
   // Cheap staleness signal: distances beyond a threshold mean the goal is far.
   // Used by Game to decide whether to recompute the field this frame.
+  /**
+   * @param {number} wx
+   * @param {number} wy
+   * @returns {number} tile-distance to goal; -1 if unreachable
+   */
   distance(wx, wy){
     const tx = Math.max(0, Math.min(this.cols - 1, Math.floor(wx / TILE)));
     const ty = Math.max(0, Math.min(this.rows - 1, Math.floor(wy / TILE)));

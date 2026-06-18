@@ -18,10 +18,30 @@
 
 import { SPRITE_ATLASES, lookupFrame } from '../data/sprite-atlas.js';
 
+/**
+ * @typedef {import('../data/sprite-atlas.js').AtlasDef} AtlasDef
+ * @typedef {import('../data/sprite-atlas.js').AtlasFrame} AtlasFrame
+ *
+ * @typedef {Object} AtlasCacheEntry
+ * @property {HTMLImageElement | {src:string, width:number, height:number, onload:any, onerror:any, complete:boolean}} img
+ * @property {boolean} ready
+ * @property {Error|null} err
+ * @property {string} src
+ *
+ * @typedef {Object} DrawImageOpts
+ * @property {number} [bob]    - vertical px offset for idle animation
+ * @property {number} [alpha]  - 0..1
+ * @property {number} [scale]  - pixel multiplier
+ */
+
 const cache = new Map();  // atlasId -> { img, ready, err, src }
 let useAtlases = true;    // setting toggle, default ON
 
 // Browser-only Image factory. Returns a stub in Node.
+/**
+ * @private
+ * @returns {HTMLImageElement | {src:string, width:number, height:number, onload:any, onerror:any, complete:boolean}}
+ */
 function _makeImage(){
   if(typeof Image !== 'undefined') return new Image();
   // Node test harness: a stand-in. The draw helper never actually calls
@@ -32,6 +52,11 @@ function _makeImage(){
 
 // Kick off the load for a single atlas. Idempotent — calling twice is
 // safe and only triggers one HTTP request.
+/**
+ * @param {string} atlasId
+ * @param {string} [basePath]
+ * @returns {AtlasCacheEntry|null}
+ */
 export function loadAtlas(atlasId, basePath){
   if(cache.has(atlasId)) return cache.get(atlasId);
   const def = SPRITE_ATLASES.find(a => a.id === atlasId);
@@ -49,21 +74,34 @@ export function loadAtlas(atlasId, basePath){
 }
 
 // Convenience: kick off every declared atlas. Call once on game boot.
+/**
+ * @param {string} [basePath]
+ * @returns {void}
+ */
 export function loadAllAtlases(basePath){
   for(const a of SPRITE_ATLASES) loadAtlas(a.id, basePath);
 }
 
 // Settings toggle. When false, drawImageFromAtlas always returns false
 // and the caller uses its canvas-primitive fallback path.
+/**
+ * @param {boolean} on
+ * @returns {void}
+ */
 export function setUseAtlases(on){
   useAtlases = !!on;
 }
+/** @returns {boolean} */
 export function isUsingAtlases(){
   return useAtlases;
 }
 
 // True when an atlas is loaded and the toggle is on. Used by the
 // caller to decide whether to draw a fallback or not.
+/**
+ * @param {string} atlasId
+ * @returns {boolean}
+ */
 export function isAtlasReady(atlasId){
   if(!useAtlases) return false;
   const e = cache.get(atlasId);
@@ -80,6 +118,15 @@ export function isAtlasReady(atlasId){
 //     bob: vertical pixel offset for idle animation (default 0)
 //     alpha: 0..1, default 1
 //     scale: pixel-multiplier, default 1 (frames are 24x32 native; scale=2 renders at 48x64)
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {string} atlasId
+ * @param {string} frame
+ * @param {number} sx
+ * @param {number} sy
+ * @param {DrawImageOpts} [opts]
+ * @returns {boolean} true on a successful draw
+ */
 export function drawImageFromAtlas(ctx, atlasId, frame, sx, sy, opts = {}){
   if(!useAtlases) return false;
   const entry = cache.get(atlasId);

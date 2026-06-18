@@ -3,19 +3,69 @@
 import { QUESTS, questsForGiver } from '../data/quests.js';
 import { makeItem } from '../data/gear.js';
 
+/**
+ * @typedef {import('../data/quests.js').Quest} Quest
+ * @typedef {import('../data/quests.js').QuestObjective} QuestObjective
+ *
+ * @typedef {Object} QuestActiveState
+ * @property {number[]} prog  - per-objective progress counter
+ *
+ * @typedef {Object} QuestGiverState
+ * @property {string[]} available
+ * @property {string[]} turnIn
+ * @property {string[]} inProgress
+ *
+ * @typedef {Object} QuestListLine
+ * @property {string}  text
+ * @property {number}  have
+ * @property {number}  need
+ * @property {boolean} done
+ *
+ * @typedef {Object} QuestListEntry
+ * @property {string} id
+ * @property {string} name
+ * @property {string} desc
+ * @property {boolean} complete
+ * @property {QuestListLine[]} lines
+ *
+ * @typedef {Object} QuestLogState
+ * QuestLog instance state.
+ * @property {any} game
+ * @property {Record<string, QuestActiveState>} active
+ * @property {Record<string, true>} done
+ * @property {Record<string, true>|undefined} _announced
+ */
+
 export class QuestLog {
+  /**
+   * @param {any} game
+   * @param {{quests?: {active?: Record<string, QuestActiveState>, done?: Record<string, true>}}} [state]
+   */
   constructor(game, state){
     this.game = game;
-    const q = state.quests || {};
+    const q = (state && state.quests) || {};
     this.active = q.active || {};   // id -> {prog:[counts]}
     this.done   = q.done   || {};   // id -> true
   }
+  /** @returns {{active: Record<string, QuestActiveState>, done: Record<string, true>}} */
   serialize(){ return { active:this.active, done:this.done }; }
 
+  /**
+   * @param {string} id
+   * @returns {boolean}
+   */
   isActive(id){ return !!this.active[id]; }
+  /**
+   * @param {string} id
+   * @returns {boolean}
+   */
   isDone(id){ return !!this.done[id]; }
 
   // What this NPC currently offers: returns {available:[ids], turnIn:[ids], inProgress:[ids]}
+  /**
+   * @param {string} name
+   * @returns {QuestGiverState}
+   */
   giverState(name){
     const out = { available:[], turnIn:[], inProgress:[] };
     for(const id of questsForGiver(name)){
@@ -28,12 +78,21 @@ export class QuestLog {
     }
     return out;
   }
+  /**
+   * @private
+   * @param {string} id
+   * @returns {boolean}
+   */
   _prereqMet(id){
     // a quest with a `next` is unlocked only after its predecessor; find any quest whose next===id
     for(const pid in QUESTS){ if(QUESTS[pid].next === id) return !!this.done[pid]; }
     return true;
   }
 
+  /**
+   * @param {string} id
+   * @returns {void}
+   */
   accept(id){
     const q = QUESTS[id]; if(!q || this.active[id] || this.done[id]) return;
     this.active[id] = { prog: q.objectives.map(()=>0) };
@@ -43,13 +102,29 @@ export class QuestLog {
     this._syncCollect(id);
   }
 
+  /**
+   * @private
+   * @param {string} id
+   * @returns {boolean}
+   */
   _complete(id){
     const q = QUESTS[id], st = this.active[id]; if(!q || !st) return false;
     return q.objectives.every((o, i) => st.prog[i] >= this._target(o));
   }
+  /**
+   * @private
+   * @param {QuestObjective} o
+   * @returns {number}
+   */
   _target(o){ return o.count || 1; }
 
   // ---- event hooks (called by Game) ----
+  /**
+   * @param {string} enemyType
+   * @param {boolean} isBoss
+   * @param {string} [bossId]
+   * @returns {void}
+   */
   onKill(enemyType, isBoss, bossId){
     for(const id in this.active){
       const q = QUESTS[id]; const st = this.active[id];
@@ -60,6 +135,10 @@ export class QuestLog {
     }
     this._notify();
   }
+  /**
+   * @param {string} mapId
+   * @returns {void}
+   */
   onReach(mapId){
     for(const id in this.active){
       const q = QUESTS[id]; const st = this.active[id];
@@ -67,7 +146,12 @@ export class QuestLog {
     }
     this._notify();
   }
+  /** @returns {void} */
   onPickup(){ for(const id in this.active) this._syncCollect(id); this._notify(); }
+  /**
+   * @param {string} mapId
+   * @returns {void}
+   */
   onEscort(mapId){
     for(const id in this.active){
       const q = QUESTS[id], st = this.active[id];
@@ -75,6 +159,10 @@ export class QuestLog {
     }
     this._notify();
   }
+  /**
+   * @param {string} mapId
+   * @returns {void}
+   */
   onTimedClear(mapId){
     for(const id in this.active){
       const q = QUESTS[id], st = this.active[id];
@@ -82,6 +170,10 @@ export class QuestLog {
     }
     this._notify();
   }
+  /**
+   * @param {string} mapId
+   * @returns {void}
+   */
   onSurvive(mapId){
     for(const id in this.active){
       const q = QUESTS[id], st = this.active[id];
@@ -89,6 +181,11 @@ export class QuestLog {
     }
     this._notify();
   }
+  /**
+   * @private
+   * @param {string} id
+   * @returns {void}
+   */
   _syncCollect(id){
     const q = QUESTS[id], st = this.active[id]; if(!st) return;
     q.objectives.forEach((o, i) => {
@@ -98,6 +195,7 @@ export class QuestLog {
       }
     });
   }
+  /** @private @returns {void} */
   _notify(){
     // surface freshly-completed quests as a turn-in hint
     for(const id in this.active){
@@ -109,6 +207,10 @@ export class QuestLog {
     if(this.game.hud && this.game.hud.refreshQuests) this.game.hud.refreshQuests();
   }
 
+  /**
+   * @param {string} id
+   * @returns {boolean} true if the quest was turned in
+   */
   turnIn(id){
     if(!this._complete(id)) return false;
     const q = QUESTS[id];
@@ -131,6 +233,7 @@ export class QuestLog {
   }
 
   // for UI: list of {id, name, desc, lines:[{text, have, need, done}], complete}
+  /** @returns {QuestListEntry[]} */
   activeList(){
     return Object.keys(this.active).map(id => {
       const q = QUESTS[id], st = this.active[id];

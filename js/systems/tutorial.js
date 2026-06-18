@@ -15,7 +15,37 @@ import { TUTORIAL_STEPS, TUTORIAL_DEFAULT, TUTORIAL_VERSION } from '../data/tuto
 
 const LOCAL_KEY = 'aetheria_tutorial_v1';
 
+/**
+ * @typedef {import('../data/tutorial.js').TutorialStep} TutorialStep
+ * @typedef {import('../data/tutorial.js').TutorialState} TutorialState
+ *
+ * @typedef {Object} TutorialBag
+ * @property {boolean} [openedBag]
+ * @property {boolean} [ackWelcome]
+ * @property {boolean} [pickedUp]
+ * @property {boolean} [castSpell]
+ * @property {boolean} [spokeNpc]
+ *
+ * @typedef {Object} TutorialStateShape
+ * Game-side state shape consumed by tutorial triggers.
+ * @property {string} [currentMap]
+ * @property {TutorialBag} [_tutorialFlag]
+ * @property {any} [player]
+ * @property {{tutorial?: {version:number, skipped:boolean, completed:string[]}}} [tutorial]
+ *
+ * @typedef {Object} TutorialInstanceState
+ * @property {any} game
+ * @property {Set<string>} completed
+ * @property {TutorialStep|null} current
+ * @property {boolean} skipped
+ * @property {number} version
+ * @property {HTMLElement|null} panel
+ */
+
 export class Tutorial {
+  /**
+   * @param {{currentMap?: string, _tutorialFlag?: TutorialBag, input?: any, hud?: any}} game
+   */
   constructor(game){
     this.game = game;
     this.completed = new Set();
@@ -31,6 +61,7 @@ export class Tutorial {
 
   // --- persistence -----------------------------------------------------------
 
+  /** @returns {void} */
   _load(){
     // 1. localStorage (per-device "did this player skip the tour?")
     try {
@@ -48,6 +79,10 @@ export class Tutorial {
     //    merge and unmerge. We don't read it here — Game.start() wires it.
   }
 
+  /**
+   * @param {TutorialStateShape} state
+   * @returns {void}
+   */
   attachSaveState(state){
     // Merge persisted tutorial state into the run. The save blob always
     // wins over localStorage if both are present (it's the authoritative
@@ -58,6 +93,7 @@ export class Tutorial {
     }
   }
 
+  /** @returns {{version:number, skipped:boolean, completed:string[]}} */
   detachSaveState(){
     return { version: this.version, skipped: this.skipped, completed: Array.from(this.completed) };
   }
@@ -65,6 +101,7 @@ export class Tutorial {
   // Reset the tutorial to the beginning of the current run. Called by the
   // "Reset tutorial" settings button. localStorage + state both get
   // rewritten on the next save.
+  /** @returns {void} */
   reset(){
     this.completed = new Set();
     this.skipped   = false;
@@ -73,6 +110,7 @@ export class Tutorial {
   }
 
   // User pressed Skip. Mark the rest as completed and hide the panel.
+  /** @returns {void} */
   skip(){
     this.skipped = true;
     this.completed = new Set(TUTORIAL_STEPS.map(s => s.id));
@@ -86,6 +124,7 @@ export class Tutorial {
   // Tick once per frame. Watches the current step's trigger and advances
   // when it's true. Also listens for the dismiss hotkey (Escape / Start /
   // B button) so a player who wants to close the panel mid-step can.
+  /** @returns {void} */
   update(){
     if(this.skipped || !this.current) return;
     // Some steps read the DOM directly (the bag is a modal, not a state
@@ -100,6 +139,7 @@ export class Tutorial {
 
   // Pull DOM-derived signals into the game-side flag bag so the trigger
   // predicates in data/tutorial.js don't have to know about document.
+  /** @private @returns {void} */
   _syncDomFlags(){
     if(typeof document === 'undefined') return;
     if(!this.game._tutorialFlag) this.game._tutorialFlag = {};
@@ -120,6 +160,7 @@ export class Tutorial {
 
   // Re-pick the next step from the list. If the player already finished
   // all of them, hide the panel and stay out of the way.
+  /** @private @returns {void} */
   _advance(){
     const next = TUTORIAL_STEPS.find(s => !this.completed.has(s.id));
     if(!next){
@@ -134,6 +175,11 @@ export class Tutorial {
   // The Game uses these to record player actions into a shared flag bag.
   // The bag is the cheapest way to surface "you did X!" without coupling
   // Tutorial to every event source.
+  /**
+   * @param {string} key
+   * @param {*} [value]
+   * @returns {void}
+   */
   flag(key, value){
     if(!key) return;
     if(!this.game._tutorialFlag) this.game._tutorialFlag = {};
@@ -142,6 +188,10 @@ export class Tutorial {
 
   // --- DOM panel -------------------------------------------------------------
 
+  /**
+   * @private
+   * @returns {HTMLElement|null}
+   */
   _ensurePanel(){
     if(this.panel) return this.panel;
     // Browser-only: skip panel creation in non-DOM environments (node tests).
@@ -168,6 +218,10 @@ export class Tutorial {
     return el;
   }
 
+  /**
+   * @private
+   * @returns {void}
+   */
   _showPanel(){
     if(!this.current) return;
     const el = this._ensurePanel();
@@ -181,16 +235,25 @@ export class Tutorial {
     el.querySelector('.tutorial-progress').textContent = this._progressBar();
   }
 
+  /**
+   * @private
+   * @returns {void}
+   */
   _hidePanel(){
     if(this.panel) this.panel.classList.add('hidden');
   }
 
+  /**
+   * @private
+   * @returns {string}
+   */
   _progressBar(){
     const n = TUTORIAL_STEPS.length;
     const done = this.completed.size;
     return '▮'.repeat(done) + '▯'.repeat(Math.max(0, n - done));
   }
 
+  /** @private @returns {void} */
   _persistLocal(){
     try {
       localStorage.setItem(LOCAL_KEY, JSON.stringify({

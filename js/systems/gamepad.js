@@ -29,7 +29,39 @@ import {
   AIM_SPEED,
 } from '../data/gamepad.js';
 
+/**
+ * @typedef {Object} StickActive
+ * @property {boolean} up
+ * @property {boolean} down
+ * @property {boolean} left
+ * @property {boolean} right
+ *
+ * @typedef {Object} RightStick
+ * @property {number}  x
+ * @property {number}  y
+ * @property {boolean} hasReported
+ *
+ * @typedef {Object} GamepadAdapterState
+ * GamepadAdapter instance state.
+ * @property {import('./input.js').Input} input
+ * @property {any} game
+ * @property {number} index                  - navigator.getGamepads() slot; -1 = none
+ * @property {boolean} connected
+ * @property {Record<number, boolean>} _lastButtons
+ * @property {{l:number, r:number}} _lastTriggers
+ * @property {StickActive} _stickActive
+ * @property {RightStick} _rightStick
+ * @property {(a: string) => string|null} _keyFromAction
+ * @property {boolean} _anyLastFrame
+ * @property {() => void} _onConnect
+ * @property {() => void} _onDisconnect
+ */
+
 export class GamepadAdapter {
+  /**
+   * @param {import('./input.js').Input} input
+   * @param {any} game
+   */
   constructor(input, game){
     this.input = input;
     this.game  = game;

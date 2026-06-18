@@ -4,6 +4,43 @@
 // heartbeat layer.
 import { MOODS, resolveMood, DEFAULT_MOOD } from '../data/music.js';
 
+/**
+ * @typedef {import('../data/music.js').MoodDef} MoodDef
+ * @typedef {import('../data/music.js').MoodName} MoodName
+ *
+ * @typedef {Object} MusicState
+ * Internal scheduler state for the currently playing music mood.
+ * @property {MoodDef}   def
+ * @property {GainNode}  master
+ * @property {number}    idx
+ * @property {string}    moodKey
+ * @property {any}       scheduler      - setInterval handle
+ * @property {number}    lookahead
+ * @property {number}    scheduleAheadTime
+ * @property {number}    nextNoteTime
+ * @property {number}    stepsPerBeat
+ *
+ * @typedef {Object} HeartbeatState
+ * @property {boolean}  active
+ * @property {GainNode} gain
+ * @property {any}      scheduler   - setInterval handle
+ * @property {number}   idx
+ * @property {number}   lastHpRatio
+ *
+ * @typedef {Object} AudioState
+ * Audio instance state.
+ * @property {AudioContext|null} ctx
+ * @property {number} sfxVol
+ * @property {number} musicVol
+ * @property {MusicState|null} music
+ * @property {string|null} musicMood
+ * @property {boolean} boss
+ * @property {HeartbeatState|null} heartbeat
+ * @property {boolean} heartbeatEnabled
+ * @property {number}  heartbeatThreshold
+ * @property {number}  heartbeatIntensity   - 0..1, ramped smoothly from HP ratio
+ */
+
 export class Audio {
   constructor(){
     this.ctx=null; this.sfxVol=0.7; this.musicVol=0.4;
@@ -16,8 +53,17 @@ export class Audio {
     this.heartbeatThreshold=0.35;
     this.heartbeatIntensity=0;  // 0..1, ramped smoothly from HP ratio
   }
+  /** @returns {void} */
   _ensure(){ if(!this.ctx) this.ctx=new (window.AudioContext||window.webkitAudioContext)(); }
 
+  /**
+   * @param {number} freq
+   * @param {number} dur
+   * @param {OscillatorType} [type]
+   * @param {number} [vol]
+   * @param {number|null} [slideTo]
+   * @returns {void}
+   */
   beep(freq, dur, type='square', vol=0.3, slideTo=null){
     this._ensure();
     const t=this.ctx.currentTime;
@@ -29,6 +75,10 @@ export class Audio {
     o.connect(g); g.connect(this.ctx.destination);
     o.start(t); o.stop(t+dur);
   }
+  /**
+   * @param {string} name
+   * @returns {void}
+   */
   play(name){
     switch(name){
       case 'swing': this.beep(420,0.12,'sawtooth',0.18,180); break;
@@ -52,6 +102,11 @@ export class Audio {
   // is the standard "lookahead scheduler" pattern — it removes the
   // drift and jitter that the old setInterval had when the tab lost
   // focus, plus it lets us do per-biome moods cleanly.
+  /**
+   * @param {string|null|undefined} declaredMood
+   * @param {boolean} boss
+   * @returns {void}
+   */
   setMusic(declaredMood, boss){
     this._ensure();
     const moodKey = resolveMood(declaredMood, boss);
@@ -79,6 +134,7 @@ export class Audio {
     state.scheduler = setInterval(() => this._tickMusic(state), state.lookahead);
     this.music = state;
   }
+  /** @param {MusicState} state @returns {void} */
   _tickMusic(state){
     if(!this.music || this.music !== state) return;
     const horizon = this.ctx.currentTime + state.scheduleAheadTime;
@@ -87,6 +143,11 @@ export class Audio {
       this._advanceNote(state);
     }
   }
+  /**
+   * @param {MusicState} state
+   * @param {number} when
+   * @returns {void}
+   */
   _scheduleNote(state, when){
     const def = state.def;
     const idx = state.idx;
@@ -108,6 +169,15 @@ export class Audio {
       this._playOsc(state, 'sine', (note / 2) * oct, when, def.tempo * 2.2, 0.5);
     }
   }
+  /**
+   * @param {MusicState} state
+   * @param {OscillatorType} type
+   * @param {number} freq
+   * @param {number} when
+   * @param {number} dur
+   * @param {number} peak
+   * @returns {void}
+   */
   _playOsc(state, type, freq, when, dur, peak){
     const o = this.ctx.createOscillator();
     const g = this.ctx.createGain();
@@ -120,10 +190,12 @@ export class Audio {
     o.start(when);
     o.stop(when + dur + 0.05);
   }
+  /** @param {MusicState} state @returns {void} */
   _advanceNote(state){
     state.nextNoteTime += state.def.tempo;
     state.idx++;
   }
+  /** @returns {void} */
   stopMusic(){
     if(this.music){
       clearInterval(this.music.scheduler);
@@ -139,10 +211,18 @@ export class Audio {
   // volume to 0/1 based on how far below `heartbeatThreshold` the
   // player's HP is. The thump itself is a short "kick drum" — sine
   // pitched-down with a fast envelope.
+  /**
+   * @param {boolean} on
+   * @returns {void}
+   */
   setHeartbeatEnabled(on){
     this.heartbeatEnabled = !!on;
     if(!this.heartbeatEnabled && this.heartbeat) this._heartbeatGainTo(0);
   }
+  /**
+   * @param {number} hpRatio
+   * @returns {void}
+   */
   updateHeartbeat(hpRatio){
     if(!this.heartbeatEnabled){
       this.heartbeatIntensity = 0;
@@ -166,6 +246,7 @@ export class Audio {
       this._heartbeatGainTo(target * this.musicVol * 0.45);
     }
   }
+  /** @returns {void} */
   _ensureHeartbeat(){
     if(this.heartbeat) return;
     this._ensure();
@@ -181,6 +262,7 @@ export class Audio {
     };
     this.heartbeat.scheduler = setInterval(() => this._tickHeartbeat(), 25);
   }
+  /** @returns {void} */
   _tickHeartbeat(){
     if(!this.heartbeat || !this.ctx) return;
     const horizon = this.ctx.currentTime + 0.10;
@@ -193,6 +275,11 @@ export class Audio {
       this.heartbeat.nextTime += stepSec;
     }
   }
+  /**
+   * @param {number} when
+   * @param {number} stepSec
+   * @returns {void}
+   */
   _playHeartbeat(when, stepSec){
     // Two-osc thump: a low sine "boom" + a click
     const dur = stepSec * 0.9;
@@ -217,6 +304,10 @@ export class Audio {
     o2.connect(g2); g2.connect(this.heartbeat.gain);
     o2.start(when); o2.stop(when + 0.05);
   }
+  /**
+   * @param {number} target
+   * @returns {void}
+   */
   _heartbeatGainTo(target){
     if(!this.heartbeat) return;
     const t = this.ctx.currentTime;
@@ -225,6 +316,7 @@ export class Audio {
     g.setValueAtTime(g.value, t);
     g.linearRampToValueAtTime(target, t + 0.2);
   }
+  /** @returns {void} */
   stopHeartbeat(){
     if(this.heartbeat){
       clearInterval(this.heartbeat.scheduler);
@@ -235,6 +327,7 @@ export class Audio {
   }
 
   // re-apply volume live when the settings slider changes
+  /** @returns {void} */
   applyMusicVol(){
     if(this.music && this.music.master){
       this.music.master.gain.value = this.musicVol * (this.boss ? 0.5 : 0.32);
@@ -243,6 +336,10 @@ export class Audio {
       this.heartbeat.gain.gain.value = this.heartbeatIntensity * this.musicVol * 0.45;
     }
   }
+  /**
+   * @param {number} v   - new music volume (0..1)
+   * @returns {void}
+   */
   setMusicVol(v){
     this.musicVol = v;
     this.applyMusicVol();

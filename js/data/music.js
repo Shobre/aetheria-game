@@ -17,6 +17,10 @@
  * @property {number}      feel    - sustain bias, 0..1
  */
 
+/**
+ * @typedef {keyof typeof MOODS} MoodName
+ */
+
 /** @type {Record<string, MoodDef>} */
 export const MOODS = {
   // ---- base moods (used directly by maps.js) ----

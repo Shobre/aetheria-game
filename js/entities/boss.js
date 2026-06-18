@@ -1,9 +1,81 @@
 import { applyStatus } from '../systems/status.js';
 import { Projectile } from './enemy.js';
 
+/**
+ * @typedef {import('./enemy.js').EnemyState} EnemyState
+ *
+ * @typedef {'burst'|'charge'|'summon'|'poisonNova'
+ *          |'frostBolt'|'blizzard'|'iceWall'|'clones'
+ *          |'fireball'|'lavaPool'|'nova'} BossAttackId
+ *
+ * @typedef {Object} BossPhase
+ * One row in `BOSSES[id].phases`. Phases are evaluated in order; the boss
+ * transitions to phase i when `hp / hpMax <= at`.
+ * @property {number} at           - HP fraction (0..1) at which this phase begins
+ * @property {BossAttackId[]} attacks - pool of attacks the boss picks from
+ * @property {number} interval     - seconds between attacks in this phase
+ * @property {string} tint         - body fill color used while in this phase
+ *
+ * @typedef {Object} BossDef
+ * Static boss definition, used to construct a Boss instance.
+ * @property {string}      name    - display name
+ * @property {string}      map     - map id where this boss spawns
+ * @property {number}      x       - tile-x spawn coordinate
+ * @property {number}      y       - tile-y spawn coordinate
+ * @property {number}      hp      - max HP
+ * @property {number}      dmg     - base contact/attack damage
+ * @property {number}      r       - body radius (px)
+ * @property {string}      color   - fallback body color
+ * @property {number}      xp      - XP reward on kill
+ * @property {number}      gold    - gold reward on kill
+ * @property {string}      drop    - gear id guaranteed to drop on kill
+ * @property {string[]}    adds    - enemy-type ids summoned by 'summon'
+ * @property {BossPhase[]} phases - ordered phase list (HP-fraction gated)
+ * @property {boolean}     [poison]   - legacy flag for poison-attack bosses
+ * @property {string}      [onHit]    - status id applied on contact (e.g. 'chill')
+ * @property {string}      [icon]     - single Unicode char (HUD tag) - magma_tyrant
+ * @property {number}      [atk]      - alternate attack stat (magma_tyrant)
+ * @property {number}      [def]      - alternate defense stat (magma_tyrant)
+ *
+ * @typedef {Object} BossClone
+ * Decoy spawned by Glacius's 'clones' attack. Ticked/drawn from game._bossClones.
+ * @property {number} x
+ * @property {number} y
+ * @property {number} r
+ * @property {number} hp
+ * @property {number} maxHp
+ * @property {boolean} dead
+ * @property {string} color
+ * @property {number} phaseIdx
+ * @property {true}   isClone
+ * @property {{name:string,tint:string}} def
+ * @property {(dmg:number, a:number, g:any, knock?:number) => void} hit
+ * @property {(ctx:CanvasRenderingContext2D, cam:any) => void} draw
+ *
+ * @typedef {Object} BossState
+ * Runtime state for one Boss instance. Inherits all EnemyState fields
+ * (x, y, r, color, hp, hpMax, dmg, dead, knockback, frozen, hitFlash,
+ * statuses, ...) and adds the boss-specific fields below.
+ * @property {string}      id        - key into BOSSES
+ * @property {BossDef}     def       - static boss definition
+ * @property {true}        isBoss    - discriminator flag
+ * @property {number}      xp        - XP reward (mirrored from def)
+ * @property {number}      speed     - base move speed (tiles/s)
+ * @property {number}      phaseIdx  - index into def.phases
+ * @property {number}      atkTimer  - seconds until next attack fires
+ * @property {'idle'|'telegraph'|'charge'} state  - AI state machine
+ * @property {number}      stateTimer - seconds remaining in current state
+ * @property {{x:number,y:number}} chargeDir - normalized charge direction
+ * @property {number}      bob       - animation phase accumulator
+ * @property {number}      intro     - intro invuln/grace seconds remaining
+ * @property {BossAttackId|null} pending - selected attack during telegraph
+ * @property {number}      _touchCd  - contact-damage cooldown seconds
+ */
+
 // Boss definitions. Each boss has phases (HP fractions) that change its move set.
 // Attacks: 'burst' (radial projectiles), 'charge' (telegraph + dash), 'summon' (adds),
 //          'poisonNova' (radial poison shots).
+/** @type {Record<string, BossDef>} */
 export const BOSSES = {
   bone_tyrant: {
     name:'The Bone Tyrant', map:'dungeon1', x:23, y:8,
@@ -115,7 +187,20 @@ export const BOSSES = {
   },
 };
 
+/**
+ * @class Boss
+ * @extends EnemyState  (conceptual — Boss shares Enemy's collision/draw signature)
+ *
+ * Bosses are heavyweight enemies with multi-phase attack sets. They share
+ * the basic movement/collision model of {@link Enemy} but add:
+ *  - phase machine (HP-fraction gated attack pools)
+ *  - telegraph + charge state
+ *  - boss-only special attacks (frostBolt, blizzard, iceWall, clones, magma)
+ */
 export class Boss {
+  /**
+   * @param {string} bossId - key into {@link BOSSES}
+   */
   constructor(bossId){
     const def = BOSSES[bossId];
     this.id = bossId; this.def = def; this.isBoss = true;
@@ -130,8 +215,18 @@ export class Boss {
     this.bob = 0; this.intro = 1.5; this.pending = null; this._touchCd = 0;
   }
 
+  /**
+   * Currently-active phase definition (the row at `phaseIdx`).
+   * @returns {BossPhase}
+   */
   get phase(){ return this.def.phases[this.phaseIdx]; }
 
+  /**
+   * Walk the phase list and advance `phaseIdx` if `hp / hpMax` has crossed
+   * a phase threshold. Resets to 'idle' with a shortened attack timer on
+   * transition so the phase change is felt immediately.
+   * @returns {void}
+   */
   _advancePhase(){
     const frac = this.hp / this.hpMax;
     let idx = 0;
@@ -142,6 +237,16 @@ export class Boss {
     }
   }
 
+  /**
+   * Per-tick update. Drives intro grace, frozen decay, knockback, phase
+   * advancement, movement (idle), telegraph timer, charge dash, and
+   * contact damage.
+   * @param {number} dt - delta time in seconds
+   * @param {{x:number,y:number,r:number,takeDamage:(amt:number,a:number,game:any)=>void}} player
+   * @param {{isSolid:(x:number,y:number)=>boolean}} world
+   * @param {any} game - Game singleton (cam, spawnAdd, toast, onBossDefeated, etc.)
+   * @returns {void}
+   */
   update(dt, player, world, game){
     if(this.dead) return;
     this.hitFlash = Math.max(0, this.hitFlash - dt);
@@ -177,6 +282,13 @@ export class Boss {
     }
   }
 
+  /**
+   * Pick a random attack from the current phase's attack pool, lock it into
+   * `this.pending`, and enter the 'telegraph' state. For 'charge', capture
+   * the direction-to-player up front so the dash lines up.
+   * @param {{x:number,y:number}} player
+   * @returns {void}
+   */
   _chooseAttack(player){
     const list = this.phase.attacks;
     this.pending = list[Math.floor(Math.random()*list.length)];
@@ -189,6 +301,16 @@ export class Boss {
     }
   }
 
+  /**
+   * Execute the attack that was chosen by {@link _chooseAttack}. Dispatches
+   * on `this.pending` (charge / burst / poisonNova / summon / frostBolt /
+   * blizzard / iceWall / clones / fireball|lavaPool|nova). Each branch
+   * resolves on this tick and returns to 'idle'.
+   * @param {{x:number,y:number,r:number}} player
+   * @param {{isSolid:(x:number,y:number)=>boolean}} world
+   * @param {any} game
+   * @returns {void}
+   */
   _fireAttack(player, world, game){
     const pick = this.pending;
     if(pick === 'charge'){ this.state='charge'; this.stateTimer=0.5; return; }
@@ -271,11 +393,28 @@ export class Boss {
     this.state='idle'; this.atkTimer=this.phase.interval;
   }
 
+  /**
+   * Per-axis solid-wall-aware movement. Each axis is resolved independently
+   * so the boss slides along walls instead of sticking on corners.
+   * @param {number} dx - x delta in px
+   * @param {number} dy - y delta in px
+   * @param {{isSolid:(x:number,y:number)=>boolean}} world
+   * @returns {void}
+   */
   _move(dx,dy,world){
     if(!world.isSolid(this.x+dx+Math.sign(dx)*this.r, this.y)) this.x+=dx;
     if(!world.isSolid(this.x, this.y+dy+Math.sign(dy)*this.r)) this.y+=dy;
   }
 
+  /**
+   * Apply damage from a hit. Adds scaled knockback, flashes the sprite, and
+   * routes to {@link kill} when HP hits zero. No-op during intro grace.
+   * @param {number} dmg - raw damage amount
+   * @param {number} angle - hit angle in radians (knockback direction)
+   * @param {any} game
+   * @param {number} [knock=4] - knockback magnitude scalar
+   * @returns {void}
+   */
   hit(dmg, angle, game, knock=4){
     if(this.dead || this.intro>0) return;
     this.hp -= dmg; this.hitFlash = 0.12;
@@ -284,9 +423,30 @@ export class Boss {
     game.floater('-'+dmg, this.x, this.y - this.r - 4, '#fff');
     if(this.hp <= 0) this.kill(game);
   }
+  /**
+   * Apply a slow/freeze to the boss. Bosses are partially resistant: the
+   * effective frozen timer is half the source duration.
+   * @param {number} t - freeze duration in seconds (halved on apply)
+   * @returns {void}
+   */
   freeze(t){ this.frozen = Math.max(this.frozen, t*0.5); }
+  /**
+   * Mark the boss dead and notify the Game. Hands the boss instance to
+   * `game.onBossDefeated` so quest / drop / SFX systems can react.
+   * @param {any} game
+   * @returns {void}
+   */
   kill(game){ this.dead = true; game.onBossDefeated(this); }
 
+  /**
+   * Render the boss to the canvas. Two visual paths: Glacius gets the
+   * layered ice-ring + crown + breath-mist treatment, everyone else gets
+   * the generic boss-ball with eyes and spikes. Always overlays the
+   * telegraph strobe and charge ring on top of the body.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {{x:number,y:number}} cam
+   * @returns {void}
+   */
   draw(ctx, cam){
     const sx=this.x-cam.x, sy=this.y-cam.y, bob=Math.sin(this.bob)*3;
     if(this.intro>0){ ctx.globalAlpha=0.5+0.5*Math.sin(performance.now()/100);

@@ -13,7 +13,50 @@
 
 import { ACHIEVEMENTS } from '../data/achievements.js';
 
+/**
+ * @typedef {import('../data/achievements.js').AchievementDef} AchievementDef
+ *
+ * @typedef {Object} AchievementStats
+ * @property {number} kills
+ * @property {number} bosses
+ * @property {number} elites
+ * @property {number} parries
+ * @property {number} noDmgBoss
+ * @property {number} portals
+ * @property {Record<string, number>} maps
+ * @property {number} chests
+ * @property {number} gold
+ * @property {number} topAffixCount
+ * @property {number} legendary
+ * @property {number} potionsDrank
+ * @property {number} quests
+ * @property {number} escorts
+ * @property {number} survives
+ * @property {number} timedClears
+ * @property {number} goldSpent
+ * @property {number} enchants
+ * @property {number} recruited
+ * @property {number} skillBranches
+ * @property {number} level
+ *
+ * @typedef {Object} AchievementSerialized
+ * @property {Record<string, true>} unlocked
+ * @property {AchievementStats} stats
+ * @property {Record<string, true>} notified
+ *
+ * @typedef {Object} AchievementTrackerState
+ * @property {any} game
+ * @property {Record<string, true>} unlocked
+ * @property {Record<string, true>} notified
+ * @property {AchievementStats} stats
+ * @property {boolean} _noDmgPending
+ * @property {boolean} _noDmgTookHit
+ */
+
 export class AchievementTracker {
+  /**
+   * @param {any} game
+   */
   constructor(game){
     this.game = game;
     this.unlocked = {};   // id -> true
@@ -30,9 +73,14 @@ export class AchievementTracker {
   }
 
   // ----- persistence -----
+  /** @returns {AchievementSerialized} */
   serialize(){
     return { unlocked:{...this.unlocked}, stats:{...this.stats, maps:{...this.stats.maps}}, notified:{...this.notified} };
   }
+  /**
+   * @param {Partial<AchievementSerialized>|null|undefined} data
+   * @returns {void}
+   */
   load(data){
     if(!data) return;
     if(data.unlocked) this.unlocked = {...data.unlocked};
@@ -46,73 +94,115 @@ export class AchievementTracker {
   }
 
   // ----- event hooks (called by game.js) -----
+  /**
+   * @param {{elite?: boolean}} e
+   * @returns {void}
+   */
   onEnemyKilled(e){
     this.stats.kills++;
     if(e.elite) this.stats.elites++;
     this._check('kill');
     // No-damage-boss tracking: regular kills don't matter
   }
+  /** @returns {void} */
   onBossFightStart(){
     this._noDmgPending = true;
     this._noDmgTookHit = false;
   }
+  /** @returns {void} */
   onPlayerHit(){
     if(this._noDmgPending) this._noDmgTookHit = true;
   }
+  /** @returns {void} */
   onBossDefeated(){
     this.stats.bosses++;
     if(this._noDmgPending && !this._noDmgTookHit) this.stats.noDmgBoss++;
     this._noDmgPending = false;
     this._check('boss');
   }
+  /** @returns {void} */
   onPortal(){
     this.stats.portals++;
     this._check('portal');
   }
+  /**
+   * @param {string} mapId
+   * @returns {void}
+   */
   onMapEnter(mapId){
     this.stats.maps[mapId] = (this.stats.maps[mapId]||0) + 1;
     // unique map count
     this._check('map');
   }
+  /** @returns {void} */
   onChestOpened(){
     this.stats.chests++;
     this._check('chest');
   }
+  /** @returns {void} */
   onParry(){
     this.stats.parries++;
     this._check('parry');
   }
+  /**
+   * @param {number} level
+   * @returns {void}
+   */
   onLevelUp(level){
     this.stats.level = Math.max(this.stats.level||0, level);
     this._check('level');
   }
+  /**
+   * @param {number} amount
+   * @returns {void}
+   */
   onGoldHeld(amount){
     // achievement is "hold X at once" — update to current amount
     this.stats.gold = amount;
     this._check('gold');
   }
+  /**
+   * @param {number} n
+   * @returns {void}
+   */
   onAffixCount(n){
     this.stats.topAffixCount = Math.max(this.stats.topAffixCount||0, n);
     this._check('affix');
   }
+  /** @returns {void} */
   onLegendaryFound(){
     this.stats.legendary = (this.stats.legendary||0) + 1;
     this._check('legendary');
   }
+  /** @returns {void} */
   onPotionDrank(){
     this.stats.potionsDrank = (this.stats.potionsDrank||0) + 1;
     this._check('potion');
   }
+  /** @returns {void} */
   onQuestComplete(){
     this.stats.quests = (this.stats.quests||0) + 1;
     this._check('quest');
   }
+  /** @returns {void} */
   onEscortComplete(){ this.stats.escorts = (this.stats.escorts||0)+1; this._check('escort'); }
+  /** @returns {void} */
   onSurviveComplete(){ this.stats.survives = (this.stats.survives||0)+1; this._check('survive'); }
+  /** @returns {void} */
   onTimedClearComplete(){ this.stats.timedClears = (this.stats.timedClears||0)+1; this._check('timed'); }
+  /**
+   * @param {number} amt
+   * @returns {void}
+   */
   onGoldSpent(amt){ this.stats.goldSpent = (this.stats.goldSpent||0) + amt; this._check('spend'); }
+  /** @returns {void} */
   onEnchant(){ this.stats.enchants = (this.stats.enchants||0)+1; this._check('enchant'); }
+  /** @returns {void} */
   onRecruited(){ this.stats.recruited = (this.stats.recruited||0)+1; this._check('recruit'); }
+  /**
+   * @param {number} n
+   * @returns {void}
+   */
   onSkillBranches(n){
     this.stats.skillBranches = Math.max(this.stats.skillBranches||0, n);
     this._check('branches');
@@ -121,6 +211,11 @@ export class AchievementTracker {
   // ----- core check -----
   // For each achievement whose `stat` matches the event key, see if the
   // goal is met (or, for compound stats, evaluate the trigger closure).
+  /**
+   * @private
+   * @param {string} eventKey
+   * @returns {void}
+   */
   _check(eventKey){
     const g = this.game;
     const newlyUnlocked = [];

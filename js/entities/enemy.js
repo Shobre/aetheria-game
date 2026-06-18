@@ -1,3 +1,10 @@
+/** @typedef {import('../data/gear.js').ItemStats} ItemStats */
+/** @typedef {import('../systems/pathfinding.js').FlowField} FlowField */
+/** @typedef {import('../systems/world.js').World} World */
+/** @typedef {import('../systems/game.js').Game} Game */
+/** @typedef {import('./player.js').Player} Player */
+/** @typedef {import('./boss.js').Boss} Boss */
+
 import { TILE } from '../systems/world.js';
 import { applyStatus, tickStatuses, drawStatusPips } from '../systems/status.js';
 import { makeItem } from '../data/gear.js';
@@ -8,10 +15,144 @@ import { rollRarity, applyRarity } from '../data/affixes.js';
 import { drawImageFromAtlas, isUsingAtlases } from '../systems/sprite-atlas.js';
 import { lookupFrame as _atlasLookupFrame } from '../data/sprite-atlas.js';
 
+/**
+ * Enemy catalog entry. All numeric fields except `r` and the `gold` tuple
+ * represent a per-stat baseline that gets scaled by `levelScale` and (for
+ * elites) multiplied by the elite mod.
+ *
+ * @typedef {Object} CFGDef
+ * @property {number} hp
+ * @property {number} dmg
+ * @property {number} speed
+ * @property {string} color
+ * @property {number} r
+ * @property {'chase'|'ranged'|'lunge'|'mage'|'berserker'} behavior
+ * @property {number} xp
+ * @property {[number, number]} gold
+ * @property {number} [shootRange]
+ * @property {number} [shootCd]
+ * @property {boolean} [erratic]
+ * @property {number} [view]   - sight radius
+ * @property {number} [fov]    - half-angle (rad) of forward vision cone
+ * @property {string} [onHit]  - status key to apply on contact
+ */
+
+/**
+ * Elite (champion) modifier — stat multipliers + cosmetic aura.
+ * `knockResist` scales incoming knockback (1 = full, 0 = immune);
+ * `burstOnDeath` triggers a radial projectile salvo on kill.
+ *
+ * @typedef {Object} EliteMod
+ * @property {string} label       - display name painted above the enemy
+ * @property {string} aura        - hex color for aura ring / floater
+ * @property {number} dmg         - damage multiplier
+ * @property {number} hp          - HP multiplier
+ * @property {number} speed       - movement-speed multiplier
+ * @property {number} [knockResist]
+ * @property {boolean} [burstOnDeath]
+ */
+
+/**
+ * Full Enemy instance state — every field set on the Enemy class instance.
+ * Used by JSDoc to type `this` inside the class methods.
+ *
+ * @typedef {Object} EnemyState
+ * @property {number} x
+ * @property {number} y
+ * @property {string} type              - enemy archetype key (e.g. 'slime')
+ * @property {CFGDef} base              - raw catalog row used at construction
+ * @property {number} r                 - collision radius (px), bumped for elites
+ * @property {number} speed             - per-tile movement speed (current, not base)
+ * @property {string} color
+ * @property {'chase'|'ranged'|'lunge'|'mage'|'berserker'} behavior
+ * @property {string|null} elite        - elite key, or null for normal enemies
+ * @property {EliteMod|null} [eliteMod] - present iff `elite` is non-null
+ * @property {number} hpMax
+ * @property {number} hp
+ * @property {number} dmg
+ * @property {number} xp
+ * @property {number} goldMin
+ * @property {number} goldMax
+ * @property {number} shootRange        - 0 if not a shooter
+ * @property {number} shootCd
+ * @property {number} shootTimer
+ * @property {boolean} erratic
+ * @property {string|null} onHit        - status applied on contact
+ * @property {Object} statuses          - active status effect map (status -> {dur, ...})
+ * @property {number} view              - sight radius
+ * @property {number} fov               - vision-cone half-angle (rad)
+ * @property {number} homeX             - spawn anchor X (leash target)
+ * @property {number} homeY             - spawn anchor Y (leash target)
+ * @property {number} alert             - >0 = actively hunting
+ * @property {{x:number, y:number}} face - facing unit vector (drives vision cone)
+ * @property {number} hitFlash          - hit-flash timer (s)
+ * @property {{x:number, y:number}} knockback - decaying per-frame knockback impulse
+ * @property {number} frozen            - freeze timer (s); >0 = locked out of update
+ * @property {number} bob               - sine phase for idle bobbing
+ * @property {boolean} dead
+ * @property {number} attackCd
+ * @property {'idle'|'telegraph'|'lunge'|'recover'} lungeState
+ * @property {number} lungeTimer
+ * @property {{x:number, y:number}} lungeDir
+ * @property {{x:number, y:number, t:number}} [wander]  - wander noise / timer
+ * @property {Array<{x:number, y:number}>|null} [path] - cached A* waypoints
+ * @property {number} [pathIdx]         - next waypoint index
+ * @property {number} [pathT]           - path recompute throttle timer
+ * @property {number} [_slowMul]        - per-frame slow multiplier (from status)
+ * @property {number} [_mageT]          - mage phase timer (hover/teleport)
+ * @property {number} [_berserkThreshold] - berserker enrage HP threshold
+ * @property {boolean} [_enraged]       - berserker: enrage flag
+ * @property {number} [_stalkerFade]    - snow_stalker: cached distance for alpha fade
+ */
+
+/**
+ * Projectile instance state. `kind` selects cosmetic tint and on-hit effects;
+ * `aoe` > 0 means impact triggers `_applyAoe` instead of single-target hit;
+ * `hostile` flips hit-targets (player vs. enemies/boss).
+ *
+ * @typedef {Object} ProjectileState
+ * @property {number} x
+ * @property {number} y
+ * @property {number} angle              - current flight angle (rad); updated when homing
+ * @property {number} speed
+ * @property {number} dmg
+ * @property {number} r
+ * @property {string} color
+ * @property {number} life               - remaining lifetime (s); <=0 = dead
+ * @property {string} kind
+ * @property {boolean} hostile
+ * @property {number} aoe                - AoE radius (0 = single target)
+ * @property {string|null} status        - status key to apply on hit
+ * @property {number} statusDur          - status duration override
+ * @property {number} chain              - remaining chain-lightning bounces
+ * @property {boolean} crit              - flag crit floater
+ * @property {number} lifesteal          - fraction of damage healed on hit
+ * @property {number} homing             - max angular turn per frame (rad)
+ * @property {Set<Enemy>|null} hitSet    - chain tracker (enemies already hit)
+ * @property {boolean} dead
+ * @property {Array<{x:number, y:number}>} trail
+ */
+
+/**
+ * Particle (visual-only) instance state.
+ *
+ * @typedef {Object} ParticleState
+ * @property {number} x
+ * @property {number} y
+ * @property {number} vx
+ * @property {number} vy
+ * @property {number} life              - remaining lifetime (s)
+ * @property {string} color
+ * @property {number} r
+ * @property {number} max               - initial lifetime (for alpha fade)
+ * @property {number} size              - draw size in px
+ */
+
 // Enemy configs per type. Behaviors: chase (touch), ranged (shoots), lunge (telegraph+dash).
 // speeds are deliberately below the player's baseSpeed (1.9) so the player can
 // always outrun foes; `view` = sight radius, `fov` = half-angle (rad) of the
 // forward vision cone the enemy must see the player within to start chasing.
+/** @type {Record<string, CFGDef>} */
 const CFG = {
   // meadow / generic
   slime:   { hp:34, speed:0.62, dmg:8,  xp:18, gold:[3,8],  color:'#7a3fb0', r:11, behavior:'chase', view:200, fov:1.0 },
@@ -54,16 +195,39 @@ const CFG = {
 
 // Elite (champion) modifiers. An elite enemy rolls one of these — it buffs the
 // base stats and paints a coloured aura, and always drops rolled gear on death.
+/** @type {Record<string, EliteMod>} */
 const ELITE_MODS = {
   vicious:  { label:'Vicious',  aura:'#ff5a5a', dmg:1.9, hp:2.6, speed:1.0 },
   armored:  { label:'Armored',  aura:'#9aa6c0', dmg:1.4, hp:4.0, speed:0.9, knockResist:0.6 },
   swift:    { label:'Swift',    aura:'#ffe24d', dmg:1.4, hp:2.2, speed:1.18 },
   arcane:   { label:'Arcane',   aura:'#b06bff', dmg:1.6, hp:2.8, speed:1.0, burstOnDeath:true },
 };
+/** @type {string[]} */
 const ELITE_KEYS = Object.keys(ELITE_MODS);
+
+/**
+ * Pick a random elite key from the ELITE_MODS catalog. Injected `rand`
+ * lets tests be deterministic.
+ *
+ * @param {() => number} [rand=Math.random] - PRNG returning a value in [0, 1).
+ * @returns {string} an ELITE_MODS key (e.g. 'vicious').
+ */
 export function rollEliteMod(rand=Math.random){ return ELITE_KEYS[Math.floor(rand()*ELITE_KEYS.length)]; }
 
 export class Enemy {
+  /**
+   * Construct an enemy instance at a world position. Stats are pulled from
+   * the CFG catalog and scaled by `levelScale`; passing an `elite` key from
+   * ELITE_MODS promotes the enemy to a champion (bigger aura, more HP/DMG,
+   * guaranteed gear drop on death).
+   *
+   * @param {number} x                 - world X position (px).
+   * @param {number} y                 - world Y position (px).
+   * @param {string} [type='slime']    - catalog key; unknown types fall back to 'slime'.
+   * @param {number} [levelScale=1]    - multiplicative scale for hp/dmg/xp/gold.
+   * @param {string|null} [elite=null] - elite key, e.g. 'vicious'. Unknown keys are ignored.
+   * @returns {void}
+   */
   constructor(x,y,type='slime', levelScale=1, elite=null){
     this.x=x; this.y=y; this.type=type;
     const c=CFG[type]||CFG.slime;
@@ -119,6 +283,18 @@ export class Enemy {
   // distance from home spawn (used to leash enemies so they don't roam the map)
   _homeDist(){ return Math.hypot(this.x-this.homeX, this.y-this.homeY); }
 
+  /**
+   * Per-frame AI tick. Advances timers, ticks statuses, resolves
+   * collisions, then dispatches to the behavior-specific AI (chase /
+   * ranged / lunge / mage / berserker). Early-exits on death, freeze, or
+   * status stun.
+   *
+   * @param {number} dt     - delta time in seconds since last frame.
+   * @param {Player} player - the player to chase / attack.
+   * @param {World} world   - the world/level for collision + pathfinding.
+   * @param {Game} game     - the live Game instance (sounds, particles, flow field).
+   * @returns {void}
+   */
   update(dt, player, world, game){
     if(this.dead) return;
     // snow_stalker: track distance for the alpha fade
@@ -388,6 +564,18 @@ export class Enemy {
     return false;
   }
 
+  /**
+   * Apply damage from an external source. Alerts the enemy, triggers the
+   * hit-flash, applies knockback (modulated by `eliteMod.knockResist` for
+   * elites), spawns a damage floater, and calls `kill()` if HP drops to 0.
+   * No-op if the enemy is already dead.
+   *
+   * @param {number} dmg      - flat damage to subtract from `this.hp`.
+   * @param {number} angle    - impact direction (rad); pushes knockback away from source.
+   * @param {Game}   game     - the live Game instance (for floater + kill side-effects).
+   * @param {number} [knock=4] - base knockback magnitude (px impulse).
+   * @returns {void}
+   */
   hit(dmg, angle, game, knock=4){
     if(this.dead) return;
     this.alert=4.0;  // taking a hit always alerts the enemy
@@ -397,7 +585,24 @@ export class Enemy {
     game.floater('-'+dmg, this.x, this.y-14, '#fff');
     if(this.hp<=0) this.kill(game);
   }
+  /**
+   * Apply a freeze status for `t` seconds. Stacks with any existing freeze
+   * (takes the max), and mirrors the duration onto the 'chill' status entry
+   * for downstream tickers.
+   *
+   * @param {number} t - duration in seconds.
+   * @returns {void}
+   */
   freeze(t){ this.frozen=Math.max(this.frozen,t); applyStatus(this,'chill',t); }
+  /**
+   * Mark the enemy as dead and run the death pipeline: XP grant, particle
+   * burst, gold drop, occasional item drop, and (for elites) a guaranteed
+   * gear drop plus an optional radial projectile burst. Fires the kill
+   * sound effect and the `onEnemyKilled` game hook. No-op if already dead.
+   *
+   * @param {Game} game - the live Game instance (player, particles, drops, SFX).
+   * @returns {void}
+   */
   kill(game){
     this.dead=true;
     game.player.gainXp(this.xp, game);
@@ -418,7 +623,16 @@ export class Enemy {
     game.sfx('kill');
     game.onEnemyKilled(this);
   }
-
+  /**
+   * Render the enemy to a 2D canvas. Draws (in order) the elite aura, the
+   * body via atlas or canvas-primitive fallback, the HP bar, the alert /
+   * elite label, and the status effect pips. All coordinates are translated
+   * by the camera.
+   *
+   * @param {CanvasRenderingContext2D} ctx - target 2D rendering context.
+   * @param {{x:number, y:number}}     cam - camera world offset.
+   * @returns {void}
+   */
   draw(ctx,cam){
     const sx=this.x-cam.x, sy=this.y-cam.y;
     // elite aura: pulsing coloured ring behind the body
@@ -663,8 +877,42 @@ export class Enemy {
   }
 }
 
+/**
+ * Options bag for the Projectile constructor. All fields are optional; sane
+ * defaults are applied for any missing key. The shape is purposely loose to
+ * match the existing call sites in the codebase (e.g. mage AI passes a
+ * partial set including `homing`).
+ *
+ * @typedef {Object} ProjectileOpts
+ * @property {number} [speed]      - flight speed (px/s). Default 5.
+ * @property {number} [dmg]        - damage on impact. Default 10.
+ * @property {number} [r]          - collision radius. Default 5.
+ * @property {string} [color]      - draw color (hex). Default '#ffcf4d'.
+ * @property {number} [life]       - lifetime in seconds. Default 1.2.
+ * @property {string} [kind]       - effect key ('fire'|'ice'|'arcane'|...). Default 'fire'.
+ * @property {boolean} [hostile]   - true = enemy projectile (hits player). Default false.
+ * @property {number} [aoe]        - AoE radius (0 = single target). Default 0.
+ * @property {string|null} [status] - status key to apply on hit. Default null.
+ * @property {number} [statusDur]  - status duration override (s). Default 0.
+ * @property {number} [chain]      - remaining chain-lightning bounces. Default 0.
+ * @property {boolean} [crit]      - emit a 'CRIT' floater on hit. Default false.
+ * @property {number} [lifesteal]  - fraction of damage healed on hit. Default 0.
+ * @property {number} [homing]     - max angular turn per frame (rad). Default 0.
+ */
+
 export class Projectile {
-  constructor(x,y,angle,opts){
+  /**
+   * Construct a projectile at `(x, y)` flying in `angle` radians. All
+   * tunables (damage, radius, lifetime, homing, AoE, lifesteal, …) come
+   * from the `opts` bag.
+   *
+   * @param {number} x                 - world X (px).
+   * @param {number} y                 - world Y (px).
+   * @param {number} angle             - initial flight angle (rad).
+   * @param {ProjectileOpts} [opts={}] - tunables; see ProjectileOpts.
+   * @returns {void}
+   */
+  constructor(x,y,angle,opts={}){
     this.x=x; this.y=y; this.angle=angle;
     this.speed=opts.speed||5; this.dmg=opts.dmg||10; this.r=opts.r||5;
     this.color=opts.color||'#ffcf4d'; this.life=opts.life||1.2;
@@ -679,6 +927,17 @@ export class Projectile {
     this.homing=opts.homing||0;
     this.hitSet=null; this.dead=false; this.trail=[];
   }
+  /**
+   * Advance the projectile one frame: optionally steer toward the player
+   * (homing), step forward, age the trail, expire on life/solid, and
+   * resolve collisions (player for hostile; boss + enemies otherwise).
+   *
+   * @param {number} dt                  - delta time in seconds.
+   * @param {World} world                - the world/level for solid checks.
+   * @param {Array<Enemy>} enemies       - active enemy list (for friendly fire).
+   * @param {Game} game                  - the live Game instance (player, boss, particles).
+   * @returns {void}
+   */
   update(dt, world, enemies, game){
     // Homing projectiles gently steer toward the player. Steered by a small
     // angular velocity (homing param) rather than full lock-on, so they can
@@ -698,6 +957,13 @@ export class Projectile {
     if(this.hostile){ this._hitPlayer(game); }
     else { this._hitBoss(game,enemies); this._hitEnemy(game,enemies); }
   }
+  /**
+   * Check collision with the player and apply damage + status. Used by
+   * hostile projectiles. Marks the projectile dead on contact.
+   *
+   * @param {Game} game - the live Game instance (for `game.player`).
+   * @returns {void}
+   */
   _hitPlayer(game){
     const p=game.player;
     if(Math.hypot(p.x-this.x,p.y-this.y)<p.r+this.r){
@@ -705,6 +971,15 @@ export class Projectile {
       if(this.status) applyStatus(p,this.status);
       this.dead=true; game.spawnParticles(this.x,this.y,this.color,6); }
   }
+  /**
+   * Check collision with the boss. Applies AoE (when configured) or
+   * direct hit + status, triggers lifesteal, and marks the projectile dead
+   * on contact.
+   *
+   * @param {Game} game            - the live Game instance (for `game.boss`).
+   * @param {Array<Enemy>} enemies - active enemy list (for AoE if triggered).
+   * @returns {void}
+   */
   _hitBoss(game,enemies){
     const boss=game.boss;
     if(boss && !boss.dead && Math.hypot(boss.x-this.x,boss.y-this.y)<boss.r+this.r){
@@ -715,6 +990,16 @@ export class Projectile {
       if(this.lifesteal>0) game.player.heal(this.dmg*this.lifesteal,game);
       this.dead=true; game.spawnParticles(this.x,this.y,this.color,8); }
   }
+  /**
+   * Scan `enemies` for a collision. On hit, applies damage + status, emits
+   * a crit floater if applicable, applies lifesteal, and (if `chain > 0`)
+   * picks a new nearby target and reroutes the projectile at 80% damage.
+   * Marks the projectile dead on the final non-chain hit.
+   *
+   * @param {Game} game            - the live Game instance (for particles + player heal).
+   * @param {Array<Enemy>} enemies - active enemy list to scan.
+   * @returns {void}
+   */
   _hitEnemy(game,enemies){
     for(const e of enemies){ if(e.dead) continue;
       if(this.hitSet && this.hitSet.has(e)) continue;
@@ -737,11 +1022,28 @@ export class Projectile {
       this.dead=true; break;
     }
   }
+  /**
+   * Apply the area-of-effect damage pulse at the projectile's current
+   * position: shake the camera, spawn burst particles, and `hit()` every
+   * live enemy within `this.aoe` radius.
+   *
+   * @param {Game} game            - the live Game instance (particles, camera shake).
+   * @param {Array<Enemy>} enemies - active enemy list (AoE targets).
+   * @returns {void}
+   */
   _applyAoe(game,enemies){
     game.spawnParticles(this.x,this.y,this.color,24); game.cam.shake=10;
     for(const e of enemies){ if(e.dead) continue;
       if(Math.hypot(e.x-this.x,e.y-this.y)<this.aoe) e.hit(this.dmg,Math.random()*7,game,8); }
   }
+  /**
+   * Render the projectile's fading trail and its body (colored disc with
+   * a white core). All coordinates are translated by the camera.
+   *
+   * @param {CanvasRenderingContext2D} ctx - target 2D rendering context.
+   * @param {{x:number, y:number}}     cam - camera world offset.
+   * @returns {void}
+   */
   draw(ctx,cam){
     const sx=this.x-cam.x, sy=this.y-cam.y;
     for(let i=0;i<this.trail.length;i++){ ctx.globalAlpha=i/this.trail.length*0.5;
@@ -753,14 +1055,42 @@ export class Projectile {
 }
 
 export class Particle {
+  /**
+   * Construct a short-lived cosmetic particle. Initial velocity is a
+   * random unit-vector scaled by `[1, 4]`; lifetime is randomized in
+   * `[0.4, 0.8]` seconds.
+   *
+   * @param {number} x     - world X (px).
+   * @param {number} y     - world Y (px).
+   * @param {string} color - draw color (hex).
+   * @returns {void}
+   */
   constructor(x,y,color){
     this.x=x; this.y=y; this.color=color;
     const a=Math.random()*7, s=1+Math.random()*3;
     this.vx=Math.cos(a)*s; this.vy=Math.sin(a)*s;
     this.life=0.4+Math.random()*0.4; this.max=this.life; this.size=2+Math.random()*3;
   }
+  /**
+   * Advance the particle: integrate position, damp velocity (0.9 per frame),
+   * and tick down lifetime.
+   *
+   * @param {number} dt - delta time in seconds.
+   * @returns {void}
+   */
   update(dt){ this.x+=this.vx; this.y+=this.vy; this.vx*=0.9; this.vy*=0.9; this.life-=dt; }
+  /**
+   * Render the particle as a single colored square with alpha proportional
+   * to remaining lifetime. Camera-translated.
+   *
+   * @param {CanvasRenderingContext2D} ctx - target 2D rendering context.
+   * @param {{x:number, y:number}}     cam - camera world offset.
+   * @returns {void}
+   */
   draw(ctx,cam){ ctx.globalAlpha=Math.max(0,this.life/this.max); ctx.fillStyle=this.color;
     ctx.fillRect(this.x-cam.x,this.y-cam.y,this.size,this.size); ctx.globalAlpha=1; }
+  /**
+   * @returns {boolean} true once `life` has elapsed.
+   */
   get dead(){ return this.life<=0; }
 }

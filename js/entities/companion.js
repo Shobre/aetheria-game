@@ -11,7 +11,69 @@ import { makeItem } from '../data/gear.js';
 import { applyStatus } from '../systems/status.js';
 import { Projectile } from './enemy.js';
 
+/**
+ * @typedef {'kira'|'thorin'|'luna'} CompanionKind
+ *
+ * @typedef {Object} CompanionCatalogEntry
+ * @property {string} name
+ * @property {string} icon    - single Unicode char drawn for the body
+ * @property {string} desc
+ * @property {string} color
+ *
+ * @typedef {Object} CompanionAbilityDef
+ * @property {string} name
+ * @property {string} label   - floater text
+ * @property {string} color
+ * @property {number} cd      - cooldown in seconds
+ * @property {(game: any, player: any, comp: Companion) => void} fn
+ *
+ * @typedef {Object} CompanionSerialized
+ * @property {string} name
+ * @property {string} icon
+ * @property {number} x
+ * @property {number} y
+ * @property {boolean} alive
+ * @property {number} level
+ * @property {number} xp
+ * @property {number} hp
+ * @property {number} maxHp
+ * @property {number} atk
+ * @property {number} def
+ * @property {CompanionKind|null} kind
+ *
+ * @typedef {Object} CompanionState
+ * Companion instance state. Fields assigned in the constructor or mutated at runtime.
+ * @property {string} name
+ * @property {string} icon
+ * @property {number} x
+ * @property {number} y
+ * @property {boolean} alive
+ * @property {number} level
+ * @property {number} xp
+ * @property {number} hp
+ * @property {number} maxHp
+ * @property {number} atk
+ * @property {number} def
+ * @property {number} spd
+ * @property {number} r
+ * @property {string} color
+ * @property {number} _atkCd
+ * @property {number} _followDist
+ * @property {number} _aggroRange
+ * @property {{x:number,y:number}|null} _target
+ * @property {number} _deathTime
+ * @property {number} _abilityCd
+ * @property {number} _abilityMaxCd
+ * @property {CompanionKind|null} kind
+ */
+
 export class Companion {
+  /**
+   * @param {string} name
+   * @param {string} icon
+   * @param {number} x  - world x (px)
+   * @param {number} y  - world y (px)
+   */
   constructor(name, icon, x, y){
     this.name=name; this.icon=icon; this.x=x; this.y=y;
     this.alive=true; this.level=1; this.xp=0;
@@ -24,14 +86,26 @@ export class Companion {
     this._abilityCd=0; this._abilityMaxCd=8;
     this.kind=null; // 'kira' | 'thorin' | 'luna' set by game.recruitCompanion
   }
+  /** @returns {number} */
   get xpToNext(){ return this.level*50; }
+  /**
+   * @param {number} amt
+   * @returns {void}
+   */
   gainXp(amt){
     this.xp+=amt;
     while(this.xp>=this.xpToNext){ this.xp-=this.xpToNext; this.levelUp(); }
   }
+  /** @returns {void} */
   levelUp(){
     this.level++; this.maxHp+=15; this.hp=this.maxHp; this.atk+=2; this.def+=1;
   }
+  /**
+   * @param {number} dt   - seconds since last frame
+   * @param {any}    game  - Game instance (enemies, boss, world, sfx, projectiles, spawnParticles, cam, floater)
+   * @param {any}    player - Player instance
+   * @returns {void}
+   */
   update(dt, game, player){
     if(!this.alive) return;
     // decay cooldowns
@@ -76,11 +150,17 @@ export class Companion {
     this.y=Math.max(20,Math.min(game.world.h-20,this.y));
   }
   // Trigger the companion's unique ability. Returns true if fired.
+  /**
+   * @param {any} game
+   * @param {any} player
+   * @returns {boolean} true if the ability fired (was off cooldown); false if on cooldown
+   */
   triggerAbility(game, player){
     if(this._abilityCd>0) return false;
     this._useAbility(game, player);
     return true;
   }
+  /** @returns {void} */
   _useAbility(game, player){
     const def = COMPANION_ABILITIES[this.kind];
     if(!def){ return; }
@@ -89,6 +169,11 @@ export class Companion {
     game.sfx('levelup');
     game.floater(def.label, this.x, this.y - 22, def.color);
   }
+  /**
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {{x:number,y:number}} cam
+   * @returns {void}
+   */
   draw(ctx, cam){
     if(!this.alive) return;
     const sx=this.x-cam.x, sy=this.y-cam.y;
@@ -109,15 +194,24 @@ export class Companion {
     ctx.font='7px monospace'; ctx.fillStyle='#ffe6a0';
     ctx.fillText('Lv'+this.level, sx+16, sy+4);
   }
+  /**
+   * @param {number} dmg
+   * @returns {void}
+   */
   hit(dmg){
     this.hp-=dmg;
     if(this.hp<=0){ this.hp=0; this.alive=false; this._deathTime=performance.now(); }
   }
+  /** @returns {CompanionSerialized} */
   serialize(){
     return { name:this.name, icon:this.icon, x:this.x, y:this.y, alive:this.alive,
       level:this.level, xp:this.xp, hp:this.hp, maxHp:this.maxHp, atk:this.atk, def:this.def,
       kind:this.kind };
   }
+  /**
+   * @param {CompanionSerialized} data
+   * @returns {Companion}
+   */
   static deserialize(data){
     const c=new Companion(data.name, data.icon, data.x, data.y);
     c.level=data.level||1; c.xp=data.xp||0; c.hp=data.hp||80; c.maxHp=data.maxHp||80;
@@ -128,6 +222,7 @@ export class Companion {
 }
 
 // Companion registry — recruitable companions
+/** @type {Record<CompanionKind, CompanionCatalogEntry>} */
 export const COMPANIONS = {
   kira:   { name:'Kira',   icon:'∧', desc:'A skilled ranger. G: Arrow Volley.', color:'#88ffaa' },
   thorin: { name:'Thorin', icon:'■', desc:'A sturdy dwarf warrior. G: Shield Bash.', color:'#ffaa44' },
@@ -138,6 +233,7 @@ export const COMPANIONS = {
 // Each ability has a name, label (floater), color, cooldown (seconds), and a
 // function(game, player, companion) that performs the effect. The function
 // is responsible for spawning particles / floaters / sfx.
+/** @type {Record<CompanionKind, CompanionAbilityDef>} */
 export const COMPANION_ABILITIES = {
   kira: {
     name: 'Arrow Volley',
