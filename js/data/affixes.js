@@ -22,6 +22,14 @@ export const RARITY = {
 export const RARITY_ORDER = /** @type {string[]} */ (['common','uncommon','rare','epic','legendary']);
 
 // Affix pool: stat key -> {label, roll()}; values are added to item.stats.
+/**
+ * @typedef {Object} AffixDef
+ * @property {string} key
+ * @property {string} label
+ * @property {number} min
+ * @property {number} max
+ */
+/** @type {AffixDef[]} */
 const AFFIX_POOL = [
   { key:'atk',  label:'ATK',    min:1, max:5 },
   { key:'def',  label:'DEF',    min:1, max:4 },
@@ -68,6 +76,7 @@ export function applyRarity(item, rarityId, rng = Math.random){
   }
   // roll N distinct bonus affixes
   item.affixes = [];
+  /** @type {AffixDef[]} */
   const pool = [...AFFIX_POOL];
   for(let i = 0; i < R.affixes && pool.length; i++){
     const idx = Math.floor(rng() * pool.length);

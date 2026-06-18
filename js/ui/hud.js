@@ -101,7 +101,7 @@ export class HUD {
       if(k!==kind) return; const fi=+from;
       if(kind==='hotbar'){ const h=this.game.hotbar; [h[fi],h[idx]]=[h[idx],h[fi]]; this.refresh(); }
       else if(kind==='spell'){ const sp=this.game.player.spellSlots; [sp[fi],sp[idx]]=[sp[idx],sp[fi]];
-        this.refresh(); if(this.refreshSpells) this.refreshSpells(); }
+        this.refresh(); }
     });
   }
   _buildInventory(){ this.el.invGrid.innerHTML='';

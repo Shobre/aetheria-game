@@ -5,6 +5,61 @@ import { tickStatuses, drawStatusPips } from '../systems/status.js';
 import { SPELLS, STARTER_SPELLS } from '../data/spells.js';
 import { drawPlayerSprite } from '../sprites.js';
 
+/**
+ * @typedef {import('./save.js').SaveState} SaveState
+ * @typedef {import('../data/gear.js').Item} Item
+ * @typedef {import('../data/gear.js').ItemStats} ItemStats
+ * @typedef {import('../data/gear.js').EquipSlot} EquipSlot
+ */
+
+/**
+ * @typedef {Object} PlayerState
+ * Player instance state. All fields assigned in the constructor or recompute().
+ * @property {number} x
+ * @property {number} y
+ * @property {number} r
+ * @property {number} baseSpeed
+ * @property {{x:number,y:number}} dir
+ * @property {'up'|'down'|'left'|'right'} facing
+ * @property {number} level
+ * @property {number} xp
+ * @property {number} xpNext
+ * @property {number} gold
+ * @property {Object<EquipSlot, string|Item|null>} equipment
+ * @property {Record<string, number>} skills
+ * @property {number} skillPoints
+ * @property {number} baseHpMax
+ * @property {number} baseMpMax
+ * @property {number} hpMax
+ * @property {number} mpMax
+ * @property {number} atk
+ * @property {number} def
+ * @property {number} hp
+ * @property {number} mp
+ * @property {number} stam
+ * @property {number} stamMax
+ * @property {number} attacking
+ * @property {number} attackCd
+ * @property {boolean} blocking
+ * @property {number} dodging
+ * @property {number} dodgeCd
+ * @property {number} invuln
+ * @property {{x:number,y:number}} dodgeDir
+ * @property {{spell_q:number, spell_e:number, spell_r:number}} spellCd
+ * @property {number} _totalMoved
+ * @property {number} _attackCount
+ * @property {number} heat
+ * @property {number} heatCap
+ * @property {number} _overheatCd
+ * @property {number} _parryWindow
+ * @property {boolean} _parried
+ * @property {Record<string, number>} ammo
+ * @property {[string,string,string]} spellSlots
+ * @property {Object<string, number>} statuses
+ * @property {number} flash
+ * @property {boolean} dead
+ */
+
 export class Player {
   constructor(x,y,state){
     this.x=x; this.y=y; this.r=12;

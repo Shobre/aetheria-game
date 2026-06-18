@@ -5,6 +5,39 @@ import { STARTING_AMMO } from '../data/ammo.js';
 
 const KEY = 'aetheria_saves_v2';
 
+/**
+ * @typedef {import('../data/gear.js').Item} Item
+ * @typedef {import('../data/gear.js').EquipSlot} EquipSlot
+ *
+ * @typedef {Object} SaveState
+ * Schema v2 — the persisted game state.
+ * @property {number} slot
+ * @property {number} version
+ * @property {number} level
+ * @property {number} xp
+ * @property {number} xpNext
+ * @property {number} hp
+ * @property {number} hpMax
+ * @property {number} mp
+ * @property {number} mpMax
+ * @property {number} gold
+ * @property {number} playtime
+ * @property {number} skillPoints
+ * @property {string} map                  - current map id
+ * @property {{x:number,y:number}} pos      - position within map (px)
+ * @property {Object<EquipSlot, string|Item|null>} equipment
+ * @property {Record<string, number>} skills
+ * @property {[string,string,string]} spellSlots
+ * @property {Item[]} inventory
+ * @property {Array<string|null>} hotbar
+ * @property {Item[]} stash
+ * @property {{chest: Item[]}} home
+ * @property {Record<string, boolean>} openedChests
+ * @property {Record<string, boolean>} boughtSpells
+ * @property {Record<string, number>} ammo
+ * @property {number} [savedAt]             - ms epoch (set on save)
+ */
+
 export const SaveSystem = {
   _all(){
     try { return JSON.parse(localStorage.getItem(KEY)) || {}; }
@@ -15,16 +48,25 @@ export const SaveSystem = {
     const all = this._all();
     return [1,2,3].map(n => ({ slot:n, data: all[n] || null }));
   },
+  /**
+   * @param {number} n
+   * @param {SaveState} state
+   */
   save(n, state){
     const all = this._all();
     all[n] = { ...state, savedAt: Date.now(), version:2 };
     localStorage.setItem(KEY, JSON.stringify(all));
   },
+  /** @param {number} n */
   delete(n){
     const all = this._all();
     delete all[n];
     localStorage.setItem(KEY, JSON.stringify(all));
   },
+  /**
+   * @param {number} n
+   * @returns {SaveState}
+   */
   newGame(n){
     const state = {
       slot:n, version:2,
