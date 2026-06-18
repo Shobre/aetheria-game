@@ -563,8 +563,10 @@ export class World {
    * @returns {{x:number, y:number}[]}
    */
   // Pick the spawn tile used by `_placeFeatures` for reachability analysis.
-  // Mirrors the logic in Game.loadMap: try the first portal's destination,
-  // then fall back to (1, 1). Returns null if no walkable tile exists.
+  // IMPORTANT: a portal's `tx, ty` is the destination tile in the SOURCE map
+  // (where the player stands when exiting the portal). It is NOT necessarily
+  // walkable in the CURRENT map — for example `cave` only has an outgoing
+  // portal whose destination is in `meadow`. We can't use `tx, ty` directly.
   /**
    * Return a sensible spawn tile for reachability BFS during world
    * generation. Used by the Sprint 19 corridor-carve pass for chests/NPCs
@@ -572,17 +574,24 @@ export class World {
    * @returns {{x:number, y:number}|null}
    */
   _findSpawnTile(){
-    // First portal's destination (matches what Game.loadMap does)
+    // 1) The portal TILE itself (set to PATH in _placeFeatures) — this is
+    //    always walkable in the current map after _placeFeatures runs.
     const portals = this.def.portals || [];
-    if(portals.length){
-      const p = portals[0];
-      if(this._inBounds(p.tx, p.ty) && this.map[p.ty] && this.map[p.ty][p.tx] !== undefined){
-        return {x: p.tx, y: p.ty};
+    for(const p of portals){
+      if(this._inBounds(p.x, p.y) && this.map[p.y] && this.map[p.y][p.x] !== undefined
+         && !SOLID.has(this.map[p.y][p.x])){
+        return {x: p.x, y: p.y};
       }
     }
-    // Fall back to the first room centre (dungeon/cave biomes carve rooms)
-    if(this._rooms && this._rooms.length) return {x: this._rooms[0].cx, y: this._rooms[0].cy};
-    // Last resort: scan the whole map for any walkable tile
+    // 2) First room centre (dungeon/cave biomes carve rooms with FLOOR)
+    if(this._rooms && this._rooms.length){
+      const r = this._rooms[0];
+      if(this._inBounds(r.cx, r.cy) && this.map[r.cy] && this.map[r.cy][r.cx] !== undefined
+         && !SOLID.has(this.map[r.cy][r.cx])){
+        return {x: r.cx, y: r.cy};
+      }
+    }
+    // 3) Scan the whole map for any walkable tile as a last resort
     for(let y = 0; y < this.rows; y++){
       for(let x = 0; x < this.cols; x++){
         if(this.map[y] && this.map[y][x] !== undefined && !SOLID.has(this.map[y][x])){
