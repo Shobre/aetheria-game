@@ -1,6 +1,6 @@
 Smoke test: https://aetheria-game-alpha.vercel.app
 User: shobre
-Elapsed: 8.5s
+Elapsed: 9.7s
 
 --- Summary ---
   Console messages:     3 total, 0 failures

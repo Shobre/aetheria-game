@@ -19,6 +19,31 @@ import { ACTIONS, REBINDABLE, labelForKey, findConflict, DEFAULT_BIND, normalize
 
 const KEYBINDS_LS_KEY = 'aetheria_keybinds_v1';
 
+/**
+ * @typedef {Object} KeybindMountOptions
+ * @property {import('../systems/input.js').Input} input       - live input system whose .bindings we mutate
+ * @property {HTMLElement} [container]   - ul/div that holds the rendered rows
+ * @property {HTMLElement} [hintEl]      - element showing the contextual hint text
+ * @property {HTMLButtonElement} [resetBtn] - "Reset to defaults" button
+ */
+
+/**
+ * @typedef {Object} KeybindListening
+ * @property {string} actionId - id of the action waiting for a keypress
+ * @property {HTMLElement} el  - the chip element currently in listening state
+ */
+
+/**
+ * @typedef {Object} KeybindUIState
+ * @property {import('../systems/input.js').Input|null} _input
+ * @property {HTMLElement|null} _container
+ * @property {HTMLElement|null} _hintEl
+ * @property {HTMLButtonElement|null} _resetBtn
+ * @property {KeybindListening|null} _listening
+ * @property {Record<string, string>} _overrides - actionId -> bound key, persisted in localStorage
+ */
+
+/** @type {KeybindUIState} */
 export const KeybindUI = {
   _input: null,
   _container: null,
@@ -29,6 +54,12 @@ export const KeybindUI = {
   // Persisted user overrides. null = use default. Loaded on mount, saved on change.
   _overrides: {},
 
+  /**
+   * Wire the rebind panel: grab DOM refs, load overrides, render rows,
+   * attach the global keydown capture and reset-button handler.
+   * @param {KeybindMountOptions} opts
+   * @returns {void}
+   */
   mount({ input, container, hintEl, resetBtn }){
     this._input = input;
     this._container = container;
@@ -51,17 +82,33 @@ export const KeybindUI = {
     window.addEventListener('keydown', (e)=> this._onGlobalKey(e), true);
   },
 
+  /**
+   * Read persisted overrides from localStorage. Silently falls back to {}
+   * on parse errors so a corrupted entry never wedges the panel.
+   * @returns {void}
+   */
   _loadOverrides(){
     try {
       const raw = localStorage.getItem(KEYBINDS_LS_KEY);
       if(raw) this._overrides = JSON.parse(raw) || {};
     } catch(e) { this._overrides = {}; }
   },
+  /**
+   * Write the current overrides map back to localStorage. Wrapped in try/catch
+   * so private/incognito mode (where setItem throws) doesn't break rebinds.
+   * @returns {void}
+   */
   _saveOverrides(){
     try { localStorage.setItem(KEYBINDS_LS_KEY, JSON.stringify(this._overrides)); } catch(e) {}
   },
 
   // Merge overrides into the input's bindings. Overrides win; defaults fill the rest.
+  /**
+   * Public alias of {@link KeybindUI._applyOverridesToInput}. Rebuilt for
+   * callers that want to re-publish overrides to the input without touching
+   * DOM (e.g. Game.start after a save-load roundtrip).
+   * @returns {void}
+   */
   applyOverridesToInput(){
     if(!this._input) return;
     const next = { ...DEFAULT_BIND };
@@ -71,11 +118,21 @@ export const KeybindUI = {
     this._input.bindings = next;
     this._input.rebuildKeyIndex();
   },
+  /**
+   * Internal wrapper kept for naming consistency with the other _-prefixed
+   * helpers. Just delegates to the public method.
+   * @returns {void}
+   */
   _applyOverridesToInput(){
     return this.applyOverridesToInput();
   },
 
   // Re-render the list. Cheap (DOM diff unnecessary at this size).
+  /**
+   * Tear down + rebuild the rebind rows from the current input.bindings map.
+   * Also re-attaches click handlers on the key chips.
+   * @returns {void}
+   */
   refresh(){
     if(!this._container) return;
     const b = this._input ? this._input.bindings : DEFAULT_BIND;
@@ -96,6 +153,12 @@ export const KeybindUI = {
     });
   },
 
+  /**
+   * Mark a row chip as listening and update the hint text. Cancels any
+   * previous in-flight listening state first so only one chip is active.
+   * @param {HTMLElement} el - the .kb-key chip that was clicked
+   * @returns {void}
+   */
   _startListening(el){
     // Cancel any in-flight listening
     this._cancelListening();
@@ -106,6 +169,12 @@ export const KeybindUI = {
     if(this._hintEl) this._hintEl.textContent = 'Press a key, or Esc to cancel.';
   },
 
+  /**
+   * Stop listening (called on Escape, after a successful bind, or when a
+   * new chip starts listening). Always re-renders so the chip text snaps
+   * back to the current key.
+   * @returns {void}
+   */
   _cancelListening(){
     if(this._listening){
       this._listening.el.classList.remove('listening');
@@ -115,6 +184,12 @@ export const KeybindUI = {
     this.refresh();
   },
 
+  /**
+   * Global keydown handler: if we're listening, capture the next keypress
+   * as a rebind for the active action. Escape cancels without binding.
+   * @param {KeyboardEvent} e
+   * @returns {void}
+   */
   _onGlobalKey(e){
     if(!this._listening) return;
     // Cancel on Escape
@@ -140,16 +215,32 @@ export const KeybindUI = {
     setTimeout(()=> this._setHint('Click a key, then press the new binding. Mouse buttons cannot be rebound.'), 1200);
   },
 
+  /**
+   * Update the hint element text if it exists. No-op without a hintEl.
+   * @param {string} msg
+   * @returns {void}
+   */
   _setHint(msg){
     if(this._hintEl) this._hintEl.textContent = msg;
   },
 };
 
 // Public helper used by Game / save: serialize the overrides for the save blob.
+/**
+ * Read the persisted overrides from localStorage. Used by Game when assembling
+ * a save blob so the rebinds follow the player across devices.
+ * @returns {Record<string, string>} actionId -> key
+ */
 export function getKeybindOverrides(){
   try { return JSON.parse(localStorage.getItem(KEYBINDS_LS_KEY) || '{}') || {}; }
   catch(e) { return {}; }
 }
+/**
+ * Programmatic setter for the overrides map. Used by Game after a save-load
+ * roundtrip to republish rebinds, and by the rebind UI itself.
+ * @param {Record<string, string>|null|undefined} overrides
+ * @returns {void}
+ */
 export function setKeybindOverrides(overrides){
   try { localStorage.setItem(KEYBINDS_LS_KEY, JSON.stringify(overrides || {})); } catch(e) {}
 }

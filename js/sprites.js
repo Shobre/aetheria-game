@@ -461,6 +461,17 @@ const NPC_SPRITES = {
 // first frame after a fresh load will use primitives; subsequent frames
 // use the atlas. No flicker, no per-entity code change.
 
+/**
+ * Draw an NPC sprite centered at (sx, sy) on screen. Tries the atlas path
+ * first (Sprint 11); falls through to canvas primitives when the atlas
+ * toggle is off or the PNG hasn't decoded yet.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {string} name - NPC name (key into NPC_SPRITES); unknown names use 'default'
+ * @param {number} sx - screen-x of the entity's tile center
+ * @param {number} sy - screen-y of the entity's tile center
+ * @param {number} [bob=0] - vertical bob offset (pixels) for idle animation
+ * @returns {void}
+ */
 export function drawNPCSprite(ctx, name, sx, sy, bob = 0) {
   // Try the atlas path. drawImageFromAtlas returns true on success, false
   // when the atlas isn't ready (or the toggle is off). We also let the
@@ -522,6 +533,24 @@ function weaponColor(weaponItem) {
 // attackProgress: 0..1, 0 = just finished, 1 = ready to swing. We tilt the
 // weapon back as the attack starts to give a visual windup.
 // blocking, bob, invuln, flash: cosmetic states.
+/**
+ * Draw the player body with equipped gear visible. The weapon is carried on
+ * the back. Shield and attack slash are NOT drawn here — player.js handles
+ * those during block and attack windup.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} sx - screen-x of the entity's tile center
+ * @param {number} sy - screen-y of the entity's tile center
+ * @param {'down'|'up'|'left'|'right'} facing
+ * @param {import('./data/gear.js').EquipmentMap} equipment - equipped armor / helm / weapon
+ * @param {Object} [opts]
+ * @param {boolean} [opts.flash=false]    - hit-flash: tint skin + eyes white for one frame
+ * @param {boolean} [opts.invuln=false]   - i-frames shimmer dots on body
+ * @param {boolean} [opts.blocking=false] - cosmetic block pose
+ * @param {number}  [opts.attacking=0]    - attack timer (seconds remaining); 0 = idle
+ * @param {number}  [opts.attackProgress=0] - 0..1 swing progress; 0 = just finished, 1 = ready
+ * @param {number}  [opts.bob=0]          - vertical bob offset for walk animation
+ * @returns {void}
+ */
 export function drawPlayerSprite(ctx, sx, sy, facing, equipment, opts = {}) {
   const { flash = false, invuln = false, blocking = false, attacking = 0,
           attackProgress = 0, bob = 0 } = opts;
@@ -757,6 +786,15 @@ function _box(ctx, x, y, w, h, fill, stroke) {
   }
 }
 
+/**
+ * Draw a 24x24 chest-plate icon at (x, y) for the HUD gear slot.
+ * Detail (chainmail / mage trim / leather belt) is picked from armorItem.id.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x - top-left x of the icon
+ * @param {number} y - top-left y of the icon
+ * @param {import('./data/gear.js').Item|null|undefined} armorItem - resolved item, or null/undefined for empty slot
+ * @returns {void}
+ */
 export function drawArmorIcon(ctx, x, y, armorItem) {
   const c = armorColor(armorItem) || '#7a7a7a';
   // chest plate silhouette
@@ -808,6 +846,15 @@ export function drawArmorIcon(ctx, x, y, armorItem) {
   ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
 }
 
+/**
+ * Draw a 24x24 helm icon at (x, y) for the HUD gear slot. Iron helms get a
+ * grey palette; other helms use the warm default.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x - top-left x of the icon
+ * @param {number} y - top-left y of the icon
+ * @param {import('./data/gear.js').Item|null|undefined} helmItem - resolved item, or null/undefined for empty slot
+ * @returns {void}
+ */
 export function drawHelmIcon(ctx, x, y, helmItem) {
   const c = helmColor(helmItem) || '#8a8a8a';
   // dome
@@ -830,6 +877,15 @@ export function drawHelmIcon(ctx, x, y, helmItem) {
   ctx.strokeRect(x + 1.5, y + 1.5, 21, 21);
 }
 
+/**
+ * Draw a 24x24 heater-shield icon at (x, y) for the HUD gear slot. Iron
+ * shields get a highlight stripe; wooden shields get grain detail.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x - top-left x of the icon
+ * @param {number} y - top-left y of the icon
+ * @param {import('./data/gear.js').Item|null|undefined} shieldItem - resolved item, or null/undefined for empty slot
+ * @returns {void}
+ */
 export function drawShieldIcon(ctx, x, y, shieldItem) {
   const c = shieldColor(shieldItem) || '#8a6a3a';
   // heater shield silhouette
@@ -863,6 +919,15 @@ export function drawShieldIcon(ctx, x, y, shieldItem) {
   }
 }
 
+/**
+ * Draw a 24x24 ring icon at (x, y) for the HUD gear slot. Empty ring is
+ * grey; filled ring is gold with a purple gem.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x - top-left x of the icon
+ * @param {number} y - top-left y of the icon
+ * @param {import('./data/gear.js').Item|null|undefined} ringItem - resolved item, or null/undefined for empty slot
+ * @returns {void}
+ */
 export function drawRingIcon(ctx, x, y, ringItem) {
   const c = ringItem ? '#ffcf4d' : '#aaaaaa';
   // band
@@ -888,6 +953,16 @@ export function drawRingIcon(ctx, x, y, ringItem) {
 // ----- WEAPON ICON for the HUD -----
 // Draws a 24x24 weapon icon. weaponItem is the resolved item or catalog id.
 // Most callers will pass the item object; we look up .id. Returns true.
+/**
+ * Draw a 24x24 weapon icon at (x, y) for the HUD gear slot. Picks the
+ * silhouette from weaponItem.id (bow, staff, spear, halberd, warhammer,
+ * greatsword, dagger, sword default).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x - top-left x of the icon
+ * @param {number} y - top-left y of the icon
+ * @param {import('./data/gear.js').Item|string|null|undefined} weaponItem - resolved item or catalog id
+ * @returns {true} always — kept for callers that use the return as a "drawn" flag
+ */
 export function drawWeaponIcon(ctx, x, y, weaponItem) {
   const wid = (weaponItem && weaponItem.id) || (typeof weaponItem === 'string' ? weaponItem : '');
   const wc = weaponColor(weaponItem) || '#aaaaaa';

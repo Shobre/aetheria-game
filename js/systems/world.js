@@ -7,6 +7,101 @@ export const TILE = 32;
 // tile ids (internal - no external consumers, so not exported)
 const T = { FLOOR:0, PATH:1, WATER:2, WALL:7, HOLE:8, LAVA:9, FLOORALT:10 };
 
+/**
+ * @typedef {Object} BiomePalette
+ * Per-biome colour palette used by the renderer.
+ * @property {string} fa - floor colour A
+ * @property {string} fb - floor colour B (alternates with A in a checker)
+ * @property {string} pa - path colour A
+ * @property {string} pb - path colour B
+ * @property {string} wd - wall dark
+ * @property {string} wl - wall light
+ * @property {string} liquid
+ * @property {string} liquid2
+ * @property {string[]} deco - decoration kinds available to scatter
+ */
+
+/**
+ * @typedef {Object} DecorTile
+ * @property {string} type - decoration kind (e.g. 'tree', 'rock', 'lamp')
+ * @property {number} x    - tile column
+ * @property {number} y    - tile row
+ * @property {boolean} [solid] - true if this decoration blocks movement
+ */
+
+/**
+ * @typedef {Object} WorldPortal
+ * @property {number} x      - tile column of the portal
+ * @property {number} y      - tile row of the portal
+ * @property {string} to     - target map id
+ * @property {number} tx     - target spawn column
+ * @property {number} ty     - target spawn row
+ * @property {string} label  - shown above the portal sprite
+ * @property {boolean} [door] - render as a door (town building) vs a glow
+ * @property {number} wx     - world-x of portal centre (px)
+ * @property {number} wy     - world-y of portal centre (px)
+ */
+
+/**
+ * @typedef {Object} WorldNpc
+ * @property {number} x  - tile column
+ * @property {number} y  - tile row
+ * @property {string} name
+ * @property {string} [icon]
+ * @property {string[]} lines
+ * @property {boolean} [shop]
+ * @property {boolean} [bank]
+ * @property {boolean} [craft]
+ * @property {boolean} [enchant]
+ * @property {*} [companion]
+ * @property {*} [stock]
+ * @property {number} wx
+ * @property {number} wy
+ */
+
+/**
+ * @typedef {Object} WorldChest
+ * @property {number} x
+ * @property {number} y
+ * @property {{type:'gold', amount:number}|{type:'item', id:string, qty?:number}} loot
+ * @property {number} idx - position in source chests array (stable id for openedChests map)
+ * @property {number} wx
+ * @property {number} wy
+ * @property {boolean} opened
+ */
+
+/**
+ * @typedef {Object} WorldHomeChest
+ * @property {number} x
+ * @property {number} y
+ * @property {number} [w]
+ * @property {number} [h]
+ * @property {string} [name]
+ * @property {number} wx
+ * @property {number} wy
+ */
+
+/**
+ * @typedef {Object} WorldState
+ * Instance state for a {@link World}.
+ * @property {string} id            - map id (key into MAPS)
+ * @property {*}     def            - raw map definition from MAPS
+ * @property {number} cols
+ * @property {number} rows
+ * @property {number} w             - world width in px (= cols * TILE)
+ * @property {number} h             - world height in px (= rows * TILE)
+ * @property {string} biome
+ * @property {BiomePalette} pal
+ * @property {number} seed
+ * @property {number[][]} map       - tile grid (row-major)
+ * @property {DecorTile[]} decor
+ * @property {WorldPortal[]} portals
+ * @property {WorldNpc[]} npcs
+ * @property {WorldChest[]} chests
+ * @property {WorldHomeChest|null} homeChest
+ * @property {{cx:number, cy:number}[]} [_rooms] - dungeon/cave room centres
+ */
+
 // Per-biome palettes: [floorA, floorB, pathA, pathB, wallDark, wallLite, accent]
 const BIOMES = {
   grass:  { fa:'#3a7d44', fb:'#46934f', pa:'#b89b72', pb:'#c4a87f', wd:'#1d2330', wl:'#2b3346', liquid:'#2f6fb0', liquid2:'#3a82c8', deco:['tree','rock','flower'] },
@@ -24,6 +119,9 @@ const BIOMES = {
 const SOLID = new Set([T.WATER, T.WALL, T.LAVA]);
 
 export class World {
+  /**
+   * @param {string} mapId - key into MAPS
+   */
   constructor(mapId){
     this.id = mapId;
     this.def = MAPS[mapId];
@@ -40,8 +138,17 @@ export class World {
     this.homeChest = null; // Sprint 12: set in _placeFeatures if the map defines one
     this._gen();
   }
+  /**
+   * Mulberry-style LCG. Mutates this.seed and returns a float in [0,1).
+   * @returns {number}
+   */
   _rand(){ this.seed=(this.seed*9301+49297)%233280; return this.seed/233280; }
 
+  /**
+   * Generate the tile grid + decor + features for the chosen map.
+   * Branches on interior / town / dungeon / cave / open biome.
+   * @returns {void}
+   */
   _gen(){
     const interior = this.def.interior;
     // base fill
@@ -81,6 +188,11 @@ export class World {
   }
 
   // open biome: winding path + scattered solid decor + a water/lava pool
+  /**
+   * Open-biome generator: carves a winding N-S path, drops a circular
+   * liquid pool, and scatters decor (about half solid obstacles).
+   * @returns {void}
+   */
   _genOpen(){
     let px=Math.floor(this.cols/2);
     for(let y=1;y<this.rows-1;y++){
@@ -110,6 +222,12 @@ export class World {
   }
 
   // town: cobbled plaza with cross avenues + building blocks at each door portal.
+  /**
+   * Town generator: cross avenues, central plaza, and ambience props
+   * (fountain + 4 corner lamps). Building blocks for door portals land
+   * via _placeFeatures.
+   * @returns {void}
+   */
   _genCity(){
     for(let y=1;y<this.rows-1;y++)for(let x=1;x<this.cols-1;x++) this.map[y][x]=T.FLOOR; // grass yards
     const cx=Math.floor(this.cols/2), cy=Math.floor(this.rows/2);
@@ -127,6 +245,11 @@ export class World {
   }
 
   // dungeon/cave: carve rooms connected by corridors
+  /**
+   * Dungeon/cave generator: fill with walls, carve 6-9 random rooms,
+   * connect rooms with L-corridors, scatter decor inside rooms.
+   * @returns {void}
+   */
   _genRooms(){
     // fill solid, carve
     for(let y=1;y<this.rows-1;y++)for(let x=1;x<this.cols-1;x++) this.map[y][x]=T.WALL;
@@ -156,6 +279,13 @@ export class World {
   }
 
   // place portals, npcs, chests from the map def, ensuring their tiles are walkable
+  /**
+   * Materialise portals, NPCs, chests, and the home chest from the map def.
+   * Each feature's tile is overwritten to a walkable kind (PATH / FLOOR)
+   * so the player can always reach them. Filters out any decor stacked
+   * on top of the home chest tile.
+   * @returns {void}
+   */
   _placeFeatures(){
     for(const p of (this.def.portals||[])){
       // clear the portal tile so it is reachable
@@ -187,6 +317,13 @@ export class World {
     }
   }
 
+  /**
+   * True if the world point (px, py) sits on or outside a solid tile
+   * (water, wall, lava). Used by entity movement as a collision predicate.
+   * @param {number} px - world x in px
+   * @param {number} py - world y in px
+   * @returns {boolean}
+   */
   isSolid(px,py){
     const x=Math.floor(px/TILE), y=Math.floor(py/TILE);
     if(x<0||y<0||x>=this.cols||y>=this.rows) return true;
@@ -198,6 +335,14 @@ export class World {
   // Snap a world point to the centre of the nearest walkable tile.
   // Keeps the player from spawning inside a wall when a portal landing
   // tile (or checkpoint) happens to be solid rock/decor.
+  /**
+   * Snap a world point to the centre of the nearest walkable tile.
+   * Keeps the player from spawning inside a wall when a portal landing
+   * tile (or checkpoint) happens to be solid rock/decor.
+   * @param {number} px - world x in px
+   * @param {number} py - world y in px
+   * @returns {{x:number, y:number}}
+   */
   nearestOpen(px,py){
     const cx=Math.floor(px/TILE), cy=Math.floor(py/TILE);
     const free=(x,y)=> x>=0&&y>=0&&x<this.cols&&y<this.rows && !SOLID.has(this.map[y][x]);
@@ -212,6 +357,12 @@ export class World {
   }
 
   // find a walkable spawn near a tile (for enemies)
+  /**
+   * Find a random walkable FLOOR tile for an enemy to spawn on. Tries
+   * up to 60 candidates before falling back to the world centre.
+   * @param {() => number} rand - 0..1 RNG (typically World._rand or Math.random)
+   * @returns {{x:number, y:number}}
+   */
   randomFloor(rand){
     for(let i=0;i<60;i++){
       const x=1+Math.floor(rand()*(this.cols-2));
@@ -227,6 +378,22 @@ export class World {
   // is an array of {x,y} tile-centre points the enemy must stay at least
   // `exclusionR` pixels away from; `others` is an array of {x,y} for
   // previously-spawned enemies (uses `otherR` as the spacing radius).
+  /**
+   * Smart enemy spawn picker. Avoids the player, every other enemy
+   * already placed, and any "reserved" world points (chests, portals,
+   * NPCs). Up to 120 attempts before falling back to a random walkable
+   * tile, then 60 more with a relaxed player-radius check.
+   * @param {() => number} rand - 0..1 RNG
+   * @param {Object} [opts]
+   * @param {number} [opts.exclusionR=28]  - min px distance from reserved zones
+   * @param {number} [opts.otherR=26]      - min px distance from other enemies
+   * @param {number} [opts.tries=120]      - candidate attempts before fallback
+   * @param {{x:number, y:number}[]} [opts.exclusions] - reserved tile centres
+   * @param {{x:number, y:number}[]} [opts.others]     - other enemies
+   * @param {{x:number, y:number}} [opts.player]       - player world pos
+   * @param {number} [opts.playerR=80]     - min px distance from player
+   * @returns {{x:number, y:number}}
+   */
   findSpawnPoint(rand, opts={}){
     const exR=opts.exclusionR||28;
     const otherR=opts.otherR||26;
@@ -269,6 +436,13 @@ export class World {
 
   // Collect reserved spawn zones (chests + portals + NPCs) for a map def.
   // Returns an array of {x,y} world points. Used by findSpawnPoint exclusions.
+  /**
+   * Collect reserved spawn zones (chests + portals + NPCs + home chest)
+   * for a map def. Returns world-pixel centres used by findSpawnPoint
+   * exclusions.
+   * @param {*} def - raw map definition (same shape as MAPS[id])
+   * @returns {{x:number, y:number}[]}
+   */
   reservedZones(def){
     const out=[];
     if(!def) return out;
