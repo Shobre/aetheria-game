@@ -455,11 +455,19 @@ export class World {
   }
 
   // ---- pathfinding helpers (used by enemy AI to navigate around walls) ----
+  /** @returns {boolean} */
   _blockedTile(x,y){
     if(x<0||y<0||x>=this.cols||y>=this.rows) return true;
     return SOLID.has(this.map[y][x]);
   }
   // straight-line tile raycast: true if nothing solid sits between the two world points
+  /**
+   * @param {number} x0
+   * @param {number} y0
+   * @param {number} x1
+   * @param {number} y1
+   * @returns {boolean}
+   */
   hasLineOfSight(x0,y0,x1,y1){
     const dist=Math.hypot(x1-x0,y1-y0);
     const steps=Math.ceil(dist/(TILE*0.5));
@@ -472,6 +480,14 @@ export class World {
   }
   // A* on the tile grid (4-dir). Returns array of world-coord waypoints (tile centers)
   // from start toward goal, or null. Node expansion is capped to stay cheap.
+  /**
+   * @param {number} sx
+   * @param {number} sy
+   * @param {number} tx
+   * @param {number} ty
+   * @param {number} [maxNodes]
+   * @returns {Array<{x:number,y:number}>|null}
+   */
   findPath(sx,sy,tx,ty,maxNodes=700){
     const sX=Math.floor(sx/TILE), sY=Math.floor(sy/TILE);
     let gX=Math.floor(tx/TILE), gY=Math.floor(ty/TILE);
@@ -513,18 +529,40 @@ export class World {
   // A* with the Sprint 6 funnel/line-of-sight smoothing pass applied. Most enemy
   // AI should use this — it removes redundant tile-centre waypoints so enemies
   // cut corners instead of stair-stepping. Pure additive: findPath is unchanged.
+  /**
+   * @param {number} sx
+   * @param {number} sy
+   * @param {number} tx
+   * @param {number} ty
+   * @param {number} [maxNodes]
+   * @returns {Array<{x:number,y:number}>|null}
+   */
   findPathSmoothed(sx, sy, tx, ty, maxNodes){
     const raw = this.findPath(sx, sy, tx, ty, maxNodes);
     if(!raw) return null;
     return smoothPath(raw, (x0, y0, x1, y1) => this.hasLineOfSight(x0, y0, x1, y1));
   }
 
+  /**
+   * @param {number} t - tile id
+   * @param {number} x - tile x (for variance)
+   * @param {number} y - tile y
+   * @returns {string} hex color
+   */
   _tileColor(t, x, y){
     const P=this.pal;
     if(t===T.PATH) return (x+y)%2?P.pa:P.pb;
     if(t===T.WATER) return (x+y)%2?P.liquid:P.liquid2;
     return (x+y)%2?P.fa:P.fb;
   }
+  /**
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} t - tile id
+   * @param {number} x
+   * @param {number} y
+   * @param {number} sx
+   * @param {number} sy
+   */
   _drawTile(ctx, t, x, y, sx, sy){
     ctx.fillStyle=this._tileColor(t,x,y);
     ctx.fillRect(sx,sy,TILE,TILE);
@@ -537,6 +575,10 @@ export class World {
       ctx.fillRect(sx+4, sy+(Math.sin(x+performance.now()/600)*3+6), TILE-8, 3);
     }
   }
+  /**
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {import('./game.js').CameraState} cam
+   */
   _drawPortal(ctx, p, cam){
     const sx=p.x*TILE-cam.x, sy=p.y*TILE-cam.y;
     const pulse=0.5+0.5*Math.sin(performance.now()/300);
@@ -557,6 +599,10 @@ export class World {
       ctx.fillStyle=`rgba(255,255,255,${pulse*0.6})`; ctx.beginPath(); ctx.arc(sx+16,sy+16,5,0,7); ctx.fill();
     }
   }
+  /**
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {import('./game.js').CameraState} cam
+   */
   draw(ctx, cam){
     const P=this.pal;
     const x0=Math.max(0,Math.floor(cam.x/TILE)), y0=Math.max(0,Math.floor(cam.y/TILE));
@@ -611,6 +657,12 @@ export class World {
     }
   }
 
+  /**
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {string} type - decor kind
+   * @param {number} sx
+   * @param {number} sy
+   */
   _drawDecor(ctx,type,sx,sy){
     switch(type){
       case 'tree': ctx.fillStyle='#5a3a22'; ctx.fillRect(sx+13,sy+18,6,12);
@@ -655,9 +707,30 @@ export class World {
   }
 }
 
+/**
+ * @typedef {Object} CameraState
+ * @property {number} x       - top-left world-x
+ * @property {number} y       - top-left world-y
+ * @property {number} w       - viewport width (px)
+ * @property {number} h       - viewport height (px)
+ * @property {number} shake   - current screen-shake amplitude (decays)
+ */
+
 export class Camera {
+  /**
+   * @param {number} w - viewport width
+   * @param {number} h - viewport height
+   */
   constructor(w,h){ this.x=0;this.y=0;this.w=w;this.h=h;this.shake=0; }
+  /**
+   * @param {number} w
+   * @param {number} h
+   */
   resize(w,h){ this.w=w; this.h=h; }
+  /**
+   * @param {{x:number,y:number}} target - entity to center on (e.g. Player)
+   * @param {WorldState} world
+   */
   follow(target, world){
     this.x=target.x-this.w/2; this.y=target.y-this.h/2;
     this.x=Math.max(0,Math.min(world.w-this.w,this.x));

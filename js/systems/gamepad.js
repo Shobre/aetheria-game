@@ -91,6 +91,7 @@ export class GamepadAdapter {
   }
 
   // Look for any standard gamepad. If we don't find one, mark disconnected.
+  /** @returns {void} */
   _tryConnect(){
     if(typeof navigator === 'undefined' || !navigator.getGamepads) return;
     const pads = navigator.getGamepads();
@@ -107,6 +108,10 @@ export class GamepadAdapter {
 
   // Call once per frame. Reads the live gamepad state and writes into
   // input.keys / input.pressed / input.mouse.* as if real events fired.
+  /**
+   * @param {number} dt - seconds since last frame
+   * @returns {boolean} true if anything was processed this frame
+   */
   poll(dt){
     if(!this.connected && !this._anyLastFrame) return false;
     let pad = null;
@@ -186,6 +191,10 @@ export class GamepadAdapter {
   // mousePressed / mouseDown flags, since wasPressed('attack') resolves to
   // `mousePressed.left` (the rebind UI keeps LMB hardcoded to attack by
   // convention, but the action registry's "attack" defaultKey is 'mouse1').
+  /**
+   * @param {string} actionId
+   * @param {boolean} isDown
+   */
   _writeAction(actionId, isDown){
     if(!actionId) return;
     // The action maps to either a key OR a mouse button. Read the live
@@ -213,6 +222,11 @@ export class GamepadAdapter {
 
   // Specialization of _writeAction for stick-driven move keys, since the
   // move keys are a small set and we already track them by name.
+  /**
+   * @param {string} actionId
+   * @param {boolean} was
+   * @param {boolean} now
+   */
   _writeDirection(actionId, was, now){
     if(was === now) return;
     this._writeAction(actionId, now);
@@ -221,6 +235,7 @@ export class GamepadAdapter {
   // Release every key and mouse button the adapter was holding. Called
   // on disconnect and on the first frame after a pad is lost, so a player
   // who unplugs mid-attack doesn't get stuck attacking.
+  /** @returns {void} */
   _releaseAll(){
     const moveActions = ['move_up', 'move_down', 'move_left', 'move_right'];
     for(const a of moveActions) this._writeAction(a, false);
