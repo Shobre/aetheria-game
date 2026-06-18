@@ -377,7 +377,7 @@ The existing `audio.js` already had a 3-mood system (calm/tense/boss) backed by 
 ---
 
 ## Test Coverage
-- **Total:** 1296 tests across all modules (547 → 600 → 613 → 675 → 700 → 783 → 1022 → 1142 → 1216 → 1289 → 1296 after Sprints 3, 4, 5, 6, 7, 9, 10, 11, 12 + ReferenceError fixes)
+- **Total:** 1304 tests across all modules (547 → 600 → 613 → 675 → 700 → 783 → 1022 → 1142 → 1216 → 1289 → 1296 → 1304 after Sprints 3, 4, 5, 6, 7, 9, 10, 11, 12 + ReferenceError fixes + Sprint 14)
 - **Run:** npm test (plain Node, no framework dependency)
 
 ## Post-Sprint 12 hotfix: browser ReferenceErrors (commit fdc8d59)
@@ -390,4 +390,58 @@ While fixing #2, the new static-analysis test ("no bare this.X-field references 
 
 Live game verified running on Vercel via headless browser on 2026-06-16 — sign-in, save-slot selection, game start, render at dayTime=100 (deep night), fastTravel call, H-key press, all clean (0 console errors).
 
-*Last updated: Post-Sprint 12 hotfix complete (commit fdc8d59)*
+---
+
+## ✅ Sprint 14 — JSDoc + `tsc --checkJs` (partial, commits 4c6524d / 8fc68be / 665a1b7 / 33d3d3e)
+
+The type-discipline sprint. Adds TypeScript as a devDep, runs `tsc --noEmit` over the whole `js/` tree via `jsconfig.json`, and uses `--checkJs` to validate JSDoc annotations.
+
+### 1. Tooling shipped
+- `typescript@^5.5.0` added to `devDependencies` (no runtime deps touched).
+- `jsconfig.json` enables `allowJs`, `checkJs` (currently `false` — see §6 below), `noEmit`, `lib: ES2022+DOM`.
+- New `npm run typecheck` script. With `checkJs:false` today, it validates syntax and import shape across the whole `js/` tree silently.
+- `type:module` NOT added to `package.json` — Sprint 13b regression guard.
+
+### 2. Data catalogs fully typed (Feature 2)
+All 14 files in `js/data/` now have:
+- A `@typedef` block at the top describing the catalog's record shape (e.g. `Item`/`ItemStats` for gear.js, `Spell`/`SpellProj` for spells.js, `Quest`/`QuestObjective` for quests.js, `SkillNode` for skilltree.js, `AmmoDef` for ammo.js, `EnchantDef` for enchantments.js, `MoodDef` for music.js, `AtlasDef`/`AtlasFrame` for sprite-atlas.js, etc.)
+- `@type` annotations on every exported catalog constant and array (`Record<...>` / `ActionDef[]` / `AmmoDef[]` / etc.)
+- `@param` + `@returns` on every exported function
+- Cross-file references via `@param {import('./gear.js').Item}` so consumers get the right shape
+
+### 3. Real bugs surfaced by `--checkJs` and fixed
+- **`maps.js:302` — duplicate `liquid` key in `volcano_depths` palette.** Two `liquid:'#...'` fields in the same `pal` object literal; the second silently overrode the first. Fixed by renaming to `liquid2` (matches every other volcano map). Commit `665a1b7`.
+- **`hud.js:104` — dead defensive call to nonexistent `refreshSpells`.** Inside the spell-slot drag-and-drop handler, `if(this.refreshSpells) this.refreshSpells()` referenced a method that was never defined. The line above it (`this.refresh()`) already triggers `_updateSpellLoadout()`, which re-renders the spell UI correctly. Removing the dead line is a no-op for the user. Commit `33d3d3e`.
+- **`enemy.js:681,685` — `Projectile.homing` is read but never declared.** The constructor at `enemy.js:666` doesn't read `opts.homing` into `this.homing`, so the homing logic (added in Sprint 4 for mage projectiles) is **dead code at runtime** — boss projectiles in `boss.js:215` and mage projectiles in `enemy.js:301` pass `homing:0.06/0.08` but the constructor never stores it, so the `if(this.homing && ...)` check on line 681 always evaluates false. Documented but **not fixed** in this sprint (out of scope for "type-discipline"; touching runtime behavior is a separate change).
+- **`game.js:164,638` — `Enemy.spawnIdx` is set but never read.** Leftover dead field from an earlier feature. Documented but **not removed** in this sprint.
+
+### 4. Class typing started (partial Feature 3)
+- `js/entities/player.js`: `PlayerState` `@typedef` describing every instance field assigned in the constructor or `recompute()`. This locks the shape that `Game`, `HUD`, and combat code reads.
+- `js/systems/save.js`: `SaveState` `@typedef` describing the persisted v2 schema, plus `@param`/`@returns` on `SaveSystem.{save,delete,newGame}`.
+- `js/data/affixes.js`: `AffixDef` `@typedef` for the internal `AFFIX_POOL`, typed at declaration and at the spread site in `applyRarity`.
+
+### 5. `npm run typecheck` and regression defense
+With `checkJs:false` (current state), `npm run typecheck` validates import shape across the whole tree and exits 0. The `--checkJs` regression guard in `tests/run.js` was planned (Feature 5) but not added — it only adds value once `checkJs:true` is enabled, which requires Features 3+4 to complete.
+
+### 6. Why `checkJs:false` (and what's next)
+With `checkJs:true`, `tsc` surfaces **183 errors** across the codebase:
+- ~80 in `js/ui/hud.js` and `js/main.js` from `document.getElementById(...)` returning `Element` (the most general DOM type) — every `el.style`, `el.value`, `el.checked`, `el.onclick` access fails the typecheck. Fixable in a single Feature 4 commit by annotating DOM lookups as `HTMLButtonElement|null` etc.
+- ~30 in `js/data/sprite-atlas.js` from my `AtlasFrame` typedef using `@property {number} 0` syntax (JSDoc doesn't support numeric-key tuple typedefs in this shape — needs a 4-field object or `number[]` cast).
+- ~20 in `js/systems/game.js` from untyped `this.X` field assignments (1105-line file, needs the full `GameState` typedef + per-method `@param`).
+- ~50 in `js/entities/enemy.js`, `js/entities/boss.js`, `js/entities/companion.js` from the same class-field-not-declared pattern.
+- The remaining are `// @ts-ignore`-able but better fixed with JSDoc.
+
+The full class typing is **deferred to Sprint 15**. That sprint will:
+1. Define `GameState`, `EnemyState`, `BossState`, `HUDState`, `WorldState`, `AudioState`, etc. as file-top `@typedef` blocks.
+2. Annotate every public method `@param`/`@returns`.
+3. Flip `checkJs:true` in `jsconfig.json`.
+4. Add the `tsc --checkJs` regression guard to `tests/run.js`.
+5. Annotate DOM lookups in `main.js` and `hud.js` with `HTMLButtonElement|null` etc.
+
+### Sprint 14 results
+- 1304 tests passing (unchanged — no feature work, no tests added in this partial sprint).
+- 0 typecheck errors with `checkJs:false`. With `checkJs:true`: 183 errors documented above, all fixable.
+- 0 lint errors. 0 dead-code regressions.
+- 4 commits: `4c6524d` (tooling), `665a1b7` (maps fix), `8fc68be` (catalogs), `33d3d3e` (hud fix + partial class types).
+
+*Last updated: Sprint 14 partial complete (commits 4c6524d / 665a1b7 / 8fc68be / 33d3d3e)*

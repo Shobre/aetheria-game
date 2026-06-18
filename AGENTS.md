@@ -33,11 +33,14 @@ Browser action-RPG. Vanilla JS + Canvas 2D + Tailwind (precompiled). No bundler,
 # Run the game (port 3005)
 python -m http.server 3005
 
-# Tests (1299+ unit tests, single command)
+# Tests (1304 unit tests, single command)
 npm test
 
 # Lint
 npm run lint
+
+# Type-check (Sprint 14)
+npm run typecheck
 ```
 
 There is **no `npm run build` step** — `build.cjs` is a Vercel pre-deploy hook, not a bundler. The site is shipped as-is.
@@ -64,6 +67,15 @@ There is **no `npm run build` step** — `build.cjs` is a Vercel pre-deploy hook
 - **Vercel rewrites** in `vercel.json` route `/api/*` → `/api/*`. Don't add a catch-all that shadows it.
 - **ESLint `no-undef`** is on. Use the `globals.browser` / `globals.node` configs from `eslint.config.js`; don't add per-file `/* global foo */` unless the var is intentionally on `window`.
 - **`prog` in `js/entities/player.js:429`** — the player progression variable. ESLint flagged it in Sprint 13. Don't introduce more latent globals; use `const`/`let` at the top of the file.
+
+## Type conventions (Sprint 14)
+
+- `npm run typecheck` runs `tsc --noEmit --project jsconfig.json` over the whole `js/` tree. Currently with `checkJs:false` — it validates syntax and import shape, silent on success.
+- All 14 `js/data/*.js` catalogs have `@typedef` blocks at the top + `@type` annotations on exports. New catalog data should follow the pattern: define a `@typedef`, then `/** @type {Record<string, MyType>} */` on the export.
+- Cross-file types via `@param {import('./other.js').Type} name`.
+- The full class typing (Player/Enemy/Boss/Game/HUD methods) is **Sprint 15 work**. Until then, `checkJs:true` surfaces ~183 unfixed errors — keep it `false` in `jsconfig.json`.
+- Don't add `// @ts-ignore` to silence the typechecker. Fix the JSDoc or fix the code.
+- Don't add `"type": "module"` to `package.json` — would break `/api/*` CJS on Vercel (Sprint 13b regression).
 
 ## Working agreement
 
