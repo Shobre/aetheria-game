@@ -1,0 +1,3673 @@
+{
+  "started": "2026-06-18T04:12:57Z",
+  "url": "https://aetheria-game-alpha.vercel.app",
+  "visited": [
+    {
+      "src": "meadow",
+      "to": "forest",
+      "tx": 3,
+      "ty": 22,
+      "ok": true,
+      "before": {
+        "x": 112,
+        "y": 720,
+        "map": "forest"
+      },
+      "dims": {
+        "cols": 55,
+        "rows": 50,
+        "w": 1760,
+        "h": 1600
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 140.50000000000009,
+          "y": 720,
+          "dx": 28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 83.49999999999991,
+          "y": 720,
+          "dx": -28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 112,
+          "y": 750.3999999999996,
+          "dx": 0,
+          "dy": 30.399999999999636,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 112,
+          "y": 689.6000000000004,
+          "dx": 0,
+          "dy": -30.399999999999636,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Greenwood Meadow",
+        "to": "meadow",
+        "dist": 64
+      },
+      "portalCount": 3
+    },
+    {
+      "src": "meadow",
+      "to": "desert",
+      "tx": 55,
+      "ty": 23,
+      "ok": true,
+      "before": {
+        "x": 1776,
+        "y": 752,
+        "map": "desert"
+      },
+      "dims": {
+        "cols": 58,
+        "rows": 42,
+        "w": 1856,
+        "h": 1344
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 251.40000000000003,
+          "y": 1232,
+          "dx": -1524.6,
+          "dy": 480,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1747.4999999999986,
+          "y": 752,
+          "dx": -28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1776,
+          "y": 780.4999999999997,
+          "dx": 0,
+          "dy": 28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1776,
+          "y": 721.6000000000004,
+          "dx": 0,
+          "dy": -30.399999999999636,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Greenwood Meadow",
+        "to": "meadow",
+        "dist": 32
+      },
+      "portalCount": 3
+    },
+    {
+      "src": "meadow",
+      "to": "cave",
+      "tx": 8,
+      "ty": 38,
+      "ok": true,
+      "before": {
+        "x": 272,
+        "y": 1264,
+        "map": "cave"
+      },
+      "dims": {
+        "cols": 50,
+        "rows": 48,
+        "w": 1600,
+        "h": 1536
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 985.4999999999999,
+          "y": 144,
+          "dx": 713.4999999999999,
+          "dy": -1120,
+          "inBounds": true,
+          "notSolid": false
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 245.40000000000015,
+          "y": 1264,
+          "dx": -26.599999999999852,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": false
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 272,
+          "y": 1292.5000000000014,
+          "dx": 0,
+          "dy": 28.500000000001364,
+          "inBounds": true,
+          "notSolid": false
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 272,
+          "y": 1235.4999999999986,
+          "dx": 0,
+          "dy": -28.500000000001364,
+          "inBounds": true,
+          "notSolid": false
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": true,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Greenwood Meadow",
+        "to": "meadow",
+        "dist": 0
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "meadow",
+      "to": "house1",
+      "tx": 8,
+      "ty": 13,
+      "ok": true,
+      "before": {
+        "x": 272,
+        "y": 432,
+        "map": "house1"
+      },
+      "dims": {
+        "cols": 18,
+        "rows": 16,
+        "w": 576,
+        "h": 512
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 300.49999999999966,
+          "y": 432,
+          "dx": 28.49999999999966,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 243.50000000000014,
+          "y": 432,
+          "dx": -28.499999999999858,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 976,
+          "y": 804.8999999999997,
+          "dx": 704,
+          "dy": 372.89999999999975,
+          "inBounds": false,
+          "notSolid": false
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 272,
+          "y": 403.50000000000034,
+          "dx": 0,
+          "dy": -28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Outside",
+        "to": "meadow",
+        "dist": 32
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "meadow",
+      "to": "snow",
+      "tx": 50,
+      "ty": 30,
+      "ok": true,
+      "before": {
+        "x": 1616,
+        "y": 976,
+        "map": "snow"
+      },
+      "dims": {
+        "cols": 56,
+        "rows": 46,
+        "w": 1792,
+        "h": 1472
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1646.4000000000015,
+          "y": 976,
+          "dx": 30.400000000001455,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1587.4999999999986,
+          "y": 976,
+          "dx": -28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1616,
+          "y": 1004.4999999999997,
+          "dx": 0,
+          "dy": 28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1616,
+          "y": 947.5000000000003,
+          "dx": 0,
+          "dy": -28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Greenwood Meadow",
+        "to": "meadow",
+        "dist": 64
+      },
+      "portalCount": 3
+    },
+    {
+      "src": "meadow",
+      "to": "city",
+      "tx": 24,
+      "ty": 3,
+      "ok": true,
+      "before": {
+        "x": 784,
+        "y": 112,
+        "map": "city"
+      },
+      "dims": {
+        "cols": 48,
+        "rows": 40,
+        "w": 1536,
+        "h": 1280
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 814.3999999999996,
+          "y": 112,
+          "dx": 30.399999999999636,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 753.6000000000004,
+          "y": 112,
+          "dx": -30.399999999999636,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 784,
+          "y": 142.4000000000001,
+          "dx": 0,
+          "dy": 30.40000000000009,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 976,
+          "y": 1307.099999999999,
+          "dx": 192,
+          "dy": 1195.099999999999,
+          "inBounds": false,
+          "notSolid": false
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Greenwood Meadow",
+        "to": "meadow",
+        "dist": 32
+      },
+      "portalCount": 6
+    },
+    {
+      "src": "meadow",
+      "to": "meadow_glade",
+      "tx": 3,
+      "ty": 20,
+      "ok": true,
+      "before": {
+        "x": 112,
+        "y": 656,
+        "map": "meadow_glade"
+      },
+      "dims": {
+        "cols": 48,
+        "rows": 40,
+        "w": 1536,
+        "h": 1280
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 140.50000000000009,
+          "y": 656,
+          "dx": 28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1755.099999999999,
+          "y": 1232,
+          "dx": 1643.099999999999,
+          "dy": 576,
+          "inBounds": false,
+          "notSolid": false
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 112,
+          "y": 656,
+          "dx": 0,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 112,
+          "y": 656,
+          "dx": 0,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": false,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Greenwood Meadow",
+        "to": "meadow",
+        "dist": 32
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "forest",
+      "to": "meadow",
+      "tx": 53,
+      "ty": 6,
+      "ok": true,
+      "before": {
+        "x": 1712,
+        "y": 208,
+        "map": "meadow"
+      },
+      "dims": {
+        "cols": 60,
+        "rows": 45,
+        "w": 1920,
+        "h": 1440
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1742.4000000000015,
+          "y": 208,
+          "dx": 30.400000000001455,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1683.4999999999986,
+          "y": 208,
+          "dx": -28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1712,
+          "y": 236.50000000000009,
+          "dx": 0,
+          "dy": 28.500000000000085,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1712,
+          "y": 179.49999999999991,
+          "dx": 0,
+          "dy": -28.500000000000085,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Whispering Forest",
+        "to": "forest",
+        "dist": 71.55417527999327
+      },
+      "portalCount": 7
+    },
+    {
+      "src": "forest",
+      "to": "dungeon1",
+      "tx": 9,
+      "ty": 2,
+      "ok": true,
+      "before": {
+        "x": 304,
+        "y": 48,
+        "map": "dungeon1"
+      },
+      "dims": {
+        "cols": 46,
+        "rows": 54,
+        "w": 1472,
+        "h": 1728
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1563.4000000000005,
+          "y": 1424,
+          "dx": 1259.4000000000005,
+          "dy": 1376,
+          "inBounds": false,
+          "notSolid": false
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 275.50000000000034,
+          "y": 48,
+          "dx": -28.49999999999966,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": false
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 304,
+          "y": 78.40000000000003,
+          "dx": 0,
+          "dy": 30.400000000000034,
+          "inBounds": true,
+          "notSolid": false
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 304,
+          "y": 44.2,
+          "dx": 0,
+          "dy": -3.799999999999997,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": false,
+      "spawnedOnPortal": true,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Whispering Forest",
+        "to": "forest",
+        "dist": 0
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "forest",
+      "to": "forest_deep",
+      "tx": 3,
+      "ty": 25,
+      "ok": true,
+      "before": {
+        "x": 112,
+        "y": 816,
+        "map": "forest_deep"
+      },
+      "dims": {
+        "cols": 52,
+        "rows": 50,
+        "w": 1664,
+        "h": 1600
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 140.50000000000009,
+          "y": 816,
+          "dx": 28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1593.199999999999,
+          "y": 176,
+          "dx": 1481.199999999999,
+          "dy": -640,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 112,
+          "y": 844.4999999999997,
+          "dx": 0,
+          "dy": 28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 112,
+          "y": 785.6000000000004,
+          "dx": 0,
+          "dy": -30.399999999999636,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Whispering Forest",
+        "to": "forest",
+        "dist": 32
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "desert",
+      "to": "meadow",
+      "tx": 7,
+      "ty": 38,
+      "ok": true,
+      "before": {
+        "x": 240,
+        "y": 1232,
+        "map": "meadow"
+      },
+      "dims": {
+        "cols": 60,
+        "rows": 45,
+        "w": 1920,
+        "h": 1440
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 270.39999999999986,
+          "y": 1232,
+          "dx": 30.399999999999864,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 211.49999999999991,
+          "y": 1232,
+          "dx": -28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 240,
+          "y": 1260.5000000000014,
+          "dx": 0,
+          "dy": 28.500000000001364,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 240,
+          "y": 1201.5999999999985,
+          "dx": 0,
+          "dy": -30.400000000001455,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Sunscar Desert",
+        "to": "desert",
+        "dist": 90.50966799187809
+      },
+      "portalCount": 7
+    },
+    {
+      "src": "desert",
+      "to": "swamp",
+      "tx": 50,
+      "ty": 40,
+      "ok": true,
+      "before": {
+        "x": 1584,
+        "y": 1264,
+        "map": "swamp"
+      },
+      "dims": {
+        "cols": 58,
+        "rows": 48,
+        "w": 1856,
+        "h": 1536
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1614.4000000000015,
+          "y": 1264,
+          "dx": 30.400000000001455,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1555.4999999999986,
+          "y": 1264,
+          "dx": -28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1584,
+          "y": 1294.4000000000015,
+          "dx": 0,
+          "dy": 30.400000000001455,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1584,
+          "y": 1235.4999999999986,
+          "dx": 0,
+          "dy": -28.500000000001364,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Sunscar Desert",
+        "to": "desert",
+        "dist": 135.76450198781714
+      },
+      "portalCount": 2
+    },
+    {
+      "src": "desert",
+      "to": "desert_ruins",
+      "tx": 24,
+      "ty": 3,
+      "ok": true,
+      "before": {
+        "x": 784,
+        "y": 112,
+        "map": "desert_ruins"
+      },
+      "dims": {
+        "cols": 50,
+        "rows": 46,
+        "w": 1600,
+        "h": 1472
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 814.3999999999996,
+          "y": 112,
+          "dx": 30.399999999999636,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 755.5000000000003,
+          "y": 112,
+          "dx": -28.49999999999966,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 784,
+          "y": 140.50000000000009,
+          "dx": 0,
+          "dy": 28.500000000000085,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 976,
+          "y": 1209.199999999999,
+          "dx": 192,
+          "dy": 1097.199999999999,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Sunscar Desert",
+        "to": "desert",
+        "dist": 32
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "cave",
+      "to": "meadow",
+      "tx": 30,
+      "ty": 4,
+      "ok": true,
+      "before": {
+        "x": 976,
+        "y": 144,
+        "map": "meadow"
+      },
+      "dims": {
+        "cols": 60,
+        "rows": 45,
+        "w": 1920,
+        "h": 1440
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1006.3999999999996,
+          "y": 144,
+          "dx": 30.399999999999636,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 947.5000000000003,
+          "y": 144,
+          "dx": -28.49999999999966,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 976,
+          "y": 174.4000000000001,
+          "dx": 0,
+          "dy": 30.40000000000009,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 976,
+          "y": 113.59999999999991,
+          "dx": 0,
+          "dy": -30.40000000000009,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Crystal Cave",
+        "to": "cave",
+        "dist": 64
+      },
+      "portalCount": 7
+    },
+    {
+      "src": "dungeon1",
+      "to": "forest",
+      "tx": 48,
+      "ty": 44,
+      "ok": true,
+      "before": {
+        "x": 1552,
+        "y": 1424,
+        "map": "forest"
+      },
+      "dims": {
+        "cols": 55,
+        "rows": 50,
+        "w": 1760,
+        "h": 1600
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1582.4000000000015,
+          "y": 1424,
+          "dx": 30.400000000001455,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1523.4999999999986,
+          "y": 1424,
+          "dx": -28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1552,
+          "y": 1452.5000000000014,
+          "dx": 0,
+          "dy": 28.500000000001364,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1552,
+          "y": 1393.5999999999985,
+          "dx": 0,
+          "dy": -30.400000000001455,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Forgotten Crypt",
+        "to": "dungeon1",
+        "dist": 71.55417527999327
+      },
+      "portalCount": 3
+    },
+    {
+      "src": "snow",
+      "to": "meadow",
+      "tx": 4,
+      "ty": 7,
+      "ok": true,
+      "before": {
+        "x": 144,
+        "y": 240,
+        "map": "meadow"
+      },
+      "dims": {
+        "cols": 60,
+        "rows": 45,
+        "w": 1920,
+        "h": 1440
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 174.4000000000001,
+          "y": 240,
+          "dx": 30.40000000000009,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 115.49999999999991,
+          "y": 240,
+          "dx": -28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 144,
+          "y": 268.4999999999999,
+          "dx": 0,
+          "dy": 28.499999999999886,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 144,
+          "y": 209.5999999999999,
+          "dx": 0,
+          "dy": -30.40000000000009,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Frostpeak Tundra",
+        "to": "snow",
+        "dist": 90.50966799187809
+      },
+      "portalCount": 7
+    },
+    {
+      "src": "snow",
+      "to": "dungeon2",
+      "tx": 23,
+      "ty": 50,
+      "ok": true,
+      "before": {
+        "x": 688,
+        "y": 1552,
+        "map": "dungeon2"
+      },
+      "dims": {
+        "cols": 48,
+        "rows": 56,
+        "w": 1536,
+        "h": 1792
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 718.3999999999996,
+          "y": 1552,
+          "dx": 30.399999999999636,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 659.5000000000003,
+          "y": 1552,
+          "dx": -28.49999999999966,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 688,
+          "y": 1555.8000000000002,
+          "dx": 0,
+          "dy": 3.800000000000182,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 688,
+          "y": 1548.1999999999998,
+          "dx": 0,
+          "dy": -3.800000000000182,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": false,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Frostpeak Tundra",
+        "to": "snow",
+        "dist": 202.3857702507763
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "snow",
+      "to": "snow_glacier",
+      "tx": 3,
+      "ty": 23,
+      "ok": true,
+      "before": {
+        "x": 112,
+        "y": 752,
+        "map": "snow_glacier"
+      },
+      "dims": {
+        "cols": 50,
+        "rows": 46,
+        "w": 1600,
+        "h": 1472
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 142.4000000000001,
+          "y": 752,
+          "dx": 30.40000000000009,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1593.199999999999,
+          "y": 240,
+          "dx": 1481.199999999999,
+          "dy": -512,
+          "inBounds": true,
+          "notSolid": false
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 112,
+          "y": 780.4999999999997,
+          "dx": 0,
+          "dy": 28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 112,
+          "y": 723.5000000000003,
+          "dx": 0,
+          "dy": -28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Frostpeak Tundra",
+        "to": "snow",
+        "dist": 32
+      },
+      "portalCount": 2
+    },
+    {
+      "src": "swamp",
+      "to": "desert",
+      "tx": 5,
+      "ty": 5,
+      "ok": true,
+      "before": {
+        "x": 176,
+        "y": 176,
+        "map": "desert"
+      },
+      "dims": {
+        "cols": 58,
+        "rows": 42,
+        "w": 1856,
+        "h": 1344
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 179.8,
+          "y": 176,
+          "dx": 3.8000000000000114,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 147.49999999999991,
+          "y": 176,
+          "dx": -28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 176,
+          "y": 206.4000000000001,
+          "dx": 0,
+          "dy": 30.40000000000009,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 176,
+          "y": 145.5999999999999,
+          "dx": 0,
+          "dy": -30.40000000000009,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": false,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Murkbog Swamp",
+        "to": "swamp",
+        "dist": 90.50966799187809
+      },
+      "portalCount": 3
+    },
+    {
+      "src": "swamp",
+      "to": "swamp_depths",
+      "tx": 50,
+      "ty": 40,
+      "ok": true,
+      "before": {
+        "x": 1616,
+        "y": 1296,
+        "map": "swamp_depths"
+      },
+      "dims": {
+        "cols": 52,
+        "rows": 48,
+        "w": 1664,
+        "h": 1536
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 249.50000000000003,
+          "y": 240,
+          "dx": -1366.5,
+          "dy": -1056,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1616,
+          "y": 1296,
+          "dx": 0,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1616,
+          "y": 1296,
+          "dx": 0,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1616,
+          "y": 1296,
+          "dx": 0,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": false,
+      "fullyEscapable": false,
+      "spawnedOnPortal": true,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Murkbog Swamp",
+        "to": "swamp",
+        "dist": 0
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "dungeon2",
+      "to": "snow",
+      "tx": 6,
+      "ty": 6,
+      "ok": true,
+      "before": {
+        "x": 208,
+        "y": 208,
+        "map": "snow"
+      },
+      "dims": {
+        "cols": 56,
+        "rows": 46,
+        "w": 1792,
+        "h": 1472
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 238.4000000000001,
+          "y": 208,
+          "dx": 30.40000000000009,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 179.49999999999991,
+          "y": 208,
+          "dx": -28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 208,
+          "y": 236.50000000000009,
+          "dx": 0,
+          "dy": 28.500000000000085,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 208,
+          "y": 177.5999999999999,
+          "dx": 0,
+          "dy": -30.40000000000009,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Sunken Catacomb",
+        "to": "dungeon2",
+        "dist": 45.254833995939045
+      },
+      "portalCount": 3
+    },
+    {
+      "src": "city",
+      "to": "meadow",
+      "tx": 30,
+      "ty": 41,
+      "ok": true,
+      "before": {
+        "x": 976,
+        "y": 1328,
+        "map": "meadow"
+      },
+      "dims": {
+        "cols": 60,
+        "rows": 45,
+        "w": 1920,
+        "h": 1440
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1004.4999999999997,
+          "y": 1328,
+          "dx": 28.49999999999966,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 947.5000000000003,
+          "y": 1328,
+          "dx": -28.49999999999966,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 976,
+          "y": 1356.5000000000014,
+          "dx": 0,
+          "dy": 28.500000000001364,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 976,
+          "y": 1299.4999999999986,
+          "dx": 0,
+          "dy": -28.500000000001364,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Aldermere City",
+        "to": "city",
+        "dist": 64
+      },
+      "portalCount": 7
+    },
+    {
+      "src": "city",
+      "to": "shop_black",
+      "tx": 6,
+      "ty": 12,
+      "ok": true,
+      "before": {
+        "x": 208,
+        "y": 400,
+        "map": "shop_black"
+      },
+      "dims": {
+        "cols": 14,
+        "rows": 14,
+        "w": 448,
+        "h": 448
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 217.50000000000003,
+          "y": 368,
+          "dx": 9.500000000000028,
+          "dy": -32,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 177.5999999999999,
+          "y": 400,
+          "dx": -30.40000000000009,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 208,
+          "y": 430.39999999999964,
+          "dx": 0,
+          "dy": 30.399999999999636,
+          "inBounds": true,
+          "notSolid": false
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 208,
+          "y": 371.50000000000034,
+          "dx": 0,
+          "dy": -28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": true,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Plaza",
+        "to": "city",
+        "dist": 0
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "city",
+      "to": "shop_alch",
+      "tx": 6,
+      "ty": 12,
+      "ok": true,
+      "before": {
+        "x": 208,
+        "y": 400,
+        "map": "shop_alch"
+      },
+      "dims": {
+        "cols": 14,
+        "rows": 14,
+        "w": 448,
+        "h": 448
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1369.5000000000005,
+          "y": 368,
+          "dx": 1161.5000000000005,
+          "dy": -32,
+          "inBounds": false,
+          "notSolid": false
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 179.49999999999991,
+          "y": 400,
+          "dx": -28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 208,
+          "y": 428.49999999999966,
+          "dx": 0,
+          "dy": 28.49999999999966,
+          "inBounds": true,
+          "notSolid": false
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 208,
+          "y": 369.60000000000036,
+          "dx": 0,
+          "dy": -30.399999999999636,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": true,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Plaza",
+        "to": "city",
+        "dist": 0
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "city",
+      "to": "shop_arcane",
+      "tx": 6,
+      "ty": 12,
+      "ok": true,
+      "before": {
+        "x": 208,
+        "y": 400,
+        "map": "shop_arcane"
+      },
+      "dims": {
+        "cols": 14,
+        "rows": 14,
+        "w": 448,
+        "h": 448
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 215.60000000000002,
+          "y": 1008,
+          "dx": 7.600000000000023,
+          "dy": 608,
+          "inBounds": false,
+          "notSolid": false
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 179.49999999999991,
+          "y": 400,
+          "dx": -28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 208,
+          "y": 428.49999999999966,
+          "dx": 0,
+          "dy": 28.49999999999966,
+          "inBounds": true,
+          "notSolid": false
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 208,
+          "y": 371.50000000000034,
+          "dx": 0,
+          "dy": -28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": true,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Plaza",
+        "to": "city",
+        "dist": 0
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "city",
+      "to": "shop_general",
+      "tx": 6,
+      "ty": 12,
+      "ok": true,
+      "before": {
+        "x": 208,
+        "y": 400,
+        "map": "shop_general"
+      },
+      "dims": {
+        "cols": 14,
+        "rows": 14,
+        "w": 448,
+        "h": 448
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1369.5000000000005,
+          "y": 1008,
+          "dx": 1161.5000000000005,
+          "dy": 608,
+          "inBounds": false,
+          "notSolid": false
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 177.5999999999999,
+          "y": 400,
+          "dx": -30.40000000000009,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 208,
+          "y": 430.39999999999964,
+          "dx": 0,
+          "dy": 30.399999999999636,
+          "inBounds": true,
+          "notSolid": false
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 208,
+          "y": 371.50000000000034,
+          "dx": 0,
+          "dy": -28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": true,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Plaza",
+        "to": "city",
+        "dist": 0
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "city",
+      "to": "home",
+      "tx": 6,
+      "ty": 11,
+      "ok": true,
+      "before": {
+        "x": 176,
+        "y": 336,
+        "map": "home"
+      },
+      "dims": {
+        "cols": 14,
+        "rows": 12,
+        "w": 448,
+        "h": 384
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 213.70000000000002,
+          "y": 1232,
+          "dx": 37.70000000000002,
+          "dy": 896,
+          "inBounds": false,
+          "notSolid": false
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 147.49999999999991,
+          "y": 336,
+          "dx": -28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 176,
+          "y": 364.49999999999966,
+          "dx": 0,
+          "dy": 28.49999999999966,
+          "inBounds": true,
+          "notSolid": false
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 176,
+          "y": 307.50000000000034,
+          "dx": 0,
+          "dy": -28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "To Aldermere",
+        "to": "city",
+        "dist": 32
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "shop_black",
+      "to": "city",
+      "tx": 6,
+      "ty": 11,
+      "ok": true,
+      "before": {
+        "x": 208,
+        "y": 368,
+        "map": "city"
+      },
+      "dims": {
+        "cols": 48,
+        "rows": 40,
+        "w": 1536,
+        "h": 1280
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 238.4000000000001,
+          "y": 368,
+          "dx": 30.40000000000009,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 179.49999999999991,
+          "y": 368,
+          "dx": -28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 208,
+          "y": 398.39999999999964,
+          "dx": 0,
+          "dy": 30.399999999999636,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 208,
+          "y": 377.2000000000003,
+          "dx": 0,
+          "dy": 9.200000000000273,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Blacksmith",
+        "to": "shop_black",
+        "dist": 32
+      },
+      "portalCount": 6
+    },
+    {
+      "src": "shop_alch",
+      "to": "city",
+      "tx": 42,
+      "ty": 11,
+      "ok": true,
+      "before": {
+        "x": 1360,
+        "y": 368,
+        "map": "city"
+      },
+      "dims": {
+        "cols": 48,
+        "rows": 40,
+        "w": 1536,
+        "h": 1280
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1390.4000000000015,
+          "y": 368,
+          "dx": 30.400000000001455,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1329.5999999999985,
+          "y": 368,
+          "dx": -30.400000000001455,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1360,
+          "y": 398.39999999999964,
+          "dx": 0,
+          "dy": 30.399999999999636,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 208,
+          "y": 377.2000000000003,
+          "dx": -1152,
+          "dy": 9.200000000000273,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Alchemist",
+        "to": "shop_alch",
+        "dist": 32
+      },
+      "portalCount": 6
+    },
+    {
+      "src": "shop_arcane",
+      "to": "city",
+      "tx": 6,
+      "ty": 31,
+      "ok": true,
+      "before": {
+        "x": 208,
+        "y": 1008,
+        "map": "city"
+      },
+      "dims": {
+        "cols": 48,
+        "rows": 40,
+        "w": 1536,
+        "h": 1280
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 236.50000000000009,
+          "y": 1008,
+          "dx": 28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 179.49999999999991,
+          "y": 1008,
+          "dx": -28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 208,
+          "y": 1038.4000000000005,
+          "dx": 0,
+          "dy": 30.400000000000546,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 208,
+          "y": 377.2000000000003,
+          "dx": 0,
+          "dy": -630.7999999999997,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Arcanum",
+        "to": "shop_arcane",
+        "dist": 32
+      },
+      "portalCount": 6
+    },
+    {
+      "src": "shop_general",
+      "to": "city",
+      "tx": 42,
+      "ty": 31,
+      "ok": true,
+      "before": {
+        "x": 1360,
+        "y": 1008,
+        "map": "city"
+      },
+      "dims": {
+        "cols": 48,
+        "rows": 40,
+        "w": 1536,
+        "h": 1280
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1388.5000000000014,
+          "y": 1008,
+          "dx": 28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1331.4999999999986,
+          "y": 1008,
+          "dx": -28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1360,
+          "y": 1038.4000000000005,
+          "dx": 0,
+          "dy": 30.400000000000546,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 208,
+          "y": 377.2000000000003,
+          "dx": -1152,
+          "dy": -630.7999999999997,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "General Store",
+        "to": "shop_general",
+        "dist": 32
+      },
+      "portalCount": 6
+    },
+    {
+      "src": "meadow_glade",
+      "to": "meadow",
+      "tx": 55,
+      "ty": 38,
+      "ok": true,
+      "before": {
+        "x": 1776,
+        "y": 1232,
+        "map": "meadow"
+      },
+      "dims": {
+        "cols": 60,
+        "rows": 45,
+        "w": 1920,
+        "h": 1440
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1804.5000000000014,
+          "y": 1232,
+          "dx": 28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1747.4999999999986,
+          "y": 1232,
+          "dx": -28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1776,
+          "y": 1262.4000000000015,
+          "dx": 0,
+          "dy": 30.400000000001455,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1776,
+          "y": 1201.5999999999985,
+          "dx": 0,
+          "dy": -30.400000000001455,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Sunlit Glade",
+        "to": "meadow_glade",
+        "dist": 96
+      },
+      "portalCount": 7
+    },
+    {
+      "src": "forest_deep",
+      "to": "forest",
+      "tx": 50,
+      "ty": 5,
+      "ok": true,
+      "before": {
+        "x": 1616,
+        "y": 176,
+        "map": "forest"
+      },
+      "dims": {
+        "cols": 55,
+        "rows": 50,
+        "w": 1760,
+        "h": 1600
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1644.5000000000014,
+          "y": 176,
+          "dx": 28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1587.4999999999986,
+          "y": 176,
+          "dx": -28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1616,
+          "y": 206.4000000000001,
+          "dx": 0,
+          "dy": 30.40000000000009,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1616,
+          "y": 145.5999999999999,
+          "dx": 0,
+          "dy": -30.40000000000009,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Deepwood Thicket",
+        "to": "forest_deep",
+        "dist": 90.50966799187809
+      },
+      "portalCount": 3
+    },
+    {
+      "src": "desert_ruins",
+      "to": "desert",
+      "tx": 30,
+      "ty": 38,
+      "ok": true,
+      "before": {
+        "x": 976,
+        "y": 1232,
+        "map": "desert"
+      },
+      "dims": {
+        "cols": 58,
+        "rows": 42,
+        "w": 1856,
+        "h": 1344
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1006.3999999999996,
+          "y": 1232,
+          "dx": 30.399999999999636,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 947.5000000000003,
+          "y": 1232,
+          "dx": -28.49999999999966,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 976,
+          "y": 1260.5000000000014,
+          "dx": 0,
+          "dy": 28.500000000001364,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 976,
+          "y": 1203.4999999999986,
+          "dx": 0,
+          "dy": -28.500000000001364,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Buried Ruins",
+        "to": "desert_ruins",
+        "dist": 64
+      },
+      "portalCount": 3
+    },
+    {
+      "src": "snow_glacier",
+      "to": "snow",
+      "tx": 50,
+      "ty": 7,
+      "ok": true,
+      "before": {
+        "x": 1616,
+        "y": 240,
+        "map": "snow"
+      },
+      "dims": {
+        "cols": 56,
+        "rows": 46,
+        "w": 1792,
+        "h": 1472
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1644.5000000000014,
+          "y": 240,
+          "dx": 28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1585.5999999999985,
+          "y": 240,
+          "dx": -30.400000000001455,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1616,
+          "y": 268.4999999999999,
+          "dx": 0,
+          "dy": 28.499999999999886,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1616,
+          "y": 211.49999999999991,
+          "dx": 0,
+          "dy": -28.500000000000085,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Glacier Hollow",
+        "to": "snow_glacier",
+        "dist": 90.50966799187809
+      },
+      "portalCount": 3
+    },
+    {
+      "src": "snow_glacier",
+      "to": "tundra_edge",
+      "tx": 3,
+      "ty": 10,
+      "ok": true,
+      "before": {
+        "x": 112,
+        "y": 336,
+        "map": "tundra_edge"
+      },
+      "dims": {
+        "cols": 50,
+        "rows": 42,
+        "w": 1600,
+        "h": 1344
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 142.4000000000001,
+          "y": 336,
+          "dx": 30.40000000000009,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1467.099999999999,
+          "y": 240,
+          "dx": 1355.099999999999,
+          "dy": -96,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 112,
+          "y": 364.49999999999966,
+          "dx": 0,
+          "dy": 28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 112,
+          "y": 307.50000000000034,
+          "dx": 0,
+          "dy": -28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Glacier Hollow",
+        "to": "snow_glacier",
+        "dist": 32
+      },
+      "portalCount": 2
+    },
+    {
+      "src": "swamp_depths",
+      "to": "swamp",
+      "tx": 7,
+      "ty": 7,
+      "ok": true,
+      "before": {
+        "x": 240,
+        "y": 240,
+        "map": "swamp"
+      },
+      "dims": {
+        "cols": 58,
+        "rows": 48,
+        "w": 1856,
+        "h": 1536
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 270.39999999999986,
+          "y": 240,
+          "dx": 30.399999999999864,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 211.49999999999991,
+          "y": 240,
+          "dx": -28.500000000000085,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 240,
+          "y": 270.39999999999986,
+          "dx": 0,
+          "dy": 30.399999999999864,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 240,
+          "y": 211.49999999999991,
+          "dx": 0,
+          "dy": -28.500000000000085,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Bog Depths",
+        "to": "swamp_depths",
+        "dist": 90.50966799187809
+      },
+      "portalCount": 2
+    },
+    {
+      "src": "house1",
+      "to": "meadow",
+      "tx": 30,
+      "ty": 24,
+      "ok": true,
+      "before": {
+        "x": 976,
+        "y": 784,
+        "map": "meadow"
+      },
+      "dims": {
+        "cols": 60,
+        "rows": 45,
+        "w": 1920,
+        "h": 1440
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1006.3999999999996,
+          "y": 784,
+          "dx": 30.399999999999636,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 947.5000000000003,
+          "y": 784,
+          "dx": -28.49999999999966,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 976,
+          "y": 812.4999999999997,
+          "dx": 0,
+          "dy": 28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 976,
+          "y": 755.5000000000003,
+          "dx": 0,
+          "dy": -28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Merchant's Hut",
+        "to": "house1",
+        "dist": 64
+      },
+      "portalCount": 7
+    },
+    {
+      "src": "volcano",
+      "to": "city",
+      "tx": 12,
+      "ty": 3,
+      "ok": true,
+      "before": {
+        "x": 400,
+        "y": 112,
+        "map": "city"
+      },
+      "dims": {
+        "cols": 48,
+        "rows": 40,
+        "w": 1536,
+        "h": 1280
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 430.39999999999964,
+          "y": 112,
+          "dx": 30.399999999999636,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 369.60000000000036,
+          "y": 112,
+          "dx": -30.399999999999636,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 400,
+          "y": 140.50000000000009,
+          "dx": 0,
+          "dy": 28.500000000000085,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 400,
+          "y": 83.49999999999991,
+          "dx": 0,
+          "dy": -28.500000000000085,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Blacksmith",
+        "to": "shop_black",
+        "dist": 295.0254226333724
+      },
+      "portalCount": 6
+    },
+    {
+      "src": "volcano",
+      "to": "volcano_depths",
+      "tx": 20,
+      "ty": 38,
+      "ok": true,
+      "before": {
+        "x": 656,
+        "y": 1232,
+        "map": "volcano_depths"
+      },
+      "dims": {
+        "cols": 40,
+        "rows": 40,
+        "w": 1280,
+        "h": 1280
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 659.8,
+          "y": 112,
+          "dx": 3.7999999999999545,
+          "dy": -1120,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 625.6000000000004,
+          "y": 1232,
+          "dx": -30.399999999999636,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 656,
+          "y": 1235.8000000000002,
+          "dx": 0,
+          "dy": 3.800000000000182,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 656,
+          "y": 1203.4999999999986,
+          "dx": 0,
+          "dy": -28.500000000001364,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": false,
+      "spawnedOnPortal": true,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "volcano",
+        "to": "volcano",
+        "dist": 0
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "volcano_depths",
+      "to": "volcano",
+      "tx": 20,
+      "ty": 3,
+      "ok": true,
+      "before": {
+        "x": 656,
+        "y": 112,
+        "map": "volcano"
+      },
+      "dims": {
+        "cols": 40,
+        "rows": 40,
+        "w": 1280,
+        "h": 1280
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 659.8,
+          "y": 112,
+          "dx": 3.7999999999999545,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 627.5000000000003,
+          "y": 112,
+          "dx": -28.49999999999966,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 656,
+          "y": 140.50000000000009,
+          "dx": 0,
+          "dy": 28.500000000000085,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 656,
+          "y": 81.59999999999991,
+          "dx": 0,
+          "dy": -30.40000000000009,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": false,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "volcano_depths",
+        "to": "volcano_depths",
+        "dist": 64
+      },
+      "portalCount": 2
+    },
+    {
+      "src": "volcano_caldera",
+      "to": "city",
+      "tx": 35,
+      "ty": 30,
+      "ok": true,
+      "before": {
+        "x": 1136,
+        "y": 976,
+        "map": "city"
+      },
+      "dims": {
+        "cols": 48,
+        "rows": 40,
+        "w": 1536,
+        "h": 1280
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1166.4000000000015,
+          "y": 976,
+          "dx": 30.400000000001455,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1107.4999999999986,
+          "y": 976,
+          "dx": -28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1136,
+          "y": 1004.4999999999997,
+          "dx": 0,
+          "dy": 28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1136,
+          "y": 945.6000000000004,
+          "dx": 0,
+          "dy": -30.399999999999636,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "General Store",
+        "to": "shop_general",
+        "dist": 224
+      },
+      "portalCount": 6
+    },
+    {
+      "src": "tundra_edge",
+      "to": "snow_glacier",
+      "tx": 46,
+      "ty": 7,
+      "ok": true,
+      "before": {
+        "x": 1488,
+        "y": 240,
+        "map": "snow_glacier"
+      },
+      "dims": {
+        "cols": 50,
+        "rows": 46,
+        "w": 1600,
+        "h": 1472
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1518.4000000000015,
+          "y": 240,
+          "dx": 30.400000000001455,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1459.4999999999986,
+          "y": 240,
+          "dx": -28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1488,
+          "y": 268.4999999999999,
+          "dx": 0,
+          "dy": 28.499999999999886,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1488,
+          "y": 211.49999999999991,
+          "dx": 0,
+          "dy": -28.500000000000085,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Tundra Edge",
+        "to": "tundra_edge",
+        "dist": 71.55417527999327
+      },
+      "portalCount": 2
+    },
+    {
+      "src": "tundra_edge",
+      "to": "tundra_heart",
+      "tx": 3,
+      "ty": 22,
+      "ok": true,
+      "before": {
+        "x": 112,
+        "y": 720,
+        "map": "tundra_heart"
+      },
+      "dims": {
+        "cols": 52,
+        "rows": 48,
+        "w": 1664,
+        "h": 1536
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 142.4000000000001,
+          "y": 720,
+          "dx": 30.40000000000009,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1467.099999999999,
+          "y": 720,
+          "dx": 1355.099999999999,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 112,
+          "y": 748.4999999999997,
+          "dx": 0,
+          "dy": 28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 112,
+          "y": 716.2,
+          "dx": 0,
+          "dy": -3.7999999999999545,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": false,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Tundra Edge",
+        "to": "tundra_edge",
+        "dist": 32
+      },
+      "portalCount": 2
+    },
+    {
+      "src": "tundra_heart",
+      "to": "tundra_edge",
+      "tx": 46,
+      "ty": 22,
+      "ok": true,
+      "before": {
+        "x": 1488,
+        "y": 720,
+        "map": "tundra_edge"
+      },
+      "dims": {
+        "cols": 50,
+        "rows": 42,
+        "w": 1600,
+        "h": 1344
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1518.4000000000015,
+          "y": 720,
+          "dx": 30.400000000001455,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1459.4999999999986,
+          "y": 720,
+          "dx": -28.500000000001364,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1488,
+          "y": 748.4999999999997,
+          "dx": 0,
+          "dy": 28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1488,
+          "y": 691.5000000000003,
+          "dx": 0,
+          "dy": -28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Tundra Heart",
+        "to": "tundra_heart",
+        "dist": 64
+      },
+      "portalCount": 2
+    },
+    {
+      "src": "tundra_heart",
+      "to": "frost_spire",
+      "tx": 24,
+      "ty": 42,
+      "ok": true,
+      "before": {
+        "x": 784,
+        "y": 1360,
+        "map": "frost_spire"
+      },
+      "dims": {
+        "cols": 50,
+        "rows": 48,
+        "w": 1600,
+        "h": 1536
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 814.3999999999996,
+          "y": 1360,
+          "dx": 30.399999999999636,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 755.5000000000003,
+          "y": 1360,
+          "dx": -28.49999999999966,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 784,
+          "y": 1388.5000000000014,
+          "dx": 0,
+          "dy": 28.500000000001364,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 784,
+          "y": 1331.4999999999986,
+          "dx": 0,
+          "dy": -28.500000000001364,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Tundra Heart",
+        "to": "tundra_heart",
+        "dist": 128
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "frost_spire",
+      "to": "tundra_heart",
+      "tx": 50,
+      "ty": 24,
+      "ok": true,
+      "before": {
+        "x": 1616,
+        "y": 784,
+        "map": "tundra_heart"
+      },
+      "dims": {
+        "cols": 52,
+        "rows": 48,
+        "w": 1664,
+        "h": 1536
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 793.4999999999999,
+          "y": 1360,
+          "dx": -822.5000000000001,
+          "dy": 576,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1588,
+          "y": 784,
+          "dx": -28,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1588,
+          "y": 784,
+          "dx": -28,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1588,
+          "y": 784,
+          "dx": -28,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": true,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "Frost Spire",
+        "to": "frost_spire",
+        "dist": 0
+      },
+      "portalCount": 2
+    },
+    {
+      "src": "home",
+      "to": "city",
+      "tx": 6,
+      "ty": 38,
+      "ok": true,
+      "before": {
+        "x": 208,
+        "y": 1232,
+        "map": "city"
+      },
+      "dims": {
+        "cols": 48,
+        "rows": 40,
+        "w": 1536,
+        "h": 1280
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 185.50000000000003,
+          "y": 336,
+          "dx": -22.49999999999997,
+          "dy": -896,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 208,
+          "y": 372,
+          "dx": 0,
+          "dy": -860,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 208,
+          "y": 372,
+          "dx": 0,
+          "dy": -860,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 208,
+          "y": 372,
+          "dx": 0,
+          "dy": -860,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": true,
+      "spawnedOnPortal": true,
+      "endedOnPortal": {
+        "label": "Blacksmith",
+        "to": "shop_black"
+      },
+      "nearestPortal": {
+        "label": "Your Home",
+        "to": "home",
+        "dist": 0
+      },
+      "portalCount": 6
+    },
+    {
+      "src": "manual",
+      "to": "volcano_caldera",
+      "tx": 78,
+      "ty": 30,
+      "ok": true,
+      "before": {
+        "x": 1072,
+        "y": 944,
+        "map": "volcano_caldera"
+      },
+      "dims": {
+        "cols": 35,
+        "rows": 35,
+        "w": 1120,
+        "h": 1120
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 1075.8000000000002,
+          "y": 944,
+          "dx": 3.800000000000182,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 1041.5999999999985,
+          "y": 944,
+          "dx": -30.400000000001455,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 1072,
+          "y": 972.4999999999997,
+          "dx": 0,
+          "dy": 28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 1072,
+          "y": 915.5000000000003,
+          "dx": 0,
+          "dy": -28.49999999999966,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": false,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "city",
+        "to": "city",
+        "dist": 1093.632479400644
+      },
+      "portalCount": 1
+    },
+    {
+      "src": "manual",
+      "to": "volcano",
+      "tx": 12,
+      "ty": 56,
+      "ok": true,
+      "before": {
+        "x": 368,
+        "y": 1232,
+        "map": "volcano"
+      },
+      "dims": {
+        "cols": 40,
+        "rows": 40,
+        "w": 1280,
+        "h": 1280
+      },
+      "inBounds": true,
+      "notSolidInitially": true,
+      "positions": [
+        {
+          "name": "right",
+          "key": "d",
+          "x": 398.39999999999964,
+          "y": 1232,
+          "dx": 30.399999999999636,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "left",
+          "key": "a",
+          "x": 339.50000000000034,
+          "y": 1232,
+          "dx": -28.49999999999966,
+          "dy": 0,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "down",
+          "key": "s",
+          "x": 368,
+          "y": 1235.8000000000002,
+          "dx": 0,
+          "dy": 3.800000000000182,
+          "inBounds": true,
+          "notSolid": true
+        },
+        {
+          "name": "up",
+          "key": "w",
+          "x": 368,
+          "y": 1203.4999999999986,
+          "dx": 0,
+          "dy": -28.500000000001364,
+          "inBounds": true,
+          "notSolid": true
+        }
+      ],
+      "stuck": false,
+      "partiallyEscapable": true,
+      "fullyEscapable": false,
+      "spawnedOnPortal": false,
+      "endedOnPortal": null,
+      "nearestPortal": {
+        "label": "city",
+        "to": "city",
+        "dist": 1038.398767333629
+      },
+      "portalCount": 2
+    }
+  ],
+  "console_failures": [],
+  "failed_requests": [],
+  "uncaught": [],
+  "ended": "2026-06-18T04:14:34Z",
+  "summary": {
+    "maps_visited": 50,
+    "maps_ok": 50,
+    "maps_failed": 0,
+    "console_failures": 0,
+    "failed_requests": 0,
+    "uncaught": 0,
+    "overall_ok": true
+  },
+  "screenshot": "/home/shobre/Projects/aetheria-game/scripts/smoke-maps-output.png"
+}
