@@ -140,6 +140,46 @@ export class Game {
         this.player.x=sp.x; this.player.y=sp.y;
       }
     }
+    // Sprint 17: if the player just spawned on (or within auto-trigger range
+    // of) a portal tile, push them one tile deeper into the map. Without this,
+    // dungeon entries where the destination tile IS the portal tile (e.g. the
+    // Forgotten Crypt at (9,1)) cause the player to immediately auto-teleport
+    // back to the previous map the moment loadMap returns. The push direction
+    // is opposite the portal's location from the map centre, falling back to
+    // "down" if the portal is dead-centre (shouldn't happen in practice).
+    const PORTAL_PUSH = 32;  // > 26 (auto-trigger range) so the player is safely outside
+    for(const p of this.world.portals){
+      const dx = this.player.x - p.wx;
+      const dy = this.player.y - p.wy;
+      const d  = Math.hypot(dx, dy);
+      if(d >= PORTAL_PUSH) continue;
+      // Pick a direction: opposite of the portal→map-centre vector, or 'down' as fallback
+      const mcx = this.world.cols * TILE / 2;
+      const mcy = this.world.rows * TILE / 2;
+      let nx = mcx - p.wx, ny = mcy - p.wy;
+      if(Math.hypot(nx, ny) < 1){ nx = 0; ny = 1; }
+      const nlen = Math.hypot(nx, ny) || 1;
+      nx /= nlen; ny /= nlen;
+      // Try several offsets in the chosen direction, snapping to walkable tile
+      let placed = false;
+      for(const dist of [PORTAL_PUSH, PORTAL_PUSH * 2, PORTAL_PUSH * 3]){
+        const tx2 = p.wx + nx * dist;
+        const ty2 = p.wy + ny * dist;
+        if(!this.world.isSolid(tx2, ty2)){
+          this.player.x = tx2;
+          this.player.y = ty2;
+          placed = true;
+          break;
+        }
+      }
+      if(!placed){
+        // Fallback: nearest walkable that isn't this portal tile
+        const sp2 = this.world.nearestOpen(p.wx + nx * PORTAL_PUSH, p.wy + ny * PORTAL_PUSH);
+        this.player.x = sp2.x;
+        this.player.y = sp2.y;
+      }
+      break; // only need to push once per portal
+    }
     // restore opened-chest state for this map
     this.world.chests.forEach(c=>{ if(this.openedChests[mapId+':'+c.idx]) c.opened=true; });
     // Spawn enemies fresh on EVERY area entry so the player can farm xp/gold.

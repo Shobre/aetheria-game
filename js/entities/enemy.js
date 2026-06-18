@@ -259,6 +259,7 @@ export class Enemy {
     this.view=c.view||220; this.fov=c.fov!=null?c.fov:1.0;
     this.homeX=x; this.homeY=y;
     this.alert=0;                  // >0 = actively hunting (sees/heard player)
+    this.alertFlash=0;             // 0..1, brief white flash on the HP bar after damage
     this.face={x:0,y:1};           // facing direction (drives the vision cone)
     this.hitFlash=0; this.knockback={x:0,y:0}; this.frozen=0;
     this.bob=Math.random()*7; this.dead=false; this.attackCd=0;
@@ -309,6 +310,7 @@ export class Enemy {
       this._stalkerFade = Math.hypot(this.x-player.x, this.y-player.y);
     }
     this.hitFlash=Math.max(0,this.hitFlash-dt);
+    this.alertFlash=Math.max(0,this.alertFlash-dt*2);  // 0.35 -> 0 in ~0.18s
     this.attackCd=Math.max(0,this.attackCd-dt);
     this.shootTimer=Math.max(0,this.shootTimer-dt);
     this.bob+=dt*6;
@@ -586,7 +588,7 @@ export class Enemy {
   hit(dmg, angle, game, knock=4){
     if(this.dead) return;
     this.alert=4.0;  // taking a hit always alerts the enemy
-    this.hp-=dmg; this.hitFlash=0.18;
+    this.hp-=dmg; this.hitFlash=0.18; this.alertFlash=0.35;
     const kr=this.eliteMod&&this.eliteMod.knockResist?this.eliteMod.knockResist:1;
     this.knockback.x+=Math.cos(angle)*knock*kr; this.knockback.y+=Math.sin(angle)*knock*kr;
     game.floater('-'+dmg, this.x, this.y-14, '#fff');
@@ -870,11 +872,28 @@ export class Enemy {
       ctx.fillStyle=c; ctx.fillRect(sx-this.r,sy-this.r+bob,this.r*2,this.r*2);
       ctx.fillStyle='#ffcf4d'; ctx.fillRect(sx-6,sy-5+bob,3,3); ctx.fillRect(sx+3,sy-5+bob,3,3);
     }
-    // hp bar
-    if(this.hp<this.hpMax){
-      ctx.fillStyle='#000'; ctx.fillRect(sx-this.r,sy-this.r-7,this.r*2,3);
-      ctx.fillStyle='#e8413c'; ctx.fillRect(sx-this.r,sy-this.r-7,this.r*2*(this.hp/this.hpMax),3);
-    }
+    // hp bar — always rendered so the player can see how much health a mob has.
+    // Previous behaviour only drew the bar once hp < hpMax (a tiny red sliver),
+    // which gave enemies no visible health state at full HP. Now: dark track +
+    // gold border + red fill scaled to current HP / HPmax. A 1px outline keeps
+    // the bar readable on any biome.
+    const barW = this.r * 2 + 2;
+    const barX = sx - this.r - 1;
+    const barY = sy - this.r - 8;
+    const frac = Math.max(0, Math.min(1, this.hp / Math.max(1, this.hpMax)));
+    ctx.fillStyle = '#000';
+    ctx.fillRect(barX, barY, barW, 4);
+    // gold border accent (1px)
+    ctx.fillStyle = '#caa050';
+    ctx.fillRect(barX, barY - 1, barW, 1);
+    ctx.fillRect(barX, barY + 4, barW, 1);
+    ctx.fillRect(barX - 1, barY - 1, 1, 6);
+    ctx.fillRect(barX + barW, barY - 1, 1, 6);
+    // damage-taken tint: if the enemy just took damage, briefly flash the bar
+    // brighter; otherwise the steady-state fill is solid red.
+    const flashAmt = Math.max(0, this.alertFlash || 0);
+    ctx.fillStyle = flashAmt > 0 ? `rgba(255, 255, 200, ${0.7 * flashAmt})` : '#e8413c';
+    ctx.fillRect(barX + 1, barY + 1, Math.max(0, (barW - 2) * frac), 2);
     // alert indicator when actively hunting the player
     if(this.alert>2.5){ ctx.fillStyle='#ffe24d'; ctx.font='bold 12px monospace'; ctx.textAlign='center';
       ctx.fillText('!', sx, sy-this.r-10); }

@@ -619,12 +619,23 @@ export function drawPlayerSprite(ctx, sx, sy, facing, equipment, opts = {}) {
   let ex1, ex2;
   if (facing === 'left')  { ex1 = 7;  ex2 = 7;  }
   else if (facing === 'right') { ex1 = 16; ex2 = 16; }
-  else { ex1 = 9; ex2 = 14; }
-  ctx.fillRect(bx + ex1, by + 4, 2, 2);
-  ctx.fillRect(bx + ex2, by + 4, 2, 2);
-  // mouth
+  else if (facing === 'up')    { ex1 = -1; ex2 = -1; }  // facing away — no eyes
+  else { ex1 = 9; ex2 = 14; }  // 'down' — face the camera
+  if (facing !== 'up') {
+    ctx.fillRect(bx + ex1, by + 4, 2, 2);
+    ctx.fillRect(bx + ex2, by + 4, 2, 2);
+  }
+  // mouth — only when facing down (front-facing)
   ctx.fillStyle = '#7a3a2a';
-  if (facing !== 'up') ctx.fillRect(bx + 10, by + 7, 4, 1);
+  if (facing === 'down') ctx.fillRect(bx + 10, by + 7, 4, 1);
+  // back-of-head hair when facing up — covers the head silhouette so it reads as
+  // "facing away" instead of a blank face
+  if (facing === 'up') {
+    ctx.fillStyle = '#5a3a22';
+    ctx.fillRect(bx + 6, by + 1, 12, 6);
+    // small dangling strand below the head
+    ctx.fillRect(bx + 9, by + 7, 2, 4);
+  }
   // helm overlay (drawn after head so it covers the top)
   if (helm) {
     const hc = helmColor(helm);

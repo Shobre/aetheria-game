@@ -10,6 +10,14 @@ body{image-rendering:pixelated}
 #game-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;
   image-rendering:pixelated;image-rendering:crisp-edges;background:#0c0e16}
 
+/* Sprint 17: round crosshair cursor on the game canvas. Hand cursor is
+   preserved everywhere a button / interactable lives (skill node, item
+   slot, etc.) — those rules are below. The SVG crosshair is a 24px circle
+   with a cross and a center dot, drawn in the gold accent so it sits on
+   top of any biome palette. */
+html,body{cursor:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><circle cx='12' cy='12' r='9' fill='none' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='12' y1='2' x2='12' y2='8' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='12' y1='16' x2='12' y2='22' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='2' y1='12' x2='8' y2='12' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='16' y1='12' x2='22' y2='12' stroke='%23ffcf4d' stroke-width='1.5'/><circle cx='12' cy='12' r='1.5' fill='%23ffcf4d'/></svg>") 12 12, crosshair}
+#game-canvas{cursor:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><circle cx='12' cy='12' r='9' fill='none' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='12' y1='2' x2='12' y2='8' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='12' y1='16' x2='12' y2='22' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='2' y1='12' x2='8' y2='12' stroke='%23ffcf4d' stroke-width='1.5'/><line x1='16' y1='12' x2='22' y2='12' stroke='%23ffcf4d' stroke-width='1.5'/><circle cx='12' cy='12' r='1.5' fill='%23ffcf4d'/></svg>") 12 12, crosshair}
+
 /* loader */
 .loader{width:54px;height:54px;border:5px solid var(--gpanel2);
   border-top-color:var(--gold);border-radius:50%;animation:spin 0.9s linear infinite}
@@ -184,6 +192,17 @@ body{image-rendering:pixelated}
 /* scrollbars */
 .skill-tree::-webkit-scrollbar,.shop-col::-webkit-scrollbar{width:8px}
 .skill-tree::-webkit-scrollbar-thumb,.shop-col::-webkit-scrollbar-thumb{background:var(--gpanel2);border-radius:4px}
+
+/* Sprint 17: styled scrollbars for the settings modal and other modal-scroll panels.
+   Match the game's gold/panel palette so the scrollbar doesn't look like the
+   browser default. Firefox uses `scrollbar-color`, WebKit uses the ::-webkit-
+   pseudo-element rules below. */
+.modal-scroll{scrollbar-width:thin;scrollbar-color:var(--gold) var(--gpanel)}
+.modal-scroll::-webkit-scrollbar{width:10px;background:var(--gpanel);border-radius:5px}
+.modal-scroll::-webkit-scrollbar-track{background:var(--gpanel);border-radius:5px;border:2px solid var(--gbg)}
+.modal-scroll::-webkit-scrollbar-thumb{background:var(--gold);border-radius:5px;border:2px solid var(--gpanel)}
+.modal-scroll::-webkit-scrollbar-thumb:hover{background:#ffe588}
+.modal-scroll::-webkit-scrollbar-thumb:active{background:var(--accent)}
 
 /* ===== boss health bar ===== */
 #boss-name{text-shadow:1px 1px 0 #000,0 0 8px rgba(232,65,60,.6)}

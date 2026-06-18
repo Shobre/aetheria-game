@@ -284,6 +284,14 @@ export class World {
    * Each feature's tile is overwritten to a walkable kind (PATH / FLOOR)
    * so the player can always reach them. Filters out any decor stacked
    * on top of the home chest tile.
+   *
+   * Sprint 17: for dungeon/cave biomes, also carve a 1-tile-wide PATH
+   * corridor from each portal to the nearest carved room. Without this,
+   * `_genRooms` fills the entire map with WALL except the random rooms,
+   * and `_placeFeatures` only sets the portal tile to PATH — leaving
+   * the portal as a 1-tile walkable pocket with no way in or out. The
+   * player would spawn on the portal, immediately auto-teleport back
+   * (range 26px), and report "portal is in the wall, can't walk anywhere".
    * @returns {void}
    */
   _placeFeatures(){
@@ -314,6 +322,36 @@ export class World {
       this.homeChest = { ...hc, wx:hc.x*TILE, wy:hc.y*TILE };
     } else {
       this.homeChest = null;
+    }
+
+    // Sprint 17: for dungeon/cave biomes, carve a 1-tile-wide PATH corridor
+    // from each portal to the nearest carved room. Without this, the portal
+    // sits as a 1-tile walkable pocket surrounded by WALL (the `_genRooms`
+    // fill). The L-corridor matches the style used between rooms above.
+    if(this.biome === 'dungeon' || this.biome === 'cave'){
+      const rooms = this._rooms || [];
+      for(const p of (this.def.portals||[])){
+        if(!rooms.length) break;
+        // find nearest room centre by tile-manhattan distance
+        let best = rooms[0], bestD = Infinity;
+        for(const r of rooms){
+          const d = Math.abs(r.cx - p.x) + Math.abs(r.cy - p.y);
+          if(d < bestD){ bestD = d; best = r; }
+        }
+        // L-corridor: horizontal then vertical (matches _genRooms style)
+        for(let x = Math.min(p.x, best.cx); x <= Math.max(p.x, best.cx); x++){
+          if(this.map[p.y] && this.map[p.y][x] !== undefined) this.map[p.y][x] = T.PATH;
+        }
+        for(let y = Math.min(p.y, best.cy); y <= Math.max(p.y, best.cy); y++){
+          if(this.map[y] && this.map[y][best.cx] !== undefined) this.map[y][best.cx] = T.PATH;
+        }
+        // Also mark the corridor intersection corner as PATH so the L-corner
+        // is walkable (otherwise the player would have to walk diagonally).
+        const cornerY = best.cy;
+        if(this.map[cornerY] && this.map[cornerY][best.cx] !== undefined){
+          this.map[cornerY][best.cx] = T.PATH;
+        }
+      }
     }
   }
 

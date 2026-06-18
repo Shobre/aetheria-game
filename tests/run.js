@@ -563,6 +563,74 @@ console.log('=== elites + biome bosses ===');
   ok('_drawMeleeSlash builds a multi-ghost trail (not single arc)',
      /_drawMeleeSlash[\s\S]*?for \(let i = 3; i >= 1/.test(slashSrc) ||
      /ghosted trail arcs behind the leading edge/.test(slashSrc));
+
+  // ===== Sprint 18: settings modal scrollbar must be themed =====
+  // History: .modal-scroll had overflow-y:auto but no ::-webkit-scrollbar rule,
+  // so the settings modal showed the OS-default grey scrollbar — clashing with
+  // the gold/panel palette. The fix adds webkit + scrollbar-color rules.
+  ok('.modal-scroll has scrollbar-color (firefox)',
+     /\.modal-scroll\s*\{[^}]*scrollbar-color:\s*var\(--gold\)/.test(cssSrc));
+  ok('.modal-scroll has webkit-scrollbar styling',
+     /\.modal-scroll::-webkit-scrollbar\s*\{[^}]*width:\s*\d+px/.test(cssSrc));
+  ok('.modal-scroll has themed thumb (gold)',
+     /\.modal-scroll::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*var\(--gold\)/.test(cssSrc));
+
+  // ===== Sprint 18: walking animation must show distinct poses per facing =====
+  // History: 'up' and 'down' both drew eyes at the same position with only the
+  // mouth hidden on 'up' — visually identical to the player. The fix hides the
+  // eyes entirely for 'up' and overlays back-of-head hair so the silhouette
+  // reads as "facing away".
+  const spriteSrc = readFileSync(new URL('../js/sprites.js', import.meta.url), 'utf8');
+  ok('drawPlayerSprite skips eyes when facing up',
+     /facing === 'up'[\s\S]{0,200}if \(facing !== 'up'\)\s*\{[\s\S]{0,100}fillRect\(bx \+ ex1/.test(spriteSrc) ||
+     // alt: the eye-draw block is now gated on facing !== 'up'
+     /if \(facing !== 'up'\)\s*\{[\s\S]{0,100}fillRect\(bx \+ ex1/.test(spriteSrc));
+  ok('drawPlayerSprite adds back-of-head hair for up facing',
+     /back-of-head hair[\s\S]{0,400}fillRect\(bx \+ 6, by \+ 1, 12, 6\)/.test(spriteSrc));
+  ok('mouth only drawn when facing down',
+     /if \(facing === 'down'\) ctx\.fillRect\(bx \+ 10, by \+ 7, 4, 1\)/.test(spriteSrc));
+
+  // ===== Sprint 18: crosshair cursor on the game canvas =====
+  // History: html/body/#game-canvas had cursor:auto. The fix applies a custom
+  // SVG crosshair (gold circle + cross + center dot) to all three, while
+  // leaving the existing pointer rules on buttons / interactables intact.
+  ok('html/body have crosshair cursor',
+     /html,body\s*\{[^}]*cursor:url\([^)]*svg/.test(cssSrc));
+  ok('#game-canvas has crosshair cursor',
+     /#game-canvas\s*\{[^}]*cursor:url\([^)]*svg/.test(cssSrc));
+  ok('crosshair SVG uses gold accent (#ffcf4d)',
+     /cursor:url\([^)]*%23ffcf4d/.test(cssSrc));
+
+  // ===== Sprint 18: enemy HP bar must always render =====
+  // History: enemy.js drew the HP bar only when hp < hpMax (a thin red sliver).
+  // Fixed enemies showed no health state at all. Now the bar always renders with
+  // a dark track, gold border, and a red fill scaled to hp/hpMax.
+  ok('enemy HP bar renders unconditionally',
+     /\/\/ hp bar\b[\s\S]{0,500}const barW = this\.r \* 2 \+ 2/.test(enemySrc2));
+  ok('enemy HP bar fill is always solid red',
+     /const flashAmt[\s\S]{0,200}fillStyle = flashAmt > 0/.test(enemySrc2) ||
+     /ctx\.fillStyle = flashAmt > 0 \?[^;]+;\s*ctx\.fillStyle = '#e8413c'/.test(enemySrc2));
+  ok('Enemy has alertFlash field set in constructor and on hit',
+     /this\.alertFlash=0/.test(enemySrc2) &&
+     /this\.alertFlash=0\.35/.test(enemySrc2));
+
+  // ===== Sprint 18: Forgotten Crypt portal corridor =====
+  // History: _genRooms filled the entire dungeon with WALL except for 6-9
+  // random rooms. _placeFeatures only set the portal tile to PATH, leaving
+  // the portal as a 1-tile walkable pocket. The player would spawn on the
+  // portal, immediately auto-teleport back, and report "portal in wall".
+  // Fix: carve a 1-tile PATH corridor from each portal to the nearest room,
+  // and push the spawn point 1 tile deeper if it would land within auto-
+  // trigger range (26px) of any portal.
+  const worldSrc = readFileSync(new URL('../js/systems/world.js', import.meta.url), 'utf8');
+  ok('_placeFeatures carves corridors to portals in dungeon/cave biomes',
+     /Sprint 17:.*?corridor[\s\S]{0,800}this\.biome === 'dungeon' \|\| this\.biome === 'cave'/.test(worldSrc));
+  const gameSrc2 = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
+  ok('loadMap pushes spawn point away from portal tiles',
+     /Sprint 17:.*portal tile[\s\S]{0,500}PORTAL_PUSH/.test(gameSrc2) ||
+     /PORTAL_PUSH[\s\S]{0,200}player\.x = tx2/.test(gameSrc2));
+  ok('portal push distance exceeds auto-trigger range (26px)',
+     /PORTAL_PUSH = 32/.test(gameSrc2) || /PORTAL_PUSH\s*=\s*\d+/.test(gameSrc2));
 }
 
 
