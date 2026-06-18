@@ -5,11 +5,13 @@
   "scripts": {
     "test": "node tests/run.js",
     "lint": "eslint js/",
+    "typecheck": "tsc --noEmit --project jsconfig.json",
     "build": "echo build"
   },
   "license": "MIT",
   "devDependencies": {
     "eslint": "^10.5.0",
-    "globals": "^17.6.0"
+    "globals": "^17.6.0",
+    "typescript": "^5.9.3"
   }
 }
