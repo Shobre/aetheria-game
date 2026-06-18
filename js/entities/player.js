@@ -403,31 +403,51 @@ export class Player {
     ctx.stroke();
     ctx.restore();
   }
-  // Melee slash: a single sweeping arc that extends from the player center
-  // outward to the weapon's reach. The weapon's silhouette is drawn at the
-  // arc tip so it looks like the player is brandishing it.
+  // Melee slash: a sweeping arc trail + the weapon silhouette at the tip.
+  // The trail is built from 3 ghosted arcs at slightly older sweep angles so
+  // it reads as motion blur. The previous version was a single arc with alpha
+  // fade, which looked fine but lacked the "swing happening now" feel.
   _drawMeleeSlash(ctx, a, prog, opts){
     const sweep = opts.sweepStart + prog * opts.sweepRange;
     const reach = opts.reach;
     const r = reach * 0.7;  // arc curve radius
-    const tipX = Math.cos(a + sweep) * reach;
-    const tipY = Math.sin(a + sweep) * reach;
-    const arcX = Math.cos(a + sweep) * r;
-    const arcY = Math.sin(a + sweep) * r;
-    const alpha = (1 - prog).toFixed(2);
-    // arc trail
+    const alpha = (1 - prog);
+    const ang = 0.4;
+    // 3 ghosted trail arcs behind the leading edge for motion blur
+    ctx.save();
+    for (let i = 3; i >= 1; i--) {
+      const t = i / 3;             // 1.0, 0.67, 0.33 — older to newer
+      const pastSweep = sweep - t * 0.18;  // behind the leading edge
+      const ghostAlpha = alpha * 0.18 * (1 - t * 0.5);
+      if (ghostAlpha < 0.02) continue;
+      ctx.save();
+      ctx.rotate(a + pastSweep);
+      ctx.strokeStyle = `rgba(255,255,255,${ghostAlpha.toFixed(2)})`;
+      ctx.lineWidth = opts.arcWidth * (1 - t * 0.3);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(0, 0, r, -ang, ang);
+      ctx.stroke();
+      if (opts.trailColor) {
+        ctx.strokeStyle = `rgba(200,220,255,${(ghostAlpha * 0.7).toFixed(2)})`;
+        ctx.lineWidth = Math.max(1, opts.arcWidth - 2);
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.8, -ang * 0.8, ang * 0.8);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    // leading edge — bright, full alpha
     ctx.save();
     ctx.rotate(a + sweep);
-    ctx.strokeStyle = `rgba(255,255,255,${(0.85 * (1 - prog)).toFixed(2)})`;
+    ctx.strokeStyle = `rgba(255,255,255,${(0.85 * alpha).toFixed(2)})`;
     ctx.lineWidth = opts.arcWidth;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    // arc from -0.4 rad to +0.4 rad around the tip
-    const ang = 0.4;
     ctx.arc(0, 0, r, -ang, ang);
     ctx.stroke();
     if (opts.trailColor) {
-      ctx.strokeStyle = `rgba(200,220,255,${(0.4 * (1 - prog)).toFixed(2)})`;
+      ctx.strokeStyle = `rgba(200,220,255,${(0.4 * alpha).toFixed(2)})`;
       ctx.lineWidth = Math.max(1, opts.arcWidth - 2);
       ctx.beginPath();
       ctx.arc(0, 0, r * 0.8, -ang * 0.8, ang * 0.8);
@@ -435,6 +455,7 @@ export class Player {
     }
     // weapon silhouette at tip
     this._drawWeaponShape(ctx, reach, opts, prog);
+    ctx.restore();
     ctx.restore();
   }
   // Draws a recognizable weapon shape at the tip of the slash arc.

@@ -510,6 +510,59 @@ console.log('=== elites + biome bosses ===');
   // rollEliteMod returns a known key deterministically
   const k = enemySrc.match(/ELITE_MODS = \{([\s\S]*?)\n\};/);
   ok('ELITE_MODS defines 4 mods', (k && (k[1].match(/\w+:\s*\{/g)||[]).length===4));
+
+  // ===== Sprint 17: settings modal must fit the viewport =====
+  // History: modal-box had no max-height and `.modal-box{overflow:visible!important}`
+  // prevented internal scroll, so a 1351px-tall settings modal overflowed every
+  // viewport from 720p upward. The fix gives .modal-box a max-height of calc(100vh
+  // - 2rem) plus a flex column, and wraps the scrollable content in .modal-scroll.
+  const cssSrc = readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
+  ok('.modal-box has max-height to fit viewport',
+     /\.modal-box\s*\{[^}]*max-height:\s*calc\(100vh/.test(cssSrc));
+  ok('.modal-scroll is defined and scrollable',
+     /\.modal-scroll\s*\{[^}]*overflow-y:\s*auto/.test(cssSrc));
+  // Match an actual CSS rule, not a comment that mentions the removed line.
+  // We strip /* ... */ comments before scanning.
+  const cssNoComments = cssSrc.replace(/\/\*[\s\S]*?\*\//g, '');
+  ok('.modal-box{overflow:visible!important} rule was removed (was blocking modal scroll)',
+     !cssNoComments.includes('.modal-box{overflow:visible!important}'));
+  const settingsHtml = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  ok('settings modal uses .modal-scroll wrapper',
+     /id="settings-modal"[\s\S]*?class="modal-scroll"[\s\S]*?id="save-game-btn"/.test(settingsHtml) ||
+     /id="settings-modal"[\s\S]*?class="modal-scroll"[\s\S]*?<\/div>\s*<div class="grid/.test(settingsHtml));
+  ok('keybinds list has max-h cap',
+     /id="keybinds-list"[^>]*max-h-56/.test(settingsHtml));
+
+  // ===== Sprint 17: spell picker must include bought spells =====
+  // History: _openSpellPicker called knownSpells(p.skills) which excluded anything
+  // in _boughtSpells — so a player who paid gold for a spell could not equip it.
+  // The fix merges both sources. These tests guard against regression.
+  const hudSrc = readFileSync(new URL('../js/ui/hud.js', import.meta.url), 'utf8');
+  ok('_openSpellPicker merges _boughtSpells into known list',
+     /_openSpellPicker[\s\S]*?Object\.keys\(this\.game\._boughtSpells/.test(hudSrc));
+  ok('_openSpellPicker no longer relies on knownSpells(p.skills) alone',
+     /_openSpellPicker[\s\S]*?new Set\(\[\s*\.\.\.knownSpells/.test(hudSrc));
+
+  // ===== Sprint 17: weapon sprite must not dangle below the character =====
+  // History: _drawWeaponOnPlayer anchored the sword at (bx+16, by+28) — the
+  // bottom-right foot — and the blade extended ~25px further DOWN, making the
+  // sword look like a tail hanging out of the character's feet. The fix anchors
+  // the weapon at the hand position and rotates it in the player's facing
+  // direction, and early-returns during an attack so the slash-effect code can
+  // draw the weapon at the arc tip without double-rendering.
+  const spritesSrc = readFileSync(new URL('../js/sprites.js', import.meta.url), 'utf8');
+  ok('_drawWeaponOnPlayer early-returns during attack',
+     /_drawWeaponOnPlayer[\s\S]{0,200}?if \(attacking > 0\) return/.test(spritesSrc));
+  ok('_drawWeaponOnPlayer no longer anchors at (bx+16, by+28)',
+     !/_drawWeaponOnPlayer[\s\S]{0,400}?translate\(bx \+ 16, by \+ 28\)/.test(spritesSrc));
+  ok('_drawWeaponOnPlayer switches hand anchor by facing',
+     /switch \(facing\)[\s\S]{0,300}?case 'left'[\s\S]*?case 'right'[\s\S]*?case 'up'[\s\S]*?case 'down'/.test(spritesSrc));
+
+  // ===== Sprint 17: attack slash has motion-blur trail =====
+  const slashSrc = readFileSync(new URL('../js/entities/player.js', import.meta.url), 'utf8');
+  ok('_drawMeleeSlash builds a multi-ghost trail (not single arc)',
+     /_drawMeleeSlash[\s\S]*?for \(let i = 3; i >= 1/.test(slashSrc) ||
+     /ghosted trail arcs behind the leading edge/.test(slashSrc));
 }
 
 
