@@ -1,5 +1,64 @@
 // Item & gear catalog. Equipment grants stat bonuses; consumables are used.
 // slot: weapon | shield | armor | helm | ring  (equippable)  OR  consumable
+
+/**
+ * @typedef {'weapon'|'shield'|'armor'|'helm'|'ring'} EquipSlot
+ * @typedef {'consumable'|'ammo'|'weapon'|'shield'|'armor'|'helm'|'ring'} ItemType
+ * @typedef {'common'|'uncommon'|'rare'|'epic'|'legendary'} RarityId
+ *
+ * @typedef {Object} ItemStats
+ * @property {number} [atk]     - flat attack bonus
+ * @property {number} [def]     - flat defense bonus
+ * @property {number} [hp]      - flat HP pool bonus
+ * @property {number} [mp]      - flat MP pool bonus
+ * @property {number} [crit]    - crit chance percent
+ * @property {number} [cdr]     - cooldown reduction percent
+ * @property {number} [spelldmg] - spell damage bonus
+ */
+
+/**
+ * @typedef {Object} ItemDef
+ * @property {string}   name
+ * @property {string}   icon   - single Unicode char (HUD tag)
+ * @property {ItemType} type
+ * @property {number}   price
+ * @property {number}   sell
+ * @property {ItemStats} [stats]
+ * @property {number}   [atkSpeed] - melee/ranged attack cooldown seconds
+ * @property {number}   [reach]    - melee reach in px
+ * @property {number}   [shotSpeed] - ranged projectile speed
+ * @property {boolean}  [ranged]    - true for bows/crossbows/staffs
+ * @property {string}   [ammo]      - ammo-type id (consumable ammo entries)
+ * @property {number}   [qty]       - stack qty (consumable/ammo)
+ * @property {string}   [enchant]   - enchantment kind (scroll consumables)
+ * @property {string}   [elemental] - elemental type (fire/ice/lightning/poison/holy)
+ * @property {(g: any) => void} [use] - consumable use callback (receives Game)
+ */
+
+/**
+ * @typedef {Object} Item
+ * @property {string}     id
+ * @property {string}     name
+ * @property {string}     icon
+ * @property {ItemType}   type
+ * @property {number}     [qty]
+ * @property {ItemStats}  [stats]
+ * @property {string}     [ammo]
+ * @property {boolean}    [ranged]
+ * @property {number}     [atkSpeed]
+ * @property {number}     [reach]
+ * @property {number}     [shotSpeed]
+ * @property {RarityId}   [rarity]
+ * @property {string}     [baseName]
+ * @property {{label: string, key: string, val: number}[]} [affixes]
+ */
+
+/**
+ * @typedef {Record<EquipSlot, string|Item|null>} EquipmentMap
+ *   Maps each slot to either a catalog id (string) or a rolled Item object.
+ */
+
+/** @type {Record<string, ItemDef>} */
 export const CATALOG = {
   // ---- consumables ----
   potion:   { name:'Health Potion', icon:'♥', type:'consumable', price:25,  sell:10,
@@ -74,9 +133,14 @@ export const CATALOG = {
   sword_firesword: { name:'Firesword', icon:'↑', type:'weapon', slot:'hand', atk:26, atkSpeed:1.0, crit:10, elemental:'fire', price:280, weight:4 },
 };
 
-export const EQUIP_SLOTS = ['weapon','shield','armor','helm','ring'];
+export const EQUIP_SLOTS = /** @type {EquipSlot[]} */ (['weapon','shield','armor','helm','ring']);
 
 // Build a fresh inventory item object from a catalog id
+/**
+ * @param {string} id   - catalog id
+ * @param {number} [qty]
+ * @returns {Item|null}
+ */
 export function makeItem(id, qty){
   const c = CATALOG[id];
   if(!c) return null;
@@ -90,6 +154,10 @@ export function makeItem(id, qty){
 }
 
 // Resolve an equipment slot value (id string OR full item object) to a display item.
+/**
+ * @param {string|Item|null|undefined} val
+ * @returns {Item|null}
+ */
 export function resolveEquip(val){
   if(!val) return null;
   if(typeof val === 'string'){ const c = CATALOG[val]; if(!c) return null;
@@ -100,6 +168,10 @@ export function resolveEquip(val){
 }
 
 // Sum stat bonuses from an equipment map {slot: id|itemObject}
+/**
+ * @param {Partial<EquipmentMap>} equipment
+ * @returns {ItemStats}
+ */
 export function equipStats(equipment){
   const total = { atk:0, def:0, hp:0, mp:0, crit:0, cdr:0 };
   for(const slot of EQUIP_SLOTS){
@@ -112,6 +184,7 @@ export function equipStats(equipment){
 }
 
 // Numeric score for a single item (sum of its stat values, weighted).
+/** @param {ItemStats|null|undefined} stats @returns {number} */
 function _scoreStats(stats){
   if(!stats) return 0;
   return (stats.atk||0)*3 + (stats.def||0)*3 + (stats.hp||0)*0.5 + (stats.mp||0)*0.4
@@ -121,6 +194,11 @@ function _scoreStats(stats){
 // Compare candidate item vs what is currently equipped in its slot.
 // Returns { delta:number, dir:'better'|'worse'|'equal', text:string }
 // delta > 0 means candidate is better.
+/**
+ * @param {Item|null|undefined} item
+ * @param {Partial<EquipmentMap>} equipment
+ * @returns {{delta:number, dir:'better'|'worse'|'equal', text:string}|null}
+ */
 export function compareItem(item, equipment){
   if(!item || item.type==='consumable') return null;
   const slot = item.type; // weapon|shield|armor|helm|ring

@@ -1,8 +1,41 @@
 // Spell catalog. Each spell defines cost/cooldown/visuals + a projectile profile.
 // `unlock` null = available from the start; otherwise the skill id that grants it.
-// `learnCost` = gold to learn at rank 1; `upgradeCost` = gold  to rank up (�rank).
+// `learnCost` = gold to learn at rank 1; `upgradeCost` = gold  to rank up (rank).
 // `upgrade` = next-tier spell id (learned automatically when upgraded).
 // The player has 3 cast slots (q/e/r) holding spell ids, rearrangeable in the UI.
+
+/**
+ * @typedef {Object} SpellProj
+ * @property {number} speed
+ * @property {number} base       - base damage
+ * @property {number} perLvl     - damage scaling per player level
+ * @property {number} r          - projectile radius
+ * @property {string} color
+ * @property {string} kind       - 'fire'|'ice'|'lightning'|'poison'|'holy'
+ * @property {number} life       - seconds before despawn
+ * @property {string} [status]   - status effect on hit ('burn'|'poison'|'freeze'|'stun')
+ * @property {number} [aoe]      - AoE radius on impact
+ * @property {number} [chain]    - chain-lightning forks
+ */
+
+/**
+ * @typedef {Object} Spell
+ * @property {string}      name
+ * @property {string}      icon
+ * @property {number}      cost       - MP cost
+ * @property {number}      cd         - cooldown (seconds)
+ * @property {string}      sfx        - sound effect key
+ * @property {string}      desc
+ * @property {SpellProj}   proj
+ * @property {number}      learnCost  - gold to learn rank 1
+ * @property {number}      upgradeCost - gold to rank up
+ * @property {string}      [upgrade]  - next-tier spell id
+ * @property {string}      [unlock]   - skill id required to learn
+ * @property {number}      [healOnCast] - HP healed on cast (holy bolts)
+ * @property {number}      [nova]     - nova shard count (frost nova)
+ */
+
+/** @type {Record<string, Spell>} */
 export const SPELLS = {
   fireball: { name:'Fireball', icon:'\uD83D\uDD25', cost:10, cd:1.0, sfx:'fire',
     desc:'Fast fire bolt that burns on hit.',
@@ -123,9 +156,14 @@ export const SPELLS = {
 };
 
 // Spells available from the start (others are unlocked via skill nodes or bought).
+/** @type {string[]} */
 export const STARTER_SPELLS = ['fireball','iceshard','spark'];
 
 // Which spells the player currently knows, given their learned skills.
+/**
+ * @param {Record<string, number>} [skills]
+ * @returns {string[]}
+ */
 export function knownSpells(skills){
   const known = [...STARTER_SPELLS];
   for(const id in SPELLS){
@@ -141,6 +179,10 @@ export function knownSpells(skills){
 
 // Get effective rank of a spell id: strips the trailing "2" or "3" to get the base.
 // Returns {base:'fireball', rank:1|2|3}
+/**
+ * @param {string} id
+ * @returns {{base: string, rank: number}}
+ */
 export function spellRank(id){
   const m = id.match(/^(.+?)([23])$/);
   if(m && SPELLS[m[1]] && SPELLS[id]) return { base:m[1], rank:parseInt(m[2]) };

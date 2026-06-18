@@ -10,6 +10,20 @@
 // achievements use the ⚔ ✦ ★ ❖ ⚜ ⚐ ⚑ glyphs; collection uses ♥ ☀ ★;
 // exploration uses ✦; secrets use a unique symbol.
 
+/**
+ * @typedef {'combat'|'exploration'|'collection'|'quests'|'secrets'} AchievementCat
+ *
+ * @typedef {Object} AchievementDef
+ * @property {AchievementCat} cat
+ * @property {string}         name
+ * @property {string}         icon   - single Unicode char
+ * @property {string}         desc
+ * @property {number}         [goal] - threshold for completion
+ * @property {string}         [stat] - which player stat to track
+ * @property {boolean}        [secret]
+ */
+
+/** @type {Record<string, AchievementDef>} */
 export const ACHIEVEMENTS = {
   // ---------------- COMBAT ----------------
   first_blood: {
@@ -152,7 +166,14 @@ export const ACHIEVEMENTS = {
   },
 };
 
-// Category metadata for the UI
+/**
+ * @typedef {Object} AchievementCatMeta
+ * @property {AchievementCat} id
+ * @property {string}         name
+ * @property {string}         color
+ */
+
+/** @type {AchievementCatMeta[]} */
 export const ACHIEVEMENT_CATS = [
   { id: 'combat',      name: 'Combat',      color: '#ff7a5a' },
   { id: 'exploration', name: 'Exploration', color: '#7ad8a0' },
@@ -162,6 +183,10 @@ export const ACHIEVEMENT_CATS = [
 ];
 
 // Total unlocked + total = quick stats
+/**
+ * @param {Record<string, boolean|number>|null|undefined} unlockedMap
+ * @returns {{done: number, total: number}}
+ */
 export function achievementStats(unlockedMap){
   const ids = Object.keys(ACHIEVEMENTS);
   const total = ids.length;

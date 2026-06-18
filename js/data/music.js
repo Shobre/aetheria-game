@@ -8,6 +8,16 @@
 // their mood as `music:'forest_tense'` etc.; unknown moods fall through
 // to a neutral "calm" scale so a typo in maps.js doesn't kill audio.
 
+/**
+ * @typedef {Object} MoodDef
+ * @property {number[]}    scale   - note frequencies (Hz)
+ * @property {number[][]}  chords  - scale-index stacks per beat
+ * @property {number}      tempo   - seconds per note
+ * @property {OscillatorType} type - oscillator wave type
+ * @property {number}      feel    - sustain bias, 0..1
+ */
+
+/** @type {Record<string, MoodDef>} */
 export const MOODS = {
   // ---- base moods (used directly by maps.js) ----
   calm: {
@@ -69,6 +79,11 @@ export const DEFAULT_MOOD = 'calm';
 // the mood key the audio engine should load. Handles the implicit
 // "biome" -> "biome_calm" / "biome_tense" mapping for maps that declare
 // their mood as a bare biome name.
+/**
+ * @param {string|null|undefined} declared
+ * @param {boolean} boss
+ * @returns {string}
+ */
 export function resolveMood(declared, boss){
   if(!declared) return DEFAULT_MOOD;
   if(MOODS[declared]) return declared;

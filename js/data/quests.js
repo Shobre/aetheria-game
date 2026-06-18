@@ -8,6 +8,40 @@
 //   timed_clear  {map:<mapId>, seconds:N}          - clear all enemies in map within time
 //   survive      {map:<mapId>, seconds:N}          - survive waves for N seconds
 // Rewards: { xp, gold, items:[{id,qty}] }
+
+/**
+ * @typedef {Object} QuestObjective
+ * @property {string} kind   - 'kill'|'reach'|'boss'|'collect'|'escort'|'timed_clear'|'survive'
+ * @property {string} text   - human-readable objective
+ * @property {string} [enemy]
+ * @property {number} [count]
+ * @property {string} [map]
+ * @property {string} [boss]
+ * @property {string} [item]
+ * @property {string} [npc]
+ * @property {string} [from]
+ * @property {string} [to]
+ * @property {number} [seconds]
+ */
+
+/**
+ * @typedef {Object} QuestReward
+ * @property {number} xp
+ * @property {number} gold
+ * @property {{id: string, qty: number}[]} [items]
+ */
+
+/**
+ * @typedef {Object} Quest
+ * @property {string} name
+ * @property {string} giver   - NPC name
+ * @property {string} desc
+ * @property {QuestObjective[]} objectives
+ * @property {QuestReward} reward
+ * @property {string} [next]  - next quest id in chain
+ */
+
+/** @type {Record<string, Quest>} */
 export const QUESTS = {
   q_slimes: {
     name:'Pest Control', giver:'Elder',
@@ -103,6 +137,10 @@ export const QUESTS = {
 };
 
 // Quests a given NPC can offer, in order.
+/**
+ * @param {string} name
+ * @returns {string[]}
+ */
 export function questsForGiver(name){
   return Object.keys(QUESTS).filter(id => QUESTS[id].giver === name);
 }

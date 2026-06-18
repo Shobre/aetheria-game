@@ -1,5 +1,19 @@
 // Skill tree: nodes grant passive stat bonuses or unlock/upgrade abilities.
 // Each level-up grants 1 skill point. Nodes have prereqs and max ranks.
+
+/**
+ * @typedef {Object} SkillNode
+ * @property {string}   name
+ * @property {string}   icon
+ * @property {'combat'|'arcane'|'survival'} branch
+ * @property {number}   max    - max rank
+ * @property {number}   cost   - skill points per rank
+ * @property {string[]} req    - prerequisite skill ids
+ * @property {string}   desc
+ * @property {(rank: number) => Object<string, number>} effect - returns stat bonuses at given rank
+ */
+
+/** @type {Record<string, SkillNode>} */
 export const SKILLS = {
   // --- Combat branch ---
   vitality:   { name:'Vitality', icon:'❤️', branch:'combat', max:5, cost:1, req:[],
@@ -49,9 +63,13 @@ export const SKILLS = {
                 desc:'+10 heat cap per rank', effect:(r)=>({rangedMastery:r}) },
 };
 
-export const BRANCHES = ['combat','arcane','survival'];
+export const BRANCHES = /** @type {Array<'combat'|'arcane'|'survival'>} */ (['combat','arcane','survival']);
 
 // Aggregate all skill effects from a {skillId:rank} map into a flat bonus object.
+/**
+ * @param {Record<string, number>} skills
+ * @returns {Object<string, number>}
+ */
 export function skillStats(skills){
   const out = { hp:0,mp:0,atk:0,def:0,crit:0,cdr:0,mpregen:0,spelldmg:0,
                 speed:0,stam:0,iframe:0,greed:0,
@@ -69,6 +87,12 @@ export function skillStats(skills){
 }
 
 // Can a node be ranked up? returns reason string or null if OK
+/**
+ * @param {string} id
+ * @param {Record<string, number>} skills
+ * @param {number} points
+ * @returns {string|null}
+ */
 export function canLearn(id, skills, points){
   const node = SKILLS[id];
   if(!node) return 'unknown';

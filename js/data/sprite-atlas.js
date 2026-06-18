@@ -21,6 +21,24 @@
 //     canvas-primitive drawNPCSprite expects.
 //   - The first row is the fallback "default" sprite.
 
+/**
+ * @typedef {Object} AtlasFrame
+ * @property {number} 0 - row (top=0)
+ * @property {number} 1 - col (left=0)
+ * @property {number} 2 - frame width (px)
+ * @property {number} 3 - frame height (px)
+ */
+
+/**
+ * @typedef {Object} AtlasDef
+ * @property {string} id
+ * @property {string} src   - relative PNG path
+ * @property {number} frameW
+ * @property {number} frameH
+ * @property {Record<string, AtlasFrame>} frames
+ */
+
+/** @type {AtlasDef[]} */
 export const SPRITE_ATLASES = [
   {
     id: 'npc',
@@ -92,6 +110,11 @@ export const SPRITE_ATLASES = [
 // frame coordinates [x, y, w, h] in the atlas image. Falls back to
 // 'default' if the name isn't in the manifest. Returns null if no
 // matching atlas exists at all.
+/**
+ * @param {string} atlasId
+ * @param {string} frameName
+ * @returns {AtlasFrame|null}
+ */
 export function lookupFrame(atlasId, frameName){
   const atlas = SPRITE_ATLASES.find(a => a.id === atlasId);
   if(!atlas) return null;
@@ -104,6 +127,7 @@ export function lookupFrame(atlasId, frameName){
 
 // List every frame the manifest declares across all atlases. Used by the
 // test suite to assert on shape.
+/** @returns {Record<string, string[]>} */
 export function listAllFrames(){
   const out = {};
   for(const a of SPRITE_ATLASES){

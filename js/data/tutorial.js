@@ -19,7 +19,26 @@
 
 import { ACTIONS } from './keybinds.js';
 
+/**
+ * @typedef {'top'|'center'|'bottom'|'corner'} PanelWhere
+ *
+ * @typedef {Object} TutorialStep
+ * @property {string}    id
+ * @property {string}    title
+ * @property {string}    body
+ * @property {PanelWhere} where
+ * @property {(game: any) => boolean} trigger
+ */
+
+/**
+ * @typedef {Object} TutorialState
+ * @property {number}    version
+ * @property {string[]}  completed
+ * @property {boolean}   skipped
+ */
+
 // A few common trigger patterns get named so the steps below stay readable.
+/** @type {Record<string, (game: any) => boolean>} */
 const T = {
   // Player has moved at least `px` total from spawn.
   movedPx: (px) => (game) => !!(game.player) && (game.player._totalMoved || 0) >= px,
@@ -94,6 +113,7 @@ export const TUTORIAL_STEPS = [
   },
 ];
 
+/** @type {TutorialState} */
 export const TUTORIAL_DEFAULT = Object.freeze({
   // If the user has never seen the tutorial (or never skipped it), run it
   // from the start. setVersion bumps if the step list ever changes
@@ -108,6 +128,11 @@ export const TUTORIAL_VERSION = TUTORIAL_DEFAULT.version;
 // Build a human-readable hint for a given step's "what key?" by reading the
 // live bindings. Falls back to the default key label if the action id isn't
 // in ACTIONS (which would itself be a bug).
+/**
+ * @param {string|null|undefined} actionId
+ * @param {Record<string, string>|null|undefined} bindings
+ * @returns {string}
+ */
 export function tutorialKeyHint(actionId, bindings){
   if(!actionId) return '';
   const a = ACTIONS.find(x => x.id === actionId);

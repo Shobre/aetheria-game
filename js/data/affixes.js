@@ -2,6 +2,16 @@
 // A dropped equippable can roll a rarity; higher rarity => more bonus affixes
 // layered on top of the base catalog stats. Consumables never roll rarity.
 
+/**
+ * @typedef {Object} RarityDef
+ * @property {string} name    - display name
+ * @property {string} color   - hex color for HUD
+ * @property {number} weight  - drop weight
+ * @property {number} affixes - bonus affixes rolled at this rarity
+ * @property {number} mult    - base-stat multiplier
+ */
+
+/** @type {Record<string, RarityDef>} */
 export const RARITY = {
   common:    { name:'Common',    color:'#c8cdd6', weight:60, affixes:0, mult:1.0 },
   uncommon:  { name:'Uncommon',  color:'#5fd35f', weight:24, affixes:1, mult:1.1 },
@@ -9,7 +19,7 @@ export const RARITY = {
   epic:      { name:'Epic',      color:'#b45cff', weight:4,  affixes:3, mult:1.45 },
   legendary: { name:'Legendary', color:'#ffae34', weight:1,  affixes:4, mult:1.7 },
 };
-export const RARITY_ORDER = ['common','uncommon','rare','epic','legendary'];
+export const RARITY_ORDER = /** @type {string[]} */ (['common','uncommon','rare','epic','legendary']);
 
 // Affix pool: stat key -> {label, roll()}; values are added to item.stats.
 const AFFIX_POOL = [
@@ -22,6 +32,11 @@ const AFFIX_POOL = [
 ];
 
 // Weighted pick of a rarity, optionally biased upward by `luck` (0..1 shifts weight to rarer).
+/**
+ * @param {() => number} [rng]
+ * @param {number} [luck]
+ * @returns {string} rarity id
+ */
 export function rollRarity(rng = Math.random, luck = 0){
   const entries = RARITY_ORDER.map((id, i) => {
     let w = RARITY[id].weight;
@@ -36,6 +51,12 @@ export function rollRarity(rng = Math.random, luck = 0){
 
 // Given a base item (from makeItem) produce a rarity-decorated copy with rolled affixes.
 // Mutates+returns the item. Safe to call on equippables only.
+/**
+ * @param {import('./gear.js').Item|null|undefined} item
+ * @param {string} rarityId
+ * @param {() => number} [rng]
+ * @returns {import('./gear.js').Item|null|undefined}
+ */
 export function applyRarity(item, rarityId, rng = Math.random){
   if(!item || item.type === 'consumable') return item;
   const R = RARITY[rarityId] || RARITY.common;
@@ -63,13 +84,16 @@ export function applyRarity(item, rarityId, rng = Math.random){
   return item;
 }
 
+/** @param {import('./gear.js').Item|null|undefined} item @returns {string} */
 export function rarityColor(item){
   return RARITY[item && item.rarity ? item.rarity : 'common'].color;
 }
+/** @param {import('./gear.js').Item|null|undefined} item @returns {string} */
 export function rarityName(item){
   return RARITY[item && item.rarity ? item.rarity : 'common'].name;
 }
 // Human-readable affix line e.g. "+3 ATK · +5% Crit"
+/** @param {import('./gear.js').Item|null|undefined} item @returns {string} */
 export function affixText(item){
   if(!item || !item.affixes || !item.affixes.length) return '';
   return item.affixes.map(a => '+' + a.val + (a.label.includes('%') ? '' : ' ') + a.label).join(' · ');

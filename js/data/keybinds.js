@@ -16,6 +16,17 @@
 //   - Q/E/R spell slots are NOT here — they're handled by the spell-slot UI
 //     and are conceptually different (the action IS the spell, not a verb).
 
+/**
+ * @typedef {'move'|'action'|'modal'|'mouse'} ActionKind
+ *
+ * @typedef {Object} ActionDef
+ * @property {string}      id           - canonical action id (e.g. 'attack')
+ * @property {string}      label        - UI label
+ * @property {string}      defaultKey   - canonical key (lowercased)
+ * @property {ActionKind}  kind
+ */
+
+/** @type {ActionDef[]} */
 export const ACTIONS = [
   // ---- movement (4 separate keys, but together form the move vector) ----
   { id: 'move_up',    label: 'Move Up',    defaultKey: 'w', kind: 'move' },
@@ -78,6 +89,7 @@ export const DEFAULT_BIND = Object.freeze(
 export const REBINDABLE = new Set(['move', 'action', 'modal']);
 
 // Convert a key string to a pretty label for the UI.
+/** @param {string|null|undefined} key @returns {string} */
 export const labelForKey = function(key){
   if(!key) return '?';
   if(key === ' ') return 'SPACE';
@@ -101,6 +113,10 @@ export const labelFor = labelForKey;
 
 // Given a KeyboardEvent (or the Input's edge key string), normalize to the
 // canonical form this registry uses.
+/**
+ * @param {KeyboardEvent|string|null|undefined} eOrKey
+ * @returns {string}
+ */
 export function normalizeKey(eOrKey){
   // Already-normalized?
   if(typeof eOrKey === 'string') return eOrKey.toLowerCase();

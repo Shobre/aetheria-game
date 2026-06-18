@@ -13,6 +13,18 @@
 // `glowColor(kind)` returns the rgb tint to use for the player's weapon glow,
 // slash, and HUD border.
 
+/**
+ * @typedef {'fire'|'ice'|'lightning'|'poison'|'holy'} EnchantKind
+ *
+ * @typedef {Object} EnchantDef
+ * @property {string} name
+ * @property {string} short - 3-letter HUD tag
+ * @property {string} desc
+ * @property {string} glow  - hex color (weapon glow)
+ * @property {string} color - hex color (slash arc)
+ */
+
+/** @type {Record<EnchantKind, EnchantDef>} */
 export const ENCHANTMENTS = {
   fire: {
     name: 'Flamed',
@@ -52,6 +64,11 @@ export const ENCHANTMENTS = {
 };
 
 // Apply an enchantment to an item. Returns true on success.
+/**
+ * @param {import('./gear.js').Item|null|undefined} item
+ * @param {EnchantKind} kind
+ * @returns {boolean}
+ */
 export function applyEnchant(item, kind){
   if(!item || item.type !== 'weapon') return false;
   if(!ENCHANTMENTS[kind]) return false;
@@ -60,6 +77,7 @@ export function applyEnchant(item, kind){
 }
 
 // Remove an enchantment. Returns the previous kind or null.
+/** @param {import('./gear.js').Item|null|undefined} item @returns {EnchantKind|null} */
 export function stripEnchant(item){
   if(!item || !item.enchant) return null;
   const k = item.enchant;
@@ -68,11 +86,13 @@ export function stripEnchant(item){
 }
 
 // Look up the display info for an enchantment; safe for missing keys.
+/** @param {string} kind @returns {EnchantDef|null} */
 export function enchantInfo(kind){
   return ENCHANTMENTS[kind] || null;
 }
 
 // Compute the cost in gold to enchant a weapon. Heavier = pricier.
+/** @param {import('./gear.js').Item|null|undefined} item @returns {number} */
 export function enchantCost(item){
   if(!item) return 0;
   const base = 150;

@@ -31,6 +31,7 @@
 // where <boundKey> comes from the live Input.bindings map. That means a key
 // rebind automatically rebinds the gamepad too — same effect, different device.
 
+/** @type {Record<number, string>} - W3C Standard gamepad button index → action id */
 export const GAMEPAD_BUTTON_TO_ACTION = {
   0:  'attack',
   1:  'dodge',
