@@ -1,0 +1,372 @@
+{
+  "url": "https://aetheria-game-alpha.vercel.app",
+  "ts": 1781800727,
+  "results": [
+    {
+      "map": "meadow",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2700,
+        "walkable": 2321,
+        "reachable": 2321,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "forest",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2750,
+        "walkable": 2342,
+        "reachable": 2342,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "desert",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2436,
+        "walkable": 2059,
+        "reachable": 2059,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "cave",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2400,
+        "walkable": 453,
+        "reachable": 453,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "dungeon1",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2484,
+        "walkable": 474,
+        "reachable": 474,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "snow",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2576,
+        "walkable": 2213,
+        "reachable": 2213,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "swamp",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2784,
+        "walkable": 2399,
+        "reachable": 2399,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "dungeon2",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2688,
+        "walkable": 588,
+        "reachable": 588,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "city",
+      "ok": true,
+      "stats": {
+        "total_tiles": 1920,
+        "walkable": 1748,
+        "reachable": 1748,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "shop_black",
+      "ok": true,
+      "stats": {
+        "total_tiles": 196,
+        "walkable": 144,
+        "reachable": 144,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "shop_alch",
+      "ok": true,
+      "stats": {
+        "total_tiles": 196,
+        "walkable": 144,
+        "reachable": 144,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "shop_arcane",
+      "ok": true,
+      "stats": {
+        "total_tiles": 196,
+        "walkable": 144,
+        "reachable": 144,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "shop_general",
+      "ok": true,
+      "stats": {
+        "total_tiles": 196,
+        "walkable": 144,
+        "reachable": 144,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "meadow_glade",
+      "ok": true,
+      "stats": {
+        "total_tiles": 1920,
+        "walkable": 1622,
+        "reachable": 1622,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "forest_deep",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2600,
+        "walkable": 2214,
+        "reachable": 2214,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "desert_ruins",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2300,
+        "walkable": 1941,
+        "reachable": 1941,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "snow_glacier",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2300,
+        "walkable": 1968,
+        "reachable": 1968,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "swamp_depths",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2496,
+        "walkable": 2136,
+        "reachable": 2136,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "house1",
+      "ok": true,
+      "stats": {
+        "total_tiles": 288,
+        "walkable": 224,
+        "reachable": 224,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "volcano",
+      "ok": true,
+      "stats": {
+        "total_tiles": 1600,
+        "walkable": 1304,
+        "reachable": 1304,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "volcano_depths",
+      "ok": true,
+      "stats": {
+        "total_tiles": 1600,
+        "walkable": 1309,
+        "reachable": 1309,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "volcano_caldera",
+      "ok": true,
+      "stats": {
+        "total_tiles": 1225,
+        "walkable": 965,
+        "reachable": 965,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "tundra_edge",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2100,
+        "walkable": 1744,
+        "reachable": 1744,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "tundra_heart",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2496,
+        "walkable": 2116,
+        "reachable": 2116,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "frost_spire",
+      "ok": true,
+      "stats": {
+        "total_tiles": 2400,
+        "walkable": 2021,
+        "reachable": 2021,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "map": "home",
+      "ok": true,
+      "stats": {
+        "total_tiles": 168,
+        "walkable": 120,
+        "reachable": 120,
+        "isolated_big": 0,
+        "isolated_tiny": 0
+      },
+      "reachable_pct": 100.0,
+      "issues": [],
+      "warnings": []
+    }
+  ],
+  "console_errors": [],
+  "failed_requests": []
+}
