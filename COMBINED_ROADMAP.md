@@ -594,8 +594,40 @@ Fix:
 - **1510 tests passing** (+2 from the checkJs guard).
 - **`npm run typecheck`** — 0 errors with `checkJs:true` on.
 - **`npm run lint`** — 0 errors.
-- **`npm test`** — 1510/1510 passing.
+- **`npm test`** — 1514/1514 passing (added 4 more in the post-ship fix below).
 - **1 latent runtime bug fixed** (magma_tyrant crash).
 - **0 runtime behavior changes** outside the boss-def fix.
+
+### Post-ship fix: `tickStatuses` runtime crash (committed `7dafdfe`)
+
+The "two recurring typing patterns" section above recommended `Object.assign({}, {burn:undefined, ...})` to satisfy `Record<StatusId, StatusInstance>` at the type level. **That pattern was a runtime landmine**: it plants literal `undefined` values under every StatusId key. The tick loop in `systems/status.js` did `for(const t in ent.statuses)` and crashed on the first status tick with `Cannot read properties of undefined (reading 'time')`.
+
+Live smoke caught it before any user did — the game threw this on the very first frame after load. Compile gate and unit tests both passed because neither exercises the status tick path with an actual entity.
+
+**The corrected pattern** is to cast the empty object directly, not pad it with undefined:
+
+```js
+// ❌ runtime landmine
+this.statuses = Object.assign({}, { burn:undefined, poison:undefined, chill:undefined, stun:undefined });
+
+// ✅ type-safe AND runtime-safe
+/** @type {Statuses} */
+this.statuses = /** @type {Statuses} */ ({});
+```
+
+And **always add a defensive guard** in any loop that iterates a `Record<K, V>` where `V` is a reference type:
+
+```js
+for(const type in ent.statuses){
+  const st = ent.statuses[type], def = STATUS[type];
+  if(!st) continue; // defensive: tickStatuses must never throw
+  st.time -= dt;
+  ...
+}
+```
+
+**4 new regression tests** in `tests/run.js` (1514 total): one source-level assertion for the guard pattern, three negative assertions that `Object.assign({}, { burn:undefined` does not appear in player.js/enemy.js/boss.js. Live smoke now passes 0/0/0 on the deployed build.
+
+**Lesson**: `--checkJs:true` validates the *type*, not the *runtime invariant* that `Object.keys(statuses)` returns only actual Status instances. Static gates + unit tests are necessary but never sufficient for runtime correctness on live game state — always smoke against the deployed build before claiming a sprint shipped.
 
 
