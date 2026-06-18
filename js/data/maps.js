@@ -278,7 +278,10 @@ export const MAPS = {
       { x:7, y:5, name:'Ember Sage', icon:'▲', lines:['The caldera burns with ancient fire.','Beware the Magma Tyrant below.'] },
     ],
     portals:[
-      { x:38, y:20, to:'city', tx:12, ty:56 },
+      // tx:12, ty:3 = north avenue of city, near the meadow portal at (24, 2).
+      // (Previously tx:12, ty:56 — past the bottom row of city; the player
+      // spawned OOB and could not move.)
+      { x:38, y:20, to:'city', tx:12, ty:3 },
       { x:20, y:1, to:'volcano_depths', tx:20, ty:38 },
     ],
     chests:[
@@ -323,7 +326,10 @@ export const MAPS = {
     pal:{ fa:'#3a1a0a', fb:'#4a2a1a', pa:'#5a3a2a', pb:'#6a4a3a', wd:'#1a0a00', wl:'#7a4a2a', liquid:'#8a2a0a', liquid2:'#9a3a1a', deco:['rock','crystal','cactus','bones'] },
     npcs:[],
     portals:[
-      { x:1, y:17, to:'city', tx:78, ty:30 },
+      // tx:35, ty:30 = east avenue of city, near the General Store portal
+      // at (42, 30). (Previously tx:78, ty:30 — past the right edge of
+      // city; the player spawned OOB and could not move.)
+      { x:1, y:17, to:'city', tx:35, ty:30 },
     ],
     chests:[],
     enemies:[

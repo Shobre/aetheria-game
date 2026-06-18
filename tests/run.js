@@ -367,6 +367,33 @@ console.log('=== stash + craft wiring ===');
   ok('blacksmith has a Forge', MAPS.shop_black.npcs.some(n=>n.craft));
 }
 
+console.log('=== portal data integrity ===');
+{
+  // Static analysis: every portal's destination tile must be inside the
+  // target map's bounds. Out-of-bounds destinations silently strand the
+  // player at OOB coordinates — they can't move, can't be reached by any
+  // other portal, and look like "teleport into a wall, can't move, then
+  // teleport back" to the player. The World.nearestOpen() safety net is
+  // a backstop, but the data should still be correct.
+  const { MAPS } = await import('../js/data/maps.js');
+  const reachable = new Set(Object.keys(MAPS));  // BFS would be nicer but not needed
+  for(const srcId in MAPS){
+    const src = MAPS[srcId];
+    for(const p of (src.portals || [])){
+      const tgt = MAPS[p.to];
+      const label = srcId + ' -> ' + p.to + ' @(' + p.tx + ',' + p.ty + ')';
+      ok('portal target exists ('+label+')', !!tgt);
+      if(!tgt) continue;
+      ok('portal tx in bounds ('+label+', target '+tgt.cols+'x'+tgt.rows+')',
+         p.tx >= 0 && p.tx < tgt.cols);
+      ok('portal ty in bounds ('+label+', target '+tgt.cols+'x'+tgt.rows+')',
+         p.ty >= 0 && p.ty < tgt.rows);
+      ok('portal source tile in bounds ('+label+', source '+src.cols+'x'+src.rows+')',
+         p.x >= 0 && p.x < src.cols && p.y >= 0 && p.y < src.rows);
+    }
+  }
+}
+
 console.log('=== enemy-player collision + spawn safety ===');
 {
   const { World, TILE } = await import('../js/systems/world.js');
@@ -390,6 +417,26 @@ console.log('=== enemy-player collision + spawn safety ===');
       ok('dungeon centre snaps to open ('+id+')', !w.isSolid(c.x,c.y));
       checkedDungeon = true;
     }
+  }
+  // OOB safety: even when called with coordinates well outside the map
+  // (which can happen if a portal's tx/ty is mistyped past the target
+  // map's bounds), nearestOpen must return a point that is BOTH inside
+  // the map AND walkable. The previous implementation would silently
+  // strand the player at the OOB coordinates.
+  const oobCases = [
+    // [mapId, px, py, description]
+    ['meadow',      -1000,    -1000, 'way negative'],
+    ['meadow',      100000,   100000, 'way positive'],
+    ['volcano_caldera', 78*TILE+16, 30*TILE+16, 'volcano_caldera->city tx=78 (city is 48 wide)'],
+    ['volcano',     12*TILE+16, 56*TILE+16, 'volcano->city ty=56 (city is 40 tall)'],
+    ['cave',        9999*TILE, 9999*TILE, 'absurdly far OOB'],
+  ];
+  for(const [id, px, py, desc] of oobCases){
+    const w = new World(id);
+    const sp = w.nearestOpen(px, py);
+    const inMap = sp.x >= 0 && sp.y >= 0 && sp.x < w.w && sp.y < w.h;
+    ok('nearestOpen OOB in-map ('+id+', '+desc+')', inMap);
+    ok('nearestOpen OOB walkable ('+id+', '+desc+')', inMap && !w.isSolid(sp.x, sp.y));
   }
   // enemy.js must wire solid-body collision against the player
 

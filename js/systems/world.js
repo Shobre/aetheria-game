@@ -335,6 +335,18 @@ export class World {
   // Snap a world point to the centre of the nearest walkable tile.
   // Keeps the player from spawning inside a wall when a portal landing
   // tile (or checkpoint) happens to be solid rock/decor.
+  //
+  // OOB safety: callers may pass coordinates that are well outside the map
+  // (e.g. a portal destination tile that was authored with tx/ty beyond the
+  // target map's bounds). The previous version's ring search was capped at
+  // `max(cols, rows)` tiles from the input point, which is not enough when
+  // the input is hundreds of tiles outside the map (the ring never reaches
+  // the map's interior). The player would spawn at the OOB coordinates and
+  // be unable to move.
+  //
+  // New behaviour: clamp cx/cy to the map bounds first, then search outward
+  // from the clamped point. If still nothing is found after a full-map ring
+  // scan, fall back to a BFS over the whole map.
   /**
    * Snap a world point to the centre of the nearest walkable tile.
    * Keeps the player from spawning inside a wall when a portal landing
@@ -344,16 +356,34 @@ export class World {
    * @returns {{x:number, y:number}}
    */
   nearestOpen(px,py){
-    const cx=Math.floor(px/TILE), cy=Math.floor(py/TILE);
+    let cx=Math.floor(px/TILE), cy=Math.floor(py/TILE);
     const free=(x,y)=> x>=0&&y>=0&&x<this.cols&&y<this.rows && !SOLID.has(this.map[y][x]);
+    // Step 1: clamp the input point to the map. If the destination coords
+    // are wildly outside (bad portal data), start the search at the
+    // closest edge of the map instead of the bogus point.
+    if(cx < 0) cx = 0;
+    else if(cx >= this.cols) cx = this.cols - 1;
+    if(cy < 0) cy = 0;
+    else if(cy >= this.rows) cy = this.rows - 1;
+    // Step 2: try the clamped tile, then a ring out to a full-map radius.
     if(free(cx,cy)) return { x:cx*TILE+TILE/2, y:cy*TILE+TILE/2 };
-    for(let rad=1; rad<Math.max(this.cols,this.rows); rad++){
+    const maxR = Math.max(this.cols, this.rows);
+    for(let rad=1; rad<=maxR; rad++){
       for(let dy=-rad; dy<=rad; dy++)for(let dx=-rad; dx<=rad; dx++){
         if(Math.max(Math.abs(dx),Math.abs(dy))!==rad) continue; // ring only
         if(free(cx+dx,cy+dy)) return { x:(cx+dx)*TILE+TILE/2, y:(cy+dy)*TILE+TILE/2 };
       }
     }
-    return { x:px, y:py };
+    // Step 3: full grid scan. Guarantees we never strand the player OOB
+    // regardless of how broken the portal data is.
+    for(let y=0; y<this.rows; y++){
+      for(let x=0; x<this.cols; x++){
+        if(free(x,y)) return { x:x*TILE+TILE/2, y:y*TILE+TILE/2 };
+      }
+    }
+    // Truly no walkable tile — keep the player at the clamped point so
+    // they at least end up inside the map (even if it's a wall).
+    return { x:cx*TILE+TILE/2, y:cy*TILE+TILE/2 };
   }
 
   // find a walkable spawn near a tile (for enemies)
