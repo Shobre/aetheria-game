@@ -12,7 +12,7 @@ const KEY = 'aetheria_saves_v2';
  * @typedef {Object} SaveState
  * Schema v2 — the persisted game state.
  * @property {number} slot
- * @property {number} version
+ * @property {number} [version]   - set by SaveSystem.save() at write time
  * @property {number} level
  * @property {number} xp
  * @property {number} xpNext
@@ -81,7 +81,7 @@ export const SaveSystem = {
       // skill ranks {id:rank}
       skills:{},
       // q/e/r spell loadout (rearrangeable)
-      spellSlots:['fireball','iceshard','spark'],
+      spellSlots: /** @type {[string,string,string]} */ (['fireball','iceshard','spark']),
       // inventory (consumables stack; gear individual)
       inventory:[
         makeItem('potion',5),
@@ -102,7 +102,9 @@ export const SaveSystem = {
       // ammo / quiver (Sprint 5) — {ammoId: qty}; sourced from data/ammo.js
       ammo:{ ...STARTING_AMMO },
     };
-    this.save(n, state);
-    return state;
+    /** @type {SaveState} */
+    const finalState = state;
+    this.save(n, finalState);
+    return finalState;
   }
 };

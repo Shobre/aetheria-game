@@ -555,6 +555,17 @@ export function drawPlayerSprite(ctx, sx, sy, facing, equipment, opts = {}) {
   const { flash = false, invuln = false, blocking = false, attacking = 0,
           attackProgress = 0, bob = 0 } = opts;
   const bx = sx - SW / 2, by = sy - SH / 2 + bob;
+  // EquipmentMap values are `string|Item|null` — narrow once so the rest of
+  // this function can treat armor/helm/shield/weapon as a string-or-Item
+  // without re-checking at every property access.
+  /** @param {string|import('./data/gear.js').Item|null|undefined} x @returns {string} */
+  const slotId = (x) => {
+    if (typeof x === 'object' && x) {
+      const item = x;
+      return /** @type {string} */ (item.id || '');
+    }
+    return /** @type {string} */ (x || '');
+  };
   const armor = equipment && equipment.armor ? equipment.armor : null;
   const helm = equipment && equipment.helm ? equipment.helm : null;
   const weapon = equipment && equipment.weapon ? equipment.weapon : null;
@@ -575,15 +586,16 @@ export function drawPlayerSprite(ctx, sx, sy, facing, equipment, opts = {}) {
   // torso (armor-tinted)
   ctx.fillStyle = shirt;
   ctx.fillRect(bx + 5, by + 8, 14, 12);
+  const armorId = slotId(armor);
   // chainmail cross-hatch detail
-  if (armor && (armor.id || '').includes('chain')) {
+  if (armorId.includes('chain')) {
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
     for (let y = by + 9; y < by + 19; y += 3) {
       for (let x = bx + 6; x < bx + 18; x += 3) {
         if ((x + y) % 6 === 0) ctx.fillRect(x, y, 1, 1);
       }
     }
-  } else if (armor && (armor.id || '').includes('mage')) {
+  } else if (armorId.includes('mage')) {
     // robe with gold trim
     ctx.fillStyle = '#ffcf4d';
     ctx.fillRect(bx + 5, by + 8, 1, 12);
@@ -640,8 +652,8 @@ export function drawPlayerSprite(ctx, sx, sy, facing, equipment, opts = {}) {
   // weapon on back (or in hand during attack windup)
   if (weapon) _drawWeaponOnPlayer(ctx, bx, by, weapon, facing, attacking, attackProgress);
   // enchantment glow: pulsing halo around the player's body in the element color
-  if (weapon && weapon.enchant){
-    const info = ENCHANTMENTS[weapon.enchant];
+  if (weapon && (typeof weapon === 'object') && /** @type {import('./data/gear.js').Item} */ (weapon).enchant){
+    const info = ENCHANTMENTS[/** @type {import('./data/gear.js').Item} */ (weapon).enchant];
     if(info){
       const pulse = 0.35 + 0.15*Math.sin(performance.now()/180);
       ctx.save();
@@ -964,7 +976,7 @@ export function drawRingIcon(ctx, x, y, ringItem) {
  * @returns {true} always — kept for callers that use the return as a "drawn" flag
  */
 export function drawWeaponIcon(ctx, x, y, weaponItem) {
-  const wid = (weaponItem && weaponItem.id) || (typeof weaponItem === 'string' ? weaponItem : '');
+  const wid = (weaponItem && typeof weaponItem === 'object' && weaponItem.id) || (typeof weaponItem === 'string' ? weaponItem : '');
   const wc = weaponColor(weaponItem) || '#aaaaaa';
   const woodC = '#5a3a22';
   ctx.save();

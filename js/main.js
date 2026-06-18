@@ -17,9 +17,7 @@ function setAuth(a){ localStorage.setItem(AUTH_KEY, JSON.stringify(a)); }
 
 // Wire login screen
 /** @type {HTMLElement|null} */
-/** @type {HTMLElement|null} */
 const loginScreen=document.getElementById('login-screen');
-/** @type {HTMLElement|null} */
 /** @type {HTMLElement|null} */
 const startScreen=document.getElementById('start-screen');
 function showLogin(){ show('login-screen'); }
@@ -29,16 +27,13 @@ function showStart(){ show('start-screen'); }
 const auth=getAuth();
 if(auth.username){
   // Still show login but pre-fill
-  /** @type {HTMLInputElement|null} */
-  /** @type {HTMLInputElement|null} */
-  const u=document.getElementById('login-user');
+  const u = /** @type {HTMLInputElement|null} */ (document.getElementById('login-user'));
   if(u) u.value=auth.username;
 }
 
-/** @type {HTMLButtonElement|null} */
 document.getElementById('login-btn').addEventListener('click', async ()=>{
-  const u=document.getElementById('login-user').value.trim().toLowerCase();
-  const p=document.getElementById('login-pass').value.trim();
+  const u=(/** @type {HTMLInputElement|null} */ (document.getElementById('login-user'))).value.trim().toLowerCase();
+  const p=(/** @type {HTMLInputElement|null} */ (document.getElementById('login-pass'))).value.trim();
   const err=document.getElementById('login-error');
   if(!u){ err.textContent='Enter a username'; err.classList.remove('hidden'); return; }
   if(p.length<3){ err.textContent='Password must be 3+ chars'; err.classList.remove('hidden'); return; }
@@ -62,7 +57,7 @@ document.querySelectorAll('.login-tab').forEach(tab => {
     document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     // Show the right form
-    const target = tab.dataset.tab;
+    const target = /** @type {HTMLElement} */ (tab).dataset.tab;
     document.querySelectorAll('.login-form').forEach(f => f.classList.add('hidden'));
     document.getElementById(target).classList.remove('hidden');
     // Clear errors
@@ -73,18 +68,10 @@ document.querySelectorAll('.login-tab').forEach(tab => {
 
 // ---- Sign up handler ----
 document.getElementById('signup-btn').addEventListener('click', async () => {
-  /** @type {HTMLInputElement|null} */
-  /** @type {HTMLInputElement|null} */
-  const u=document.getElementById('signup-user');
-  /** @type {HTMLInputElement|null} */
-  /** @type {HTMLInputElement|null} */
-  const p=document.getElementById('signup-pass');
-  /** @type {HTMLInputElement|null} */
-  /** @type {HTMLInputElement|null} */
-  const p2=document.getElementById('signup-pass2');
-  /** @type {HTMLElement|null} */
-  /** @type {HTMLElement|null} */
-  const err=document.getElementById('signup-error');
+  const u = /** @type {HTMLInputElement|null} */ (document.getElementById('signup-user'));
+  const p = /** @type {HTMLInputElement|null} */ (document.getElementById('signup-pass'));
+  const p2 = /** @type {HTMLInputElement|null} */ (document.getElementById('signup-pass2'));
+  const err = /** @type {HTMLElement|null} */ (document.getElementById('signup-error'));
   if (!u || !u.value.trim()) { if(err){err.textContent='Enter a username'; err.classList.remove('hidden');} return; }
   const username = u.value.trim().toLowerCase();
   if (username.length < 2) { err.textContent='Username must be 2+ chars'; err.classList.remove('hidden'); return; }
@@ -133,12 +120,10 @@ SaveSystem.newGameUser=function(username,n){
   return state;
 };
 
-/** @type {HTMLCanvasElement|null} */
-
-const canvas=document.getElementById('game-canvas');
+const canvas = /** @type {HTMLCanvasElement|null} */ (document.getElementById('game-canvas'));
 const input=new Input(canvas);
 const game=new Game(canvas,input);
-window.GAME=game;
+/** @type {any} */ (window).GAME=game;
 // Sprint 11: restore the user's atlas-toggle preference (default ON), then
 // start loading both atlases. The loader is async, so this is fire-and-forget.
 try{
@@ -153,14 +138,14 @@ KeybindUI.mount({
   input,
   container: document.getElementById('keybinds-list'),
   hintEl:    document.getElementById('keybinds-hint'),
-  resetBtn:  document.getElementById('keybinds-reset'),
+  resetBtn:  /** @type {HTMLButtonElement|null} */ (document.getElementById('keybinds-reset')),
 });
 
 // Expose the override helpers for Game to round-trip bindings through saves.
 // The rebind UI owns localStorage; Game.start() writes the loaded overrides
 // back to localStorage so the next mount picks them up. setKeybindOverrides
 // is the explicit programmatic setter (used by the rebind UI itself).
-window.__keybinds = { get: getKeybindOverrides, set: setKeybindOverrides, applyToInput: KeybindUI.applyOverridesToInput, refresh: KeybindUI.refresh };
+/** @type {any} */ (window).__keybinds = { get: getKeybindOverrides, set: setKeybindOverrides, applyToInput: KeybindUI.applyOverridesToInput, refresh: KeybindUI.refresh };
 
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden'); }
@@ -191,7 +176,7 @@ async function renderSlotsWithAuth(username){
           GOLD ${data.gold}<br>${fmtTime((data.playtime||0)*1000)}<br>
           <span style="color:#667">${fmtDate(data.savedAt)}</span></div>
         <span class="sl-del" title="Delete">🗑</span>`;
-      btn.querySelector('.sl-del').onclick=(e)=>{ e.stopPropagation();
+      /** @type {HTMLElement} */ (btn.querySelector('.sl-del')).onclick=(e)=>{ e.stopPropagation();
         if(confirm('Delete?')){ cloudDelete(username,slot); renderSlotsWithAuth(username); } };
       btn.onclick=()=>cloudLoad(username,slot).then(s=>launchUser(s,username));
     } else if(data && data.cloudOnly){
@@ -213,14 +198,14 @@ async function cloudSave(username, slot, state){
   SaveSystem.saveUser(username, slot, state);
   try {
     const r = await tursoSave(username, slot, state);
-    if (r && r.localOnly) console.log('Cloud unavailable - saved locally');
+    if (r && /** @type {any} */ (r).localOnly) console.log('Cloud unavailable - saved locally');
   } catch(e){ console.warn('cloud save failed', e); }
 }
 async function cloudLoad(username, slot){
   const local = SaveSystem.getSlotUser(username, slot);
   try {
     const cloud = await tursoLoad(username, slot);
-    if(cloud && (!local || (cloud.savedAt||0) > (local.savedAt||0))){
+    if(cloud && (!local || (/** @type {any} */ (cloud).savedAt||0) > (local.savedAt||0))){
       SaveSystem.saveUser(username, slot, cloud);
       return cloud;
     }
@@ -238,7 +223,7 @@ function launchUser(state,username){
   // Apply saved keybind overrides BEFORE game.start() so the Input instance
   // sees them when Player + Game read bindings in their constructors.
   if(state && state.keybinds && typeof state.keybinds === 'object'){
-    if(window.__keybinds){ window.__keybinds.set(state.keybinds); window.__keybinds.applyToInput(); }
+    if(/** @type {any} */ (window).__keybinds){ /** @type {any} */ (window).__keybinds.set(state.keybinds); /** @type {any} */ (window).__keybinds.applyToInput(); }
   }
   game.start(state); game._username=username; applySettings();
   // Sprint 9: restore the heartbeat preference from localStorage. The DOM
@@ -248,8 +233,7 @@ function launchUser(state,username){
     const hbPref = localStorage.getItem('aetheria_heartbeat_v1');
     if(hbPref != null && game.audio && game.audio.setHeartbeatEnabled){
       game.audio.setHeartbeatEnabled(hbPref === '1');
-      /** @type {HTMLInputElement|null} */
-      const cb=document.getElementById('set-heartbeat');
+      const cb = /** @type {HTMLInputElement|null} */ (document.getElementById('set-heartbeat'));
       if(cb) cb.checked = (hbPref === '1');
     }
   }catch(e){}
@@ -260,8 +244,7 @@ function launchUser(state,username){
   try{
     const atPref = localStorage.getItem('aetheria_atlases_v1');
     if(atPref != null){
-      /** @type {HTMLInputElement|null} */
-      const cb=document.getElementById('set-atlases');
+      const cb = /** @type {HTMLInputElement|null} */ (document.getElementById('set-atlases'));
       if(cb) cb.checked = (atPref === '1');
     }
   }catch(e){}
@@ -290,22 +273,20 @@ const craftModal=document.getElementById('craft-modal');
 /** @type {HTMLElement|null} */
 const enchantModal=document.getElementById('enchant-modal');
 function applySettings(){
-  game.settings.shake=document.getElementById('set-shake').checked;
-  const sm=document.getElementById('set-minimap'); if(sm) game.settings.minimap=sm.checked;
-  game.settings.fps=document.getElementById('set-fps').checked;
-  game.audio.musicVol=document.getElementById('set-music').value/100;
-  game.audio.sfxVol=document.getElementById('set-sfx').value/100;
+  game.settings.shake=(/** @type {HTMLInputElement|null} */ (document.getElementById('set-shake'))).checked;
+  const sm=(/** @type {HTMLInputElement|null} */ (document.getElementById('set-minimap'))); if(sm) game.settings.minimap=sm.checked;
+  game.settings.fps=(/** @type {HTMLInputElement|null} */ (document.getElementById('set-fps'))).checked;
+  game.audio.musicVol=Number((/** @type {HTMLInputElement|null} */ (document.getElementById('set-music'))).value)/100;
+  game.audio.sfxVol=Number((/** @type {HTMLInputElement|null} */ (document.getElementById('set-sfx'))).value)/100;
   if(game.audio.applyMusicVol) game.audio.applyMusicVol();
   // Sprint 9: heartbeat toggle
-  /** @type {HTMLInputElement|null} */
-  const hb=document.getElementById('set-heartbeat');
+  const hb = /** @type {HTMLInputElement|null} */ (document.getElementById('set-heartbeat'));
   if(hb && game.audio.setHeartbeatEnabled){
     game.audio.setHeartbeatEnabled(hb.checked);
     try{ localStorage.setItem('aetheria_heartbeat_v1', hb.checked ? '1' : '0'); }catch(e){}
   }
   // Sprint 11: atlas toggle
-  /** @type {HTMLInputElement|null} */
-  const at=document.getElementById('set-atlases');
+  const at = /** @type {HTMLInputElement|null} */ (document.getElementById('set-atlases'));
   if(at){
     setUseAtlases(at.checked);
     try{ localStorage.setItem('aetheria_atlases_v1', at.checked ? '1' : '0'); }catch(e){}
@@ -340,7 +321,7 @@ document.getElementById('quests-btn').onclick=openQuests;
 document.getElementById('achieve-btn').onclick=openAchievements;
 document.getElementById('log-btn').onclick=()=>{ const cl=document.getElementById('combat-log-modal');
   if(cl.classList.contains('hidden')) openModal(cl); else closeModal(cl); };
-document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeModal(document.getElementById(b.dataset.close)));
+document.querySelectorAll('[data-close]').forEach(b=>{ const el = /** @type {HTMLElement} */ (b); el.onclick=()=>closeModal(document.getElementById(/** @type {string} */ (el.dataset.close))); });
 document.getElementById('shop-close').onclick=()=>closeModal(shopModal);
 document.getElementById('save-game-btn').onclick=()=>{
   const uname=game._username;
@@ -365,8 +346,8 @@ document.getElementById('logout-btn').addEventListener('click', ()=>{
     game.quitToMenu();
     localStorage.removeItem('aetheria_auth');
     show('login-screen');
-    document.getElementById('login-user').value='';
-    document.getElementById('login-pass').value='';
+    /** @type {HTMLInputElement|null} */ (document.getElementById('login-user')).value='';
+    /** @type {HTMLInputElement|null} */ (document.getElementById('login-pass')).value='';
   }
 });
 document.getElementById('respawn-btn').onclick=()=>game.respawn();

@@ -31,7 +31,13 @@ const LOCAL_KEY = 'aetheria_tutorial_v1';
  * @property {string} [currentMap]
  * @property {TutorialBag} [_tutorialFlag]
  * @property {any} [player]
- * @property {{tutorial?: {version:number, skipped:boolean, completed:string[]}}} [tutorial]
+ * @property {TutorialSaveShape} [tutorial]
+ *
+ * @typedef {Object} TutorialSaveShape
+ * Persisted tutorial state. Stored under `state.tutorial` in the save blob.
+ * @property {number} version
+ * @property {boolean} skipped
+ * @property {string[]} completed
  *
  * @typedef {Object} TutorialInstanceState
  * @property {any} game

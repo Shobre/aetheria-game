@@ -3,20 +3,34 @@ import { QUESTS } from './data/quests.js';
 import { CATALOG, makeItem } from './data/gear.js';
 
 /**
+ * Discriminated union returned by the find helpers. One of:
+ *  - {type:'portal',     ref, label}
+ *  - {type:'npc',        ref, label}
+ *  - {type:'chest',      ref, label}
+ *  - {type:'home_chest', ref, label}
+ *  - {autoEnter:portal}  (short-circuit when within auto-enter range)
+ * @typedef {{type:'portal', ref:object, label:string}
+ *         | {type:'npc', ref:object, label:string}
+ *         | {type:'chest', ref:object, label:string}
+ *         | {type:'home_chest', ref:object, label:string}
+ *         | {autoEnter:object}} Near
+ */
+
+/**
  * Find the closest portal to the player. If a portal is within the auto-enter
  * threshold (26px) it short-circuits with {autoEnter} so the caller can
  * immediately teleport instead of showing a prompt.
  * @private
  * @param {{x:number, y:number}} player - player world position
  * @param {{portals: Array<{wx:number, wy:number, label:string}>}} world
- * @returns {{type:'portal', ref:object, label:string}|{autoEnter:object}|null}
+ * @returns {Near|null}
  */
 function _closestPortal(player, world){
   let near=null, nd=52;
   for(const p of world.portals){
     const d=Math.hypot(p.wx-player.x,p.wy-player.y);
-    if(d<26){ return {autoEnter:p}; }
-    if(d<nd){ near={type:'portal',ref:p,label:'Go to '+p.label}; nd=d; }
+    if(d<26){ return /** @type {Near} */ ({autoEnter:p}); }
+    if(d<nd){ near=/** @type {Near} */ ({type:'portal',ref:p,label:'Go to '+p.label}); nd=d; }
   }
   return near;
 }
@@ -53,7 +67,7 @@ function _closestNpc(player, world, quests){
   let near=null, nd=52;
   for(const n of world.npcs){
     const d=Math.hypot(n.wx+16-player.x,n.wy+16-player.y);
-    if(d<nd){ near={type:'npc',ref:n,label:_npcLabel(n,quests)}; nd=d; }
+    if(d<nd){ near=/** @type {{type:'npc', ref:object, label:string}} */ ({type:'npc',ref:n,label:_npcLabel(n,quests)}); nd=d; }
   }
   return near;
 }
@@ -70,7 +84,7 @@ function _closestChest(player, world){
   for(const c of world.chests){
     if(c.opened) continue;
     const d=Math.hypot(c.wx+16-player.x,c.wy+16-player.y);
-    if(d<nd){ near={type:'chest',ref:c,label:'Open Chest'}; nd=d; }
+    if(d<nd){ near=/** @type {{type:'chest', ref:object, label:string}} */ ({type:'chest',ref:c,label:'Open Chest'}); nd=d; }
   }
   return near;
 }
@@ -96,16 +110,19 @@ function _pickNearest(a, b, c){
  * Portals within auto-enter range trigger an immediate teleport via
  * game._usePortal. Among nearby targets the closest wins.
  * @param {import('./systems/game.js').Game} game
- * @returns {{type:string, ref:object, label:string}|null}
+ * @returns {Near|null}
  */
 export function findNearestInteractable(game){
   const player=game.player, world=game.world, quests=game.quests;
   const portalResult=_closestPortal(player, world);
-  if(portalResult && portalResult.autoEnter){ game._usePortal(portalResult.autoEnter); return null; }
+  if(portalResult){
+    if('autoEnter' in portalResult){ game._usePortal(portalResult.autoEnter); return null; }
+  }
   const npcNear=_closestNpc(player, world, quests);
   const chestNear=_closestChest(player, world);
   // Portal has priority, then npc, then chest — compare by distance
-  let best=portalResult, bestDist=portalResult?Math.hypot(portalResult.ref.wx-player.x,portalResult.ref.wy-player.y):Infinity;
+  const portalRef=portalResult && 'ref' in portalResult ? portalResult.ref : null;
+  let best=portalResult, bestDist=portalRef?Math.hypot(portalRef.wx-player.x,portalRef.wy-player.y):Infinity;
   if(npcNear){ const d=Math.hypot(npcNear.ref.wx+16-player.x,npcNear.ref.wy+16-player.y); if(d<bestDist){ best=npcNear; bestDist=d; } }
   if(chestNear){ const d=Math.hypot(chestNear.ref.wx+16-player.x,chestNear.ref.wy+16-player.y); if(d<bestDist){ best=chestNear; } }
   return best;
@@ -202,7 +219,7 @@ export function updateEscort(game){
  * companion recruit / quest turn-in / quest accept / fallback dialogue.
  * @private
  * @param {import('./systems/game.js').Game} game
- * @param {{name:string, bank?:boolean, craft?:boolean, shop?:any, enchant?:boolean, companion?:any, lines:string[]}} n
+ * @param {{name:string, bank?:boolean, craft?:boolean, shop?:any, stock?:any, enchant?:boolean, companion?:any, lines:string[], _line?:number}} n
  * @returns {void}
  */
 function _interactNpc(game, n){
@@ -247,7 +264,7 @@ function _interactChest(game, c, CATALOG, makeItem){
  * Apply the player's chosen interactable. Dispatches to the NPC/portal/
  * chest handler based on the descriptor type.
  * @param {import('./systems/game.js').Game} game
- * @param {{type:'npc'|'portal'|'chest', ref:object}} near
+ * @param {{type:'npc'|'portal'|'chest'|'home_chest', ref:object}} near
  * @returns {void}
  */
 export function doInteract(game, near){

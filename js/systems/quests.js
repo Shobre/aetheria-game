@@ -6,6 +6,7 @@ import { makeItem } from '../data/gear.js';
 /**
  * @typedef {import('../data/quests.js').Quest} Quest
  * @typedef {import('../data/quests.js').QuestObjective} QuestObjective
+ * @typedef {import('../data/quests.js').QuestReward} QuestReward
  *
  * @typedef {Object} QuestActiveState
  * @property {number[]} prog  - per-objective progress counter
@@ -215,7 +216,7 @@ export class QuestLog {
     if(!this._complete(id)) return false;
     const q = QUESTS[id];
     delete this.active[id]; this.done[id] = true;
-    const r = q.reward || {};
+    const r = /** @type {QuestReward} */ (q.reward || Object.assign({}, { xp:0, gold:0 }));
     if(r.xp) this.game.player.gainXp(r.xp, this.game);
     if(r.gold){ const a = this.game.player.gainGold(r.gold, this.game); this.game.floater('+'+a+'g', this.game.player.x, this.game.player.y-30, '#ffcf4d'); }
     (r.items || []).forEach(it => this.game.addItem(makeItem(it.id, it.qty)));

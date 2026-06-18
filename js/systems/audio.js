@@ -54,7 +54,7 @@ export class Audio {
     this.heartbeatIntensity=0;  // 0..1, ramped smoothly from HP ratio
   }
   /** @returns {void} */
-  _ensure(){ if(!this.ctx) this.ctx=new (window.AudioContext||window.webkitAudioContext)(); }
+  _ensure(){ if(!this.ctx) this.ctx=new (window.AudioContext||/** @type {any} */ (window).webkitAudioContext)(); }
 
   /**
    * @param {number} freq

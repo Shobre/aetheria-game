@@ -22,6 +22,10 @@ import { getKeybindOverrides, setKeybindOverrides } from '../ui/keybinds.js';
 import { GamepadAdapter } from './gamepad.js';
 import { Tutorial } from './tutorial.js';
 
+/**
+ * @typedef {import('./save.js').SaveState} SaveState
+ */
+
 // Display names for the toast when a companion joins. Kept in sync with
 // COMPANION_ABILITIES in companion.js (which is private to that module).
 const COMPANION_ABILITY_NAMES = {
@@ -594,8 +598,8 @@ export class Game {
     if(this._tutorialFlag) this._tutorialFlag.castSpell = true;  // Sprint 10
     const pr=sp.proj;
     const dmg=Math.round((pr.base + p.level*(pr.perLvl||0))*p.spellMul);
-    const opts={ speed:pr.speed, dmg, r:pr.r, color:pr.color, kind:pr.kind,
-      life:pr.life, aoe:pr.aoe||0, status:pr.status||null, chain:pr.chain||0 };
+    const opts = /** @type {import('../entities/enemy.js').ProjectileOpts} */ ({ speed:pr.speed, dmg, r:pr.r, color:pr.color, kind:pr.kind,
+      life:pr.life, aoe:pr.aoe||0, status:pr.status||null, chain:pr.chain||0 });
     if(sp.healOnCast) p.heal(sp.healOnCast,this);
     if(sp.nova){
       // ring of projectiles outward
@@ -962,7 +966,7 @@ export class Game {
     // pay gold + apply
     this.player.gold -= gold;
     const wasAlready = weapon.enchant;
-    applyEnchant(weapon, sc.enchant);
+    applyEnchant(weapon, /** @type {import('../data/enchantments.js').EnchantKind} */ (sc.enchant));
     // visual: big particle burst in the element color
     const info = enchantInfo(sc.enchant);
     if(info){ this.spawnParticles(this.player.x, this.player.y, info.color, 28); }
@@ -1046,6 +1050,16 @@ export class Game {
     this.toast(c.name+' left the party.');
   }
 
+  /**
+   * Build the persisted state object for SaveSystem.save/saveUser. The shape
+   * is a SaveState core (slot, level/xp/hp/mp/gold, equipment, inventory,
+   * etc.) plus runtime extensions (tutorial, weaponSkills, companions,
+   * keybinds, lastLocation, bossesDead, checkpoint, quests, achievements,
+   * boughtSpells, username, heat, _overheatCd, ammo) that the save system
+   * tolerates as extra fields. `version` is added by SaveSystem.save()
+   * itself at write time.
+   * @returns {SaveState}
+   */
   _buildState(){
     // Pull current keybind overrides so they follow the save. The rebind UI
     // owns the canonical override map; we read via the public helper so
@@ -1053,7 +1067,7 @@ export class Game {
     let keybinds = {};
     try { keybinds = getKeybindOverrides() || {}; }
     catch(e) { keybinds = {}; }
-    return { ...this.player.serialize(), slot:this.slot,
+    return /** @type {SaveState} */ (/** @type {unknown} */ ({ ...this.player.serialize(), slot:this.slot,
       map:this.currentMap, inventory:this.inventory, hotbar:this.hotbar,
       playtime:this.playtime, openedChests:this.openedChests, stash:this.stash,
       // Sprint 12: persist the home chest and the last-location for fast-travel.
@@ -1069,7 +1083,7 @@ export class Game {
       keybinds,
       tutorial: this.tutorial ? this.tutorial.detachSaveState() : undefined,
       weaponSkills:this._weaponSkills,
-      companions:this._companions.map(c=>c.serialize()) };
+      companions:this._companions.map(c=>c.serialize()) }));
   }
   save(){
     const u=this._username; if(u) SaveSystem.saveUser(u,this.slot,this._buildState()); else SaveSystem.save(this.slot,this._buildState());

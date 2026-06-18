@@ -41,6 +41,16 @@ const KEYBINDS_LS_KEY = 'aetheria_keybinds_v1';
  * @property {HTMLButtonElement|null} _resetBtn
  * @property {KeybindListening|null} _listening
  * @property {Record<string, string>} _overrides - actionId -> bound key, persisted in localStorage
+ * @property {function(KeybindMountOptions): void} mount
+ * @property {function(): void} _loadOverrides
+ * @property {function(): void} _saveOverrides
+ * @property {function(): void} applyOverridesToInput
+ * @property {function(): void} _applyOverridesToInput
+ * @property {function(): void} refresh
+ * @property {function(HTMLElement): void} _startListening
+ * @property {function(): void} _cancelListening
+ * @property {function(KeyboardEvent): void} _onGlobalKey
+ * @property {function(string): void} _setHint
  */
 
 /** @type {KeybindUIState} */
@@ -149,7 +159,7 @@ export const KeybindUI = {
     }
     // Click handlers (delegated — re-attached on each refresh)
     this._container.querySelectorAll('.kb-key').forEach(el => {
-      el.onclick = (e)=> this._startListening(e.currentTarget);
+      /** @type {HTMLElement} */ (el).onclick = (e)=> this._startListening(/** @type {HTMLElement} */ (e.currentTarget));
     });
   },
 

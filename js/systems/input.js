@@ -38,7 +38,8 @@ export class Input {
     this.mousePressed = { left:false, right:false, middle:false };
     // {actionId: key}. Live copy — mutating this object + calling .rebuild()
     // is enough to swap bindings at runtime.
-    this.bindings = { ...DEFAULT_BIND };
+    const bindings = /** @type {Record<string, string>} */ ({ ...DEFAULT_BIND });
+    this.bindings = bindings;
     this._rebuildKeyIndex();
     this._bind();
   }

@@ -607,7 +607,7 @@ export class World {
   }
   /**
    * @param {CanvasRenderingContext2D} ctx
-   * @param {import('./game.js').CameraState} cam
+   * @param {CameraState} cam
    */
   _drawPortal(ctx, p, cam){
     const sx=p.x*TILE-cam.x, sy=p.y*TILE-cam.y;
@@ -631,7 +631,7 @@ export class World {
   }
   /**
    * @param {CanvasRenderingContext2D} ctx
-   * @param {import('./game.js').CameraState} cam
+   * @param {CameraState} cam
    */
   draw(ctx, cam){
     const P=this.pal;

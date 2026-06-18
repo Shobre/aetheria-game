@@ -22,6 +22,12 @@
  * @property {boolean} stunned
  */
 
+/**
+ * @typedef {Record<StatusId, StatusInstance>} Statuses
+ *   Canonical active-status map shape, shared by Player/Enemy/Boss. Filled
+ *   by {@link applyStatus} and consumed by {@link tickStatuses}.
+ */
+
 /** @type {Record<StatusId, StatusDef>} */
 export const STATUS = {
   burn:   { name:'Burn',   color:'#ff7a2a', dot:7, tick:0.5, dur:3.0, slow:0 },
@@ -32,14 +38,17 @@ export const STATUS = {
 
 // Apply (or refresh) a status on an entity. Longer of remaining/new duration.
 /**
- * @param {{statuses?: Record<StatusId, StatusInstance>}} ent
+ * Accepts any entity-shaped object that may carry a `statuses` map. Player/Enemy/Boss
+ * are valid inputs; we only access `ent.statuses` so a structural type is enough.
+ *
+ * @param {{statuses?: Statuses}} ent
  * @param {StatusId} type
  * @param {number} [dur]
  * @returns {void}
  */
 export function applyStatus(ent, type, dur){
   const def = STATUS[type]; if(!def) return;
-  if(!ent.statuses) ent.statuses = {};
+  if(!ent.statuses) ent.statuses = /** @type {Statuses} */ (/** @type {unknown} */ ({}));
   const d = dur || def.dur;
   const cur = ent.statuses[type];
   if(cur){ cur.time = Math.max(cur.time, d); }
@@ -47,7 +56,7 @@ export function applyStatus(ent, type, dur){
 }
 
 /**
- * @param {{statuses?: Record<StatusId, StatusInstance>}} ent
+ * @param {{statuses?: Statuses}} ent
  * @param {StatusId} type
  * @returns {boolean}
  */
@@ -56,7 +65,7 @@ export function hasStatus(ent, type){ return !!(ent.statuses && ent.statuses[typ
 // Advance all statuses one frame. Returns {slow:0..1, stunned:bool}.
 // isPlayer routes lethal DoT through the right death path.
 /**
- * @param {{x:number, y:number, r:number, hp:number, statuses?: Record<StatusId, StatusInstance>, die?: (g:any)=>void, kill?: (g:any)=>void}} ent
+ * @param {{x:number, y:number, r:number, hp:number, statuses?: Statuses, die?: (g:any)=>void, kill?: (g:any)=>void}} ent
  * @param {number} dt
  * @param {{floater: (text:string, x:number, y:number, color:string) => void}} game
  * @param {boolean} isPlayer
@@ -87,7 +96,7 @@ export function tickStatuses(ent, dt, game, isPlayer){
 
 // Small colored pips above an entity to show active statuses.
 /**
- * @param {{statuses?: Record<StatusId, StatusInstance>, r:number}} ent
+ * @param {{statuses?: Statuses, r:number}} ent
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} sx
  * @param {number} sy
