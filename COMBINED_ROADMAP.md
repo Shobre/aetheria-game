@@ -631,3 +631,59 @@ for(const type in ent.statuses){
 **Lesson**: `--checkJs:true` validates the *type*, not the *runtime invariant* that `Object.keys(statuses)` returns only actual Status instances. Static gates + unit tests are necessary but never sufficient for runtime correctness on live game state — always smoke against the deployed build before claiming a sprint shipped.
 
 
+## ✅ Sprint 17 — UI/Visual Fixes (settings scroll, spell picker, weapon anchor)
+
+Shipped in the previous session (commit `2f634f8` + `835cfc4`). All three reported issues fixed:
+
+| Bug | Root cause | Fix |
+|---|---|---|
+| Settings menu overflows screen | `.modal-box` had `overflow:visible!important` blocking modal scroll, no `max-height` | `.modal-box` gets `max-height:calc(100vh-2rem)`, flex column, new `.modal-scroll` utility wraps sliders/keybinds |
+| Bought spells invisible in picker | `_openSpellPicker` only used `knownSpells(p.skills)`, excluded `_boughtSpells` | Merges `Object.keys(this.game._boughtSpells)` into the picker set (mirrors `_renderSpellShop`) |
+| Weapon dangling below character | `_drawWeaponOnPlayer` anchored at `(bx+16, by+28)` (bottom-right of body) with blade pointing down | Anchors at the hand position based on facing, rotates blade in the facing direction. Plus 3-ghost motion-blur trail on `_drawMeleeSlash` for a smoother swing |
+
++11 regression tests in `tests/run.js` (1525 total). Live Vercel verified all three fixes end-to-end (settings fits viewport, picker shows 4 items after buying 1, weapon held in hand).
+
+
+## ✅ Sprint 18 — 5 User-Reported Bugs (scrollbar, walking, cursor, enemy HP, crypt portal)
+
+User reported 5 distinct issues. All 5 reproduced in live headless Chromium **before** any code was written (`scripts/_repro_bugs.py` + `scripts/_repro_hp_bar.py`), then fixed and verified live.
+
+| Bug | Root cause | Live repro evidence | Fix |
+|---|---|---|---|
+| **Settings scrollbar ugly** | `.modal-scroll` had `overflow-y:auto` but **no `::-webkit-scrollbar` rule** — OS-default grey bar | `scrollHeight:1125` overflows 461px viewport; `has_modal_scroll_rule: false` | Added 6 webkit + scrollbar-color rules themed to gold/panel palette |
+| **Walking directions wrong** | `'up'` and `'down'` both drew eyes at positions 9+14, mouth hidden on up — visually identical | Confirmed via pixel-level skin/hair/eye detection on full screenshots | `'up'` now hides eyes entirely + overlays back-of-head hair with dangling strand; mouth only on `'down'` |
+| **No crosshair cursor** | `html`, `body`, `#game-canvas` all `cursor:auto` | DOM computed-style inspect returned `'auto'` for all three | Custom 24px SVG crosshair (gold circle + cross + center dot) applied to html/body/canvas; existing `cursor:pointer` rules on buttons preserved |
+| **No enemy health bar** | `enemy.js:874` had `if(this.hp<this.hpMax)` — bar **only rendered after first damage** | DOM scan: `has_enemy_hp_id: false`; visual: bat with full HP showed no bar | Always render bar: dark track + gold border (1px) + red fill scaled to `hp/hpMax`; new `alertFlash` field gives a brief white flash on damage (decays over 0.18s) |
+| **Crypt portal in wall** | `_genRooms` filled dungeon with WALL except random rooms; `_placeFeatures` only set portal tile to PATH — **1-tile walkable pocket**. Player spawns on portal, auto-triggers (range 26px), teleports back to forest. User sees "portal in wall, can't walk anywhere" | `loadMap('dungeon1',9,5)` → `currentMap:'dungeon1'` → 1.2s later `currentMap:'forest'`, player at (1552,1424). `smoke_maps.py` never visited dungeon1, so Sprint 15b's "50/50 maps OK" was a false pass | **(a)** `_placeFeatures` now carves a 1-tile-wide PATH corridor from each portal to the nearest room (dungeon/cave biomes); **(b)** `loadMap` pushes spawn point 32px+ away from any portal tile so the player lands safely inside the map, beyond the 26px auto-trigger range |
+
+### Live verification (deployed build, age=0s post-push)
+
+| Check | Before | After |
+|---|---|---|
+| `npm test` | 1525/1525 | **1540/1540** (+15 new regression tests) |
+| `npx tsc --noEmit` (checkJs:true) | 0 errors | **0 errors** |
+| `npm run lint` | 0 errors | **0 errors** |
+| Settings modal at 720p | overflowed 315 px | **fits viewport, overflow 0** + **gold scrollbar visible** |
+| Spell picker after buy | 3 items (bought missing) | **4 items (bought visible)** |
+| Player sprite `'up'` | eyes visible (looked like `'down'`) | **back-of-head hair, no eyes/mouth, dangling strand** |
+| Player sprite `'down'` | face visible | **face visible (unchanged)** |
+| Cursor on canvas | `auto` (OS default) | **gold SVG crosshair** |
+| Enemy HP bar (bat next to player) | invisible | **18 gold-border pixels + dark track visible above enemy** |
+| Forgotten Crypt `loadMap` | auto-teleport to forest after 1.2s | **`currentMap: 'dungeon1'` STABLE**, player at (304, 176), dungeon interior rendered (walls, paths, Bone Tyrant boss, chest) |
+| Standard smoke | 0/0/0 | **0/0/0** |
+| Map smoke | 50/50 maps OK | **50/50 maps OK** |
+| Console errors / failed requests | 0 | **0** |
+
+### Commits
+
+```
+f9af821 scripts/_repro_hp_bar.py — live HP bar pixel verification
+aa2269b Sprint 18: 5 bug fixes — scrollbar style, walking poses, crosshair cursor, enemy HP bar, crypt portal corridor
+```
+
+### Lessons (added to memory)
+
+1. **`Object.assign({}, {k1:undefined, ...})` for `Record<K,V>` is a runtime landmine** — Sprint 16 caught this; the corrected pattern is `/** @type {T} */ ({})` plus `if(!v) continue` defensive guards. Now in MEMORY.
+2. **Live smoke is non-negotiable** — `--checkJs` + lint + unit tests + map-smoke missed all 5 Sprint 18 bugs. The new headless `_repro_bugs.py` (5 sections: settings scrollbar, walking poses, cursor, enemy HP, crypt portal) is the proof for every UI/visual claim.
+3. **Sprint 15b's `smoke_maps.py` is incomplete** — it visits 50 maps but never `dungeon1` (Forgotten Crypt). The dungeon1 portal bug existed at Sprint 15b and was only caught in Sprint 18. The map smoke should iterate ALL `def.portals` and verify the player can stand on each destination tile.
+
