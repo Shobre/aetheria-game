@@ -218,7 +218,7 @@ def main():
             # Open inventory (B)
             page.keyboard.press('b')
             page.wait_for_timeout(300)
-            page.keyboard.press('escape')
+            page.keyboard.press('Escape')
             page.wait_for_timeout(300)
         except Exception as e:
             print(f'WARNING: input simulation failed: {e}', file=sys.stderr)
