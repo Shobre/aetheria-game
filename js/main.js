@@ -16,7 +16,11 @@ function getAuth(){ try{return JSON.parse(localStorage.getItem(AUTH_KEY)||'{}');
 function setAuth(a){ localStorage.setItem(AUTH_KEY, JSON.stringify(a)); }
 
 // Wire login screen
+/** @type {HTMLElement|null} */
+/** @type {HTMLElement|null} */
 const loginScreen=document.getElementById('login-screen');
+/** @type {HTMLElement|null} */
+/** @type {HTMLElement|null} */
 const startScreen=document.getElementById('start-screen');
 function showLogin(){ show('login-screen'); }
 function showStart(){ show('start-screen'); }
@@ -25,10 +29,13 @@ function showStart(){ show('start-screen'); }
 const auth=getAuth();
 if(auth.username){
   // Still show login but pre-fill
+  /** @type {HTMLInputElement|null} */
+  /** @type {HTMLInputElement|null} */
   const u=document.getElementById('login-user');
   if(u) u.value=auth.username;
 }
 
+/** @type {HTMLButtonElement|null} */
 document.getElementById('login-btn').addEventListener('click', async ()=>{
   const u=document.getElementById('login-user').value.trim().toLowerCase();
   const p=document.getElementById('login-pass').value.trim();
@@ -66,26 +73,35 @@ document.querySelectorAll('.login-tab').forEach(tab => {
 
 // ---- Sign up handler ----
 document.getElementById('signup-btn').addEventListener('click', async () => {
-  const u = document.getElementById('signup-user').value.trim().toLowerCase();
-  const p = document.getElementById('signup-pass').value.trim();
-  const p2 = document.getElementById('signup-pass2').value.trim();
-  const err = document.getElementById('signup-error');
-  if (!u) { err.textContent = 'Enter a username'; err.classList.remove('hidden'); return; }
-  if (u.length < 2) { err.textContent = 'Username must be 2+ chars'; err.classList.remove('hidden'); return; }
-  if (p.length < 3) { err.textContent = 'Password must be 3+ chars'; err.classList.remove('hidden'); return; }
-  if (p !== p2) { err.textContent = 'Passwords do not match'; err.classList.remove('hidden'); return; }
-  err.textContent = 'Creating account...'; err.classList.remove('hidden');
-  const hash = btoa(u + ':' + p);
+  /** @type {HTMLInputElement|null} */
+  /** @type {HTMLInputElement|null} */
+  const u=document.getElementById('signup-user');
+  /** @type {HTMLInputElement|null} */
+  /** @type {HTMLInputElement|null} */
+  const p=document.getElementById('signup-pass');
+  /** @type {HTMLInputElement|null} */
+  /** @type {HTMLInputElement|null} */
+  const p2=document.getElementById('signup-pass2');
+  /** @type {HTMLElement|null} */
+  /** @type {HTMLElement|null} */
+  const err=document.getElementById('signup-error');
+  if (!u || !u.value.trim()) { if(err){err.textContent='Enter a username'; err.classList.remove('hidden');} return; }
+  const username = u.value.trim().toLowerCase();
+  if (username.length < 2) { err.textContent='Username must be 2+ chars'; err.classList.remove('hidden'); return; }
+  if (!p || p.value.length < 3) { err.textContent='Password must be 3+ chars'; err.classList.remove('hidden'); return; }
+  if (!p2 || p.value !== p2.value) { err.textContent='Passwords do not match'; err.classList.remove('hidden'); return; }
+  err.textContent='Creating account...'; err.classList.remove('hidden');
+  const hash = btoa(username + ':' + p.value);
   // Try to register
-  const reg = await tursoRegister(u, hash);
+  const reg = await tursoRegister(username, hash);
   if (reg && reg.error) {
     // If user already exists, try login
-    const ok = await tursoLogin(u, hash);
-    if (!ok) { err.textContent = 'Account already exists with different password'; return; }
+    const ok = await tursoLogin(username, hash);
+    if (!ok) { err.textContent='Account already exists with different password'; return; }
   }
-  setAuth({username: u, hash});
+  setAuth({username, hash});
   err.classList.add('hidden');
-  renderSlotsWithAuth(u);
+  renderSlotsWithAuth(username);
   showStart();
 });
 
@@ -116,6 +132,8 @@ SaveSystem.newGameUser=function(username,n){
   this.saveUser(username,n,state);
   return state;
 };
+
+/** @type {HTMLCanvasElement|null} */
 
 const canvas=document.getElementById('game-canvas');
 const input=new Input(canvas);
@@ -230,6 +248,7 @@ function launchUser(state,username){
     const hbPref = localStorage.getItem('aetheria_heartbeat_v1');
     if(hbPref != null && game.audio && game.audio.setHeartbeatEnabled){
       game.audio.setHeartbeatEnabled(hbPref === '1');
+      /** @type {HTMLInputElement|null} */
       const cb=document.getElementById('set-heartbeat');
       if(cb) cb.checked = (hbPref === '1');
     }
@@ -241,6 +260,7 @@ function launchUser(state,username){
   try{
     const atPref = localStorage.getItem('aetheria_atlases_v1');
     if(atPref != null){
+      /** @type {HTMLInputElement|null} */
       const cb=document.getElementById('set-atlases');
       if(cb) cb.checked = (atPref === '1');
     }
@@ -249,15 +269,25 @@ function launchUser(state,username){
 function launch(state){ show('game-container'); game.resize(); game.start(state); applySettings(); }
 
 // ---- settings ----
+/** @type {HTMLElement|null} */
 const settingsModal=document.getElementById('settings-modal');
+/** @type {HTMLElement|null} */
 const bagModal=document.getElementById('bag-modal');
+/** @type {HTMLElement|null} */
 const charModal=document.getElementById('char-modal');
+/** @type {HTMLElement|null} */
 const skillsModal=document.getElementById('skills-modal');
+/** @type {HTMLElement|null} */
 const questsModal=document.getElementById('quests-modal');
+/** @type {HTMLElement|null} */
 const achievementsModal=document.getElementById('achievements-modal');
+/** @type {HTMLElement|null} */
 const shopModal=document.getElementById('shop-modal');
+/** @type {HTMLElement|null} */
 const stashModal=document.getElementById('stash-modal');
+/** @type {HTMLElement|null} */
 const craftModal=document.getElementById('craft-modal');
+/** @type {HTMLElement|null} */
 const enchantModal=document.getElementById('enchant-modal');
 function applySettings(){
   game.settings.shake=document.getElementById('set-shake').checked;
@@ -267,12 +297,14 @@ function applySettings(){
   game.audio.sfxVol=document.getElementById('set-sfx').value/100;
   if(game.audio.applyMusicVol) game.audio.applyMusicVol();
   // Sprint 9: heartbeat toggle
+  /** @type {HTMLInputElement|null} */
   const hb=document.getElementById('set-heartbeat');
   if(hb && game.audio.setHeartbeatEnabled){
     game.audio.setHeartbeatEnabled(hb.checked);
     try{ localStorage.setItem('aetheria_heartbeat_v1', hb.checked ? '1' : '0'); }catch(e){}
   }
   // Sprint 11: atlas toggle
+  /** @type {HTMLInputElement|null} */
   const at=document.getElementById('set-atlases');
   if(at){
     setUseAtlases(at.checked);
@@ -365,6 +397,7 @@ window.addEventListener('keydown', e=>{
     achievementsModal.classList.contains('hidden')?openAchievements():closeModal(achievementsModal);
   }
   if(game.input.wasPressed('toggle_combat_log')){
+    /** @type {HTMLElement|null} */
     const cl=document.getElementById('combat-log-modal');
     if(cl.classList.contains('hidden')) openModal(cl);
     else closeModal(cl);
@@ -374,6 +407,7 @@ window.addEventListener('keydown', e=>{
   }
   if(game.input.wasPressed('toggle_map')){
     if(!game.hud) return;
+    /** @type {HTMLElement|null} */
     const fm=document.getElementById('fullmap-modal');
     if(fm.classList.contains('hidden')){ game.hud.showFullMap(); openModal(fm); } else closeModal(fm);
   }
