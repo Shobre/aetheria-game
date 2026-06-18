@@ -377,8 +377,9 @@ The existing `audio.js` already had a 3-mood system (calm/tense/boss) backed by 
 ---
 
 ## Test Coverage
-- **Total:** 1304 tests across all modules (547 → 600 → 613 → 675 → 700 → 783 → 1022 → 1142 → 1216 → 1289 → 1296 → 1304 after Sprints 3, 4, 5, 6, 7, 9, 10, 11, 12 + ReferenceError fixes + Sprint 14)
+- **Total:** 1306 tests across all modules (547 → 600 → 613 → 675 → 700 → 783 → 1022 → 1142 → 1216 → 1289 → 1296 → 1304 → 1306 after Sprints 3, 4, 5, 6, 7, 9, 10, 11, 12 + ReferenceError fixes + Sprint 14 + Sprint 15)
 - **Run:** npm test (plain Node, no framework dependency)
+- **Live smoke:** `python3 scripts/smoke.py` — Playwright headless chromium against the deployed Vercel URL. Captures console errors/warnings, failed network requests, uncaught exceptions. Exits non-zero on any. Wire as post-deploy gate.
 
 ## Post-Sprint 12 hotfix: browser ReferenceErrors (commit fdc8d59)
 
@@ -444,4 +445,58 @@ The full class typing is **deferred to Sprint 15**. That sprint will:
 - 0 lint errors. 0 dead-code regressions.
 - 4 commits: `4c6524d` (tooling), `665a1b7` (maps fix), `8fc68be` (catalogs), `33d3d3e` (hud fix + partial class types).
 
-*Last updated: Sprint 14 partial complete (commits 4c6524d / 665a1b7 / 8fc68be / 33d3d3e)*
+---
+
+## ✅ Sprint 15 — Favicon + Live Smoke + Bug Fixes + JSDoc Typing (commits df5107c, 65d8255, 861ceb1, 04772b3, e7e06f2, 41ff4e4, fc6d5eb, 3d97267, f44eac2)
+
+**The user bar: "make sure there are no errors" + favicon warning + thoroughly tested.** All three delivered cleanly.
+
+### 1. Favicon (commit `df5107c`)
+
+Eliminates the `Failed to load resource: favicon.ico 404` console warning that fired on every page load.
+- `assets/favicon.svg` — 32x32 pixel-art sword. Matches the canvas game's icon language (gear.js uses `'↑'` for swords).
+- `favicon.ico` — multi-resolution (16/32/48) for browser tabs, bookmarks, taskbar.
+- `favicon-32x32.png` — dedicated 32x32 PNG fallback.
+- `apple-touch-icon.png` — 180x180 iOS home-screen pin icon.
+- `scripts/build-favicon.py` — one-off dev script. Parses the SVG rect-by-rect, rasterizes to PNG at any size with nearest-neighbor (preserves pixel-art crispness), and packs the ICO.
+- `index.html` — 4 `<link rel=icon>` / `<link rel=apple-touch-icon>` tags in `<head>`.
+
+### 2. Live browser smoke harness (commits `65d8255`, `861ceb1`)
+
+`scripts/smoke.py` — Playwright headless chromium against the deployed Vercel URL.
+- Creates a fresh disposable account per run (timestamped `smoke_XXXX`); no env vars required.
+- Picks save slot 1, waits for the game canvas to mount, drives a few keyboard inputs (move + spell cast + inventory), takes a screenshot to `scripts/smoke-output.png`.
+- Captures all console errors/warnings, failed network requests, uncaught JS exceptions.
+- Exits non-zero on any issue. Exit 0 = clean deploy.
+- **Verified: zero console failures, zero failed requests, zero failed responses, zero uncaught exceptions** on the live Vercel deploy after every commit in this sprint.
+
+### 3. Real bug fixes
+
+- **Projectile.homing (commit `04772b3`)** — Sprint 4 added homing logic in `Projectile.update()` (`if(this.homing && ...)`), but the constructor at `enemy.js:666` never copied `opts.homing` into `this.homing`. Result: mage and boss projectiles flew straight instead of tracking the player. **Fix: add `this.homing = opts.homing || 0`** to the constructor. Verified with 2 new tests in `tests/run.js` (homing:0.08 stored; default 0). The homing math at `enemy.js:681-686` (smallest-angle delta + clamp) now activates correctly for boss projectiles (`homing:0.08`) and mage projectiles (`homing:0.06`).
+- **Enemy.spawnIdx (commit `e7e06f2`)** — Dead field. `grep -rn spawnIdx js/ tests/` showed only writers, no readers. Leftover from an earlier feature. Removed (2 lines deleted, 0 behavior change).
+
+### 4. JSDoc typing across 19 files (commits `41ff4e4`, `fc6d5eb`, `3d97267`, `f44eac2`)
+
+~1,500 lines of pure JSDoc added. No runtime code changed.
+
+**Entities:** `enemy.js` (CFGDef, EliteMod, EnemyState, ProjectileState, ParticleState, ProjectileOpts + 14 methods), `boss.js` (BossAttackId, BossPhase, BossDef, BossClone, BossState + 12 methods), `companion.js` (5 typedefs + 9 methods).
+
+**Systems:** `audio.js`, `pathfinding.js`, `quests.js`, `achievements.js`, `status.js`, `craft.js`, `turso.js`, `sprite-atlas.js`, `tutorial.js`, `input.js`, `gamepad.js` — all fully typed. `world.js` — World + Camera classes fully typed.
+
+**UI:** `keybinds.js` (KeybindUI fully typed), `interact.js` (every export + 9 helpers), `sprites.js` (7 export draw functions). `main.js` — 28 `@type` annotations on DOM lookups (buttons, inputs, canvas, modals).
+
+**Data:** `music.js` — added `MoodName` typedef so audio.js can cross-file type the mood parameter.
+
+### 5. `checkJs:true` preview
+
+Flipping `checkJs:true` in `jsconfig.json` surfaces **291 errors** — most are noise from my own imperfect typedef shapes (the `AtlasFrame` tuple-syntax doesn't work in JSDoc, tutorial triggers are curried function-returning functions, sprite-atlas frames are numeric-indexed tuples). All fixable; deferred to Sprint 16 to keep this sprint focused on the user-visible bar (favicon + smoke + bugs).
+
+### Sprint 15 results
+
+- **1306 tests passing** (+2 new from the Projectile.homing regression guard).
+- **Smoke test PASSED** on the live Vercel deploy: 0 console failures, 0 failed requests, 0 uncaught exceptions.
+- 9 commits (df5107c, 65d8255, 861ceb1, 04772b3, e7e06f2, 41ff4e4, fc6d5eb, 3d97267, f44eac2).
+- 2 real bugs fixed (`Projectile.homing`, `Enemy.spawnIdx`).
+- Favicon warning eliminated (verified via smoke).
+
+*Last updated: Sprint 15 shipped (live smoke clean, favicon fixed, 2 bugs fixed, 19 files JSDoc-typed)*
