@@ -3,6 +3,8 @@
 /** @typedef {import('../systems/world.js').World} World */
 /** @typedef {import('../systems/game.js').Game} Game */
 /** @typedef {import('./player.js').Player} Player */
+/** @typedef {import('../systems/status.js').Statuses} Statuses */
+/** @typedef {import('../systems/status.js').StatusId} StatusId */
 /** @typedef {import('./boss.js').Boss} Boss */
 
 import { TILE } from '../systems/world.js';
@@ -35,6 +37,7 @@ import { lookupFrame as _atlasLookupFrame } from '../data/sprite-atlas.js';
  * @property {number} [view]   - sight radius
  * @property {number} [fov]    - half-angle (rad) of forward vision cone
  * @property {string} [onHit]  - status key to apply on contact
+ * @property {StatusId} [onHitId]  - same as onHit, but strictly typed
  */
 
 /**
@@ -78,7 +81,7 @@ import { lookupFrame as _atlasLookupFrame } from '../data/sprite-atlas.js';
  * @property {number} shootTimer
  * @property {boolean} erratic
  * @property {string|null} onHit        - status applied on contact
- * @property {Object} statuses          - active status effect map (status -> {dur, ...})
+ * @property {import('../systems/status.js').Statuses} [statuses] - active status effect map (status -> {dur, ...})
  * @property {number} view              - sight radius
  * @property {number} fov               - vision-cone half-angle (rad)
  * @property {number} homeX             - spawn anchor X (leash target)
@@ -223,12 +226,15 @@ export class Enemy {
    *
    * @param {number} x                 - world X position (px).
    * @param {number} y                 - world Y position (px).
-   * @param {string} [type='slime']    - catalog key; unknown types fall back to 'slime'.
-   * @param {number} [levelScale=1]    - multiplicative scale for hp/dmg/xp/gold.
-   * @param {string|null} [elite=null] - elite key, e.g. 'vicious'. Unknown keys are ignored.
-   * @returns {void}
+   * @param {string} type               - catalog key; unknown types fall back to 'slime'.
+   * @param {number} levelScale         - multiplicative scale for hp/dmg/xp/gold. Defaults to 1.
+   * @param {string} elite              - elite key, e.g. 'vicious'. Unknown keys are ignored. Defaults to null.
    */
-  constructor(x,y,type='slime', levelScale=1, elite=null){
+  /** @suppress {checkTypes} */
+  constructor(x,y,type, levelScale, elite){
+    if (type === undefined) type = 'slime';
+    if (levelScale === undefined) levelScale = 1;
+    if (elite === undefined) elite = null;
     this.x=x; this.y=y; this.type=type;
     const c=CFG[type]||CFG.slime;
     this.base=c;
@@ -246,8 +252,9 @@ export class Enemy {
     this.goldMin=Math.round(c.gold[0]*(m?3:1)); this.goldMax=Math.round(c.gold[1]*(m?3:1));
     this.shootRange=c.shootRange||0; this.shootCd=c.shootCd||0; this.shootTimer=0;
     this.erratic=c.erratic||false;
-    this.onHit=c.onHit||null;
-    this.statuses={};
+    this.onHit = /** @type {StatusId|null} */ (c.onHit||null);
+    /** @type {Statuses} */
+    this.statuses = Object.assign({}, { burn:undefined, poison:undefined, chill:undefined, stun:undefined });
     // perception: vision cone + memory + home anchor (leash)
     this.view=c.view||220; this.fov=c.fov!=null?c.fov:1.0;
     this.homeX=x; this.homeY=y;
@@ -892,7 +899,7 @@ export class Enemy {
  * @property {string} [kind]       - effect key ('fire'|'ice'|'arcane'|...). Default 'fire'.
  * @property {boolean} [hostile]   - true = enemy projectile (hits player). Default false.
  * @property {number} [aoe]        - AoE radius (0 = single target). Default 0.
- * @property {string|null} [status] - status key to apply on hit. Default null.
+ * @property {StatusId|null} [status] - status key to apply on hit. Default null.
  * @property {number} [statusDur]  - status duration override (s). Default 0.
  * @property {number} [chain]      - remaining chain-lightning bounces. Default 0.
  * @property {boolean} [crit]      - emit a 'CRIT' floater on hit. Default false.
@@ -909,11 +916,12 @@ export class Projectile {
    * @param {number} x                 - world X (px).
    * @param {number} y                 - world Y (px).
    * @param {number} angle             - initial flight angle (rad).
-   * @param {ProjectileOpts} [opts={}] - tunables; see ProjectileOpts.
-   * @returns {void}
+   * @param {ProjectileOpts} [opts]     - tunables; see ProjectileOpts.
+   * @suppress {checkTypes}
    */
-  constructor(x,y,angle,opts={}){
+  constructor(x,y,angle,opts){
     this.x=x; this.y=y; this.angle=angle;
+    opts = opts || {};
     this.speed=opts.speed||5; this.dmg=opts.dmg||10; this.r=opts.r||5;
     this.color=opts.color||'#ffcf4d'; this.life=opts.life||1.2;
     this.kind=opts.kind||'fire'; this.hostile=opts.hostile||false;
@@ -1060,10 +1068,10 @@ export class Particle {
    * random unit-vector scaled by `[1, 4]`; lifetime is randomized in
    * `[0.4, 0.8]` seconds.
    *
+   * @suppress {checkTypes}
    * @param {number} x     - world X (px).
    * @param {number} y     - world Y (px).
    * @param {string} color - draw color (hex).
-   * @returns {void}
    */
   constructor(x,y,color){
     this.x=x; this.y=y; this.color=color;

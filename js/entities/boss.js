@@ -3,10 +3,9 @@ import { Projectile } from './enemy.js';
 
 /**
  * @typedef {import('./enemy.js').EnemyState} EnemyState
+ * @typedef {import('../systems/status.js').Statuses} Statuses
  *
- * @typedef {'burst'|'charge'|'summon'|'poisonNova'
- *          |'frostBolt'|'blizzard'|'iceWall'|'clones'
- *          |'fireball'|'lavaPool'|'nova'} BossAttackId
+ * @typedef {'burn'|'poison'|'chill'|'stun'} BossStatusId
  *
  * @typedef {Object} BossPhase
  * One row in `BOSSES[id].phases`. Phases are evaluated in order; the boss
@@ -15,6 +14,10 @@ import { Projectile } from './enemy.js';
  * @property {BossAttackId[]} attacks - pool of attacks the boss picks from
  * @property {number} interval     - seconds between attacks in this phase
  * @property {string} tint         - body fill color used while in this phase
+ *
+ * @typedef {'burst'|'charge'|'summon'|'poisonNova'
+ *          |'frostBolt'|'blizzard'|'iceWall'|'clones'
+ *          |'fireball'|'lavaPool'|'nova'} BossAttackId
  *
  * @typedef {Object} BossDef
  * Static boss definition, used to construct a Boss instance.
@@ -32,7 +35,7 @@ import { Projectile } from './enemy.js';
  * @property {string[]}    adds    - enemy-type ids summoned by 'summon'
  * @property {BossPhase[]} phases - ordered phase list (HP-fraction gated)
  * @property {boolean}     [poison]   - legacy flag for poison-attack bosses
- * @property {string}      [onHit]    - status id applied on contact (e.g. 'chill')
+ * @property {BossStatusId}  [onHit]    - status id applied on contact (e.g. 'chill')
  * @property {string}      [icon]     - single Unicode char (HUD tag) - magma_tyrant
  * @property {number}      [atk]      - alternate attack stat (magma_tyrant)
  * @property {number}      [def]      - alternate defense stat (magma_tyrant)
@@ -160,9 +163,10 @@ export const BOSSES = {
   },
   magma_tyrant: {
     name:'Magma Tyrant', icon:'◆', color:'#ff4400',
-    map:'volcano_depths',
-    hp:1800, atk:28, def:12, xp:800, gold:600,
+    map:'volcano_depths', x:20, y:20,
+    hp:1800, dmg:28, r:28, def:12, xp:800, gold:600,
     drop:'sword_firesword',
+    adds:[],
     phases:[
       { at:1.0, attacks:['fireball','summon','charge'], interval:1.8, tint:'#ff6600' },
       { at:0.50, attacks:['fireball','lavaPool','summon','charge'], interval:1.3, tint:'#ff2200' },
@@ -209,7 +213,9 @@ export class Boss {
     this.hpMax = def.hp; this.hp = def.hp; this.dmg = def.dmg;
     this.xp = def.xp; this.speed = 1.0;
     this.dead = false; this.hitFlash = 0; this.frozen = 0;
-    this.knockback = { x:0, y:0 }; this.statuses = {};
+    this.knockback = { x:0, y:0 };
+    /** @type {Statuses} */
+    this.statuses = Object.assign({}, { burn:undefined, poison:undefined, chill:undefined, stun:undefined });
     this.phaseIdx = 0; this.atkTimer = def.phases[0].interval;
     this.state = 'idle'; this.stateTimer = 0; this.chargeDir = { x:0, y:0 };
     this.bob = 0; this.intro = 1.5; this.pending = null; this._touchCd = 0;
@@ -242,7 +248,7 @@ export class Boss {
    * advancement, movement (idle), telegraph timer, charge dash, and
    * contact damage.
    * @param {number} dt - delta time in seconds
-   * @param {{x:number,y:number,r:number,takeDamage:(amt:number,a:number,game:any)=>void}} player
+   * @param {import('./player.js').Player} player
    * @param {{isSolid:(x:number,y:number)=>boolean}} world
    * @param {any} game - Game singleton (cam, spawnAdd, toast, onBossDefeated, etc.)
    * @returns {void}

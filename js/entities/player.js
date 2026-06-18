@@ -6,7 +6,7 @@ import { SPELLS, STARTER_SPELLS } from '../data/spells.js';
 import { drawPlayerSprite } from '../sprites.js';
 
 /**
- * @typedef {import('./save.js').SaveState} SaveState
+ * @typedef {import('../systems/save.js').SaveState} SaveState
  * @typedef {import('../data/gear.js').Item} Item
  * @typedef {import('../data/gear.js').ItemStats} ItemStats
  * @typedef {import('../data/gear.js').EquipSlot} EquipSlot
@@ -55,7 +55,7 @@ import { drawPlayerSprite } from '../sprites.js';
  * @property {boolean} _parried
  * @property {Record<string, number>} ammo
  * @property {[string,string,string]} spellSlots
- * @property {Object<string, number>} statuses
+ * @property {import('../systems/status.js').Statuses} statuses
  * @property {number} flash
  * @property {boolean} dead
  */
@@ -63,7 +63,9 @@ import { drawPlayerSprite } from '../sprites.js';
 export class Player {
   constructor(x,y,state){
     this.x=x; this.y=y; this.r=12;
-    this.baseSpeed=1.9; this.dir={x:0,y:1}; this.facing='down';
+    this.baseSpeed=1.9; this.dir={x:0,y:1};
+    /** @type {'down'|'up'|'left'|'right'} */
+    this.facing='down';
     // persistent stats
     this.level=state.level; this.xp=state.xp; this.xpNext=state.xpNext;
     this.gold=state.gold;
@@ -100,7 +102,7 @@ export class Player {
     // load heat state
     this.heat=state.heat||0;
     this._overheatCd=state._overheatCd||0;
-    this.statuses={};
+    this.statuses = state.statuses || Object.assign({}, { burn:undefined, poison:undefined, chill:undefined, stun:undefined });
     this.flash=0; this.dead=false;
   }
 
@@ -326,7 +328,7 @@ export class Player {
     // Body is now drawn by the sprite module. Kept as a thin wrapper so the
     // existing draw() signature still composes the body, dodge ghost, etc.
     const bob = Math.sin(performance.now()/600) * 1.2;
-    drawPlayerSprite(ctx, sx, sy, this.facing, this.equipment, {
+    drawPlayerSprite(ctx, sx, sy, /** @type {'down'|'up'|'left'|'right'} */ (this.facing), this.equipment, {
       flash, invuln: this.invuln > 0, blocking: this.blocking,
       attacking: this.attacking, attackProgress: 1 - (this.attacking / 0.18),
       bob,
