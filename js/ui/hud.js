@@ -12,6 +12,13 @@ import { drawArmorIcon, drawHelmIcon, drawShieldIcon, drawRingIcon, drawWeaponIc
 import { ACHIEVEMENTS, ACHIEVEMENT_CATS, achievementStats } from '../data/achievements.js';
 import { ENCHANTMENTS, enchantCost, enchantInfo } from '../data/enchantments.js';
 
+/**
+ * @typedef {import('../data/gear.js').Item} Item
+ * @typedef {import('../data/gear.js').ItemDef} ItemDef
+ * @typedef {import('../data/spells.js').Spell} Spell
+ * @typedef {import('../data/spells.js').SpellProj} SpellProj
+ */
+
 export class HUD {
   constructor(game){
     this.game=game;
@@ -63,7 +70,7 @@ export class HUD {
     this.el.itemSlots.innerHTML='';
     for(let i=0;i<9;i++){
       const d=document.createElement('div');
-      d.className='item-slot'+(i===0?' active':''); d.dataset.idx=i;
+      d.className='item-slot'+(i===0?' active':''); d.dataset.idx=String(i);
       d.innerHTML=`<span class="key">${i+1}</span><span class="ico"></span><span class="qty"></span>`;
       d.onclick=()=>this.game.useHotbar(i);
       this._enableSwapDrag(d, i, 'hotbar');
@@ -105,7 +112,7 @@ export class HUD {
     });
   }
   _buildInventory(){ this.el.invGrid.innerHTML='';
-    for(let i=0;i<30;i++){ const c=document.createElement('div'); c.className='inv-cell'; c.dataset.idx=i;
+    for(let i=0;i<30;i++){ const c=document.createElement('div'); c.className='inv-cell'; c.dataset.idx=String(i);
       this._enableBagDrag(c,i); this.el.invGrid.appendChild(c); } }
 
   // drag an item from bag cell `from` and drop on cell `to` to reorder the inventory
@@ -133,7 +140,7 @@ export class HUD {
     const stats = achievementStats(this.game.achievements.unlocked);
     const badge = document.getElementById('achieve-badge');
     if(badge){
-      badge.textContent = stats.done;
+      badge.textContent = String(stats.done);
       badge.style.display = stats.done > 0 ? 'flex' : 'none';
     }
   }
@@ -150,14 +157,14 @@ export class HUD {
       return;
     }
     slot.style.display = '';
-    const cd = slot.querySelector('.cd');
-    const ico = slot.querySelector('.ico');
+    const cd = /** @type {HTMLElement|null} */ (slot.querySelector('.cd'));
+    const ico = /** @type {HTMLElement|null} */ (slot.querySelector('.ico'));
     if(ico) ico.textContent = comp.icon;
+    if(cd){
     // cooldown overlay: 100% when just triggered, 0% when ready
     const max = comp._abilityMaxCd || 1;
     const remain = comp._abilityCd || 0;
-    if(cd){
-      if(remain > 0){
+    if(remain > 0){
         cd.style.height = Math.min(100, (remain / max) * 100) + '%';
         cd.style.background = 'rgba(0,0,0,0.65)';
       } else {
@@ -166,7 +173,7 @@ export class HUD {
       }
     }
     // tooltip via title
-    const inner = slot.querySelector('.spell-slot');
+    const inner = /** @type {HTMLElement|null} */ (slot.querySelector('.spell-slot'));
     if(inner) inner.title = `${comp.name}: ${this._companionAbilityName(comp.kind)} (G)`;
   }
   _companionAbilityName(kind){
@@ -224,7 +231,7 @@ export class HUD {
     const bindings = (this.game.input && this.game.input.bindings) || {};
     if(el.children.length!==3){
       el.innerHTML='';
-      for(let i=0;i<3;i++){ const d=document.createElement('div'); d.className='spell-slot'; d.dataset.idx=i;
+      for(let i=0;i<3;i++){ const d=document.createElement('div'); d.className='spell-slot'; d.dataset.idx=String(i);
         const cap = labelForKey(bindings[slotActions[i]] || slotActions[i].slice(-1));
         d.innerHTML=`<span class="key">${cap}</span><span class="ico"></span><span class="rank"></span><div class="cd"></div>`;
         this._enableSwapDrag(d,i,'spell');
@@ -234,11 +241,11 @@ export class HUD {
         d.onclick=()=>this._openSpellPicker(i);
         el.appendChild(d); }
     }
-    [...el.children].forEach((d,i)=>{
+    /** @type {HTMLElement[]} */ (/** @type {*} */ ([...el.children])).forEach((d,i)=>{
       const id=p.spellSlots[i], sp=id?SPELLS[id]:null;
-      d.querySelector('.ico').textContent=sp?sp.icon:'?';
+      /** @type {HTMLElement} */ (d.querySelector('.ico')).textContent=sp?sp.icon:'?';
       const maxCd=sp?sp.cd:1;
-      d.querySelector('.cd').style.height=(p.spellCd[slotActions[i]]/maxCd*100)+'%';
+      /** @type {HTMLElement} */ (d.querySelector('.cd')).style.height=(p.spellCd[slotActions[i]]/maxCd*100)+'%';
       d.title='';
     });
   }
@@ -290,7 +297,7 @@ export class HUD {
     const p=this.game.player, inv=this.game.inventory;
     const cells=[...this.el.invGrid.children];
     const eq=this.game.player.equipment;
-    cells.forEach((c,i)=>{
+    cells.forEach(/** @type {(c: HTMLElement, i: number) => void} */ ((c,i)=>{
       const item=inv[i];
       if(item){ let cmpHtml='';
         if(item.type!=='consumable' && item.type!=='ammo'){ const cmp=compareItem(item,eq);
@@ -317,7 +324,7 @@ export class HUD {
           this.refreshBag();
         };
       } else { c.innerHTML=''; c.onclick=null; c.title=''; c.style.borderColor=''; this._hideTooltip(); }
-    });
+    }));
     this.el.goldText.textContent=this.game.player.gold;
     this.el.slotsText.textContent=`${inv.length}/30`;
     // heat bar + ammo bar (ranged weapons)
@@ -395,7 +402,7 @@ export class HUD {
   // Build rich HTML for an item (catalog id, or full item object with rolled affixes).
   _itemMeta(item){
     const isObj = typeof item==='object';
-    const cat = isObj ? (CATALOG[item.id]||{}) : (CATALOG[item]||{});
+    const cat = /** @type {ItemDef} */ (isObj ? (CATALOG[item.id]||Object.assign({}, {name:'',icon:'',type:'consumable'})) : (CATALOG[item]||Object.assign({}, {name:'',icon:'',type:'consumable'})));
     const it = isObj ? item : resolveEquip(item);
     if(!it) return null;
     const consumable = (it.type==='consumable')||(cat.type==='consumable');
@@ -447,7 +454,7 @@ export class HUD {
   _buildSpellTooltip(id, opts){
     opts=opts||{}; const sp=SPELLS[id]; if(!sp) return '';
     const p=this.game.player;
-    const pr=sp.proj||{};
+    const pr = /** @type {SpellProj} */ (sp.proj || Object.assign({}, { speed:0, base:0, perLvl:0, r:0, color:'#000', kind:'fire', life:0 }));
     const dmg=Math.round((pr.base + p.level*(pr.perLvl||0))*(p.spellMul||1));
     let html = `<div class="tt-name" style="color:#b9a7ff">${sp.icon} ${sp.name}</div>`;
     html += `<div class="tt-type">SPELL</div>`;
@@ -526,7 +533,9 @@ export class HUD {
 
   // ===== FULL MAP (M) =====
   showFullMap(){
-    const w=this.game.world, cv=document.getElementById('fullmap-canvas');
+    const w=this.game.world;
+    /** @type {HTMLCanvasElement|null} */
+    const cv = /** @type {HTMLCanvasElement|null} */ (document.getElementById('fullmap-canvas'));
     const title=document.getElementById('fullmap-title');
     if(title) title.textContent='MAP - '+w.def.name;
     if(!cv) return;
@@ -534,7 +543,7 @@ export class HUD {
     const maxW=640, maxH=460;
     const scale=Math.min(maxW/w.cols, maxH/w.rows);
     cv.width=Math.round(w.cols*scale); cv.height=Math.round(w.rows*scale);
-    const ctx=cv.getContext('2d');
+    const ctx = cv.getContext('2d');
     ctx.clearRect(0,0,cv.width,cv.height);
     // tiles
     for(let y=0;y<w.rows;y++)for(let x=0;x<w.cols;x++){
@@ -627,7 +636,7 @@ export class HUD {
     const t = item.type;
     if(t !== 'armor' && t !== 'helm' && t !== 'shield' && t !== 'ring' && t !== 'weapon') return false;
     // clear any prior canvas so refresh doesn't pile them up
-    const existing = cell.querySelector('canvas');
+    const existing = /** @type {HTMLCanvasElement|null} */ (cell.querySelector('canvas'));
     if(existing) existing.remove();
     const cv = document.createElement('canvas');
     cv.width = 24; cv.height = 24;
@@ -677,11 +686,11 @@ export class HUD {
     const buy=this.el.shopBuy; if(!buy) return;
     buy.innerHTML='';
     for(const id of stock){
-      const c=CATALOG[id], row=document.createElement('div'); row.className='shop-row';
-      const cmp=compareItem(c,eq);
+      const c=CATALOG[id], it = resolveEquip(id), row=document.createElement('div'); row.className='shop-row';
+      const cmp = it ? compareItem(it, eq) : null;
       row.innerHTML=`<span>${c.icon} ${c.name}${cmp?'<span class="cmp cmp-'+cmp.dir+'">'+cmp.text+'</span>':''}</span><span class="shop-price">${c.price}g</span>
         <button class="menu-btn shop-buy-btn" data-id="${id}">Buy</button>`;
-      row.querySelector('.shop-buy-btn').onclick=()=>{ this.game.buyItem(id); this.refreshShop(); this.refreshBag(); };
+      /** @type {HTMLElement} */ (row.querySelector('.shop-buy-btn')).onclick=()=>{ this.game.buyItem(id); this.refreshShop(); this.refreshBag(); };
       this._bindTooltip(row, ()=>this._buildItemTooltip(id,{hint:c.price+'g to buy'}));
       buy.appendChild(row);
     }
@@ -691,11 +700,12 @@ export class HUD {
     sell.innerHTML='';
     this.game.inventory.forEach(item=>{
       if(item.type==='consumable'&&(!item.qty||item.qty<=0)) return;
-      const c=CATALOG[item.id]||{}; const val=c.sell||Math.floor((c.price||0)/2);
+      const c = /** @type {ItemDef} */ (CATALOG[item.id] || Object.assign({}, { name:'', icon:'', type:'consumable', price:0, sell:0 }));
+      const val=c.sell||Math.floor((c.price||0)/2);
       const row=document.createElement('div'); row.className='shop-row';
       row.innerHTML=`<span>${item.icon} ${item.name}${item.type==='consumable'&&item.qty>1?' x'+item.qty:''}</span>
         <span class="shop-price">${val}g</span><button class="menu-btn shop-sell-btn">Sell</button>`;
-      row.querySelector('.shop-sell-btn').onclick=()=>{ this.game.sellItem(item); this.refreshShop(); this.refreshBag(); };
+      /** @type {HTMLElement} */ (row.querySelector('.shop-sell-btn')).onclick=()=>{ this.game.sellItem(item); this.refreshShop(); this.refreshBag(); };
       this._bindTooltip(row, ()=>this._buildItemTooltip(item,{hint:val+'g to sell'}));
       sell.appendChild(row);
     });
@@ -719,11 +729,11 @@ export class HUD {
         <button class="menu-btn shop-buy-btn" data-spell="${id}" data-action="${canBuy?'buy':'upgrade'}">${canBuy?'Learn':'Upgrade'}</button>`;
       spDiv.appendChild(row);
     }
-    spDiv.querySelectorAll('.shop-buy-btn').forEach(btn=>{
+    /** @type {HTMLElement[]} */ (/** @type {*} */ ([...spDiv.querySelectorAll('.shop-buy-btn')])).forEach(btn=>{
       btn.onclick=()=>{
         const sid=btn.dataset.spell, act=btn.dataset.action;
         if(act==='buy') g.buySpell(sid); else g.upgradeSpell(sid);
-        this.refreshShop(); this.hud&&this.hud._updateSpellLoadout();
+        this.refreshShop(); this._updateSpellLoadout();
       };
     });
     if(!shown.size) spDiv.innerHTML='<p class="text-[9px] text-gray-500">No spells available.</p>';
@@ -809,11 +819,11 @@ export class HUD {
       <div class="craft-hint">${canUp?'Raises rarity one tier and re-rolls for the higher tier.':'Already legendary.'}</div>
       ${sec?`<button class="menu-btn craft-btn" id="craft-strip" ${gold<sec?'disabled':''}>Strip Enchant — ${sec}g</button>
       <div class="craft-hint">Removes the current enchant and returns the matching scroll to your bag.</div>`:''}`;
-    const rb=d.querySelector('#craft-reforge'); if(rb) rb.onclick=()=>{ const ni=this.game.reforgeItem(it);
+    const rb=/** @type {HTMLElement|null} */ (d.querySelector('#craft-reforge')); if(rb) rb.onclick=()=>{ const ni=this.game.reforgeItem(it);
       if(ni) this._craftSel=ni; this.refreshCraft(); };
-    const ub=d.querySelector('#craft-upgrade'); if(ub) ub.onclick=()=>{ const ni=this.game.upgradeItem(it);
+    const ub=/** @type {HTMLElement|null} */ (d.querySelector('#craft-upgrade')); if(ub) ub.onclick=()=>{ const ni=this.game.upgradeItem(it);
       if(ni) this._craftSel=ni; this.refreshCraft(); };
-    const sb=d.querySelector('#craft-strip'); if(sb) sb.onclick=()=>{ this.game.stripEnchantFromItem(it); this.refreshCraft(); };
+    const sb=/** @type {HTMLElement|null} */ (d.querySelector('#craft-strip')); if(sb) sb.onclick=()=>{ this.game.stripEnchantFromItem(it); this.refreshCraft(); };
   }
 
   // ===== ENCHANT (Arcane Anvil) =====
@@ -861,7 +871,7 @@ export class HUD {
         const k = CATALOG[s.id].enchant;
         if(seen.has(k)) continue;
         seen.add(k);
-        const info = enchantInfo(k) || {name:k, color:'#ffcf4d', desc:''};
+        const info = enchantInfo(k) || {name:k, color:'#ffcf4d', desc:'', short:''};
         const totalQty = scrolls.filter(x => CATALOG[x.id] && CATALOG[x.id].enchant === k).reduce((a,x)=>a+(x.qty||1), 0);
         const row = document.createElement('div');
         row.className = 'shop-row';
@@ -887,7 +897,7 @@ export class HUD {
           <div class="craft-affix" style="color:${col}">${info ? info.desc : ''}</div>
           <div class="text-[9px] text-gray-400">Cost: <span class="text-gold">${cost}g</span> + 1× ${CATALOG[sid].name}</div>
           <div class="mt-2"><button id="enchant-go" class="menu-btn">BIND ENCHANTMENT</button></div>`;
-        const btn = det.querySelector('#enchant-go');
+        const btn = /** @type {HTMLElement|null} */ (det.querySelector('#enchant-go'));
         if(btn) btn.onclick = ()=>{
           const ni = g.enchantItemWith(w, sid);
           if(ni){
@@ -955,7 +965,8 @@ export class HUD {
     });
     // rows
     wrap.innerHTML = '';
-    const list = Object.values(ACHIEVEMENTS);
+    // Object.entries gives us the key as the id alongside the def.
+    const list = Object.entries(ACHIEVEMENTS).map(([id, a]) => /** @type {import('../data/achievements.js').AchievementDef} */ ({ ...a, id }));
     const filtered = this._achieveActiveCat === 'all' ? list : list.filter(a => a.cat === this._achieveActiveCat);
     if(!filtered.length){
       wrap.innerHTML = '<div class="text-[9px] text-gray-500 text-center py-6">No achievements in this category.</div>';

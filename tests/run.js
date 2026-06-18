@@ -477,7 +477,11 @@ console.log('=== elites + biome bosses ===');
   const enemySrc = readFileSync(new URL('../js/entities/enemy.js', import.meta.url), 'utf8');
   ok('enemy exports rollEliteMod', enemySrc.includes('export function rollEliteMod'));
   ok('enemy has ELITE_MODS', enemySrc.includes('ELITE_MODS'));
-  ok('constructor takes elite param', /constructor\(x,y,type='slime', levelScale=1, elite=null\)/.test(enemySrc));
+  // Sprint 16: switched to explicit-undefined checks so --checkJs can validate
+  // the constructor parameter list without TS1093 ("Type annotation cannot
+  // appear on a constructor declaration"). The behavior is identical: all
+  // three parameters default in the body if not passed.
+  ok('constructor takes elite param', /constructor\(x,y,type, levelScale, elite\)/.test(enemySrc));
   ok('elites buff hp/dmg', enemySrc.includes('levelScale*hpMul') && enemySrc.includes('levelScale*dmgMul'));
   ok('elites guarantee gear on death', /this\.elite[\s\S]*?game\.dropGear/.test(enemySrc));
   ok('elites draw an aura', enemySrc.includes('eliteMod.aura'));
@@ -2848,6 +2852,26 @@ console.log('\n=== smoke test: dynamic import of all boot-path modules (Sprint 1
   ok('boot-path modules: 0 ReferenceErrors', smoke.result.referenceErrors.length === 0);
   ok('boot-path modules: ' + smoke.result.modules.length + ' modules checked',
      smoke.result.modules.length >= 5);
+
+  // ===== SPRINT 16: checkJs:true regression guard =====
+  // `jsconfig.json` has `checkJs:true` and `tsc --noEmit` is wired as
+  // `npm run typecheck`. This guard invokes tsc in --checkJs mode and
+  // asserts zero errors. Catches future regressions where a JSDoc typing
+  // hole, missing import('...').Type, or weak `{}` literal slips back in.
+  // Runs in a child process so tsc's exit code can't short-circuit the
+  // test harness.
+  console.log('\n=== typecheck: tsc --checkJs (Sprint 16 regression guard) ===');
+  const { spawnSync } = await import('node:child_process');
+  const tc = spawnSync('npx', ['tsc', '--noEmit', '--project', 'jsconfig.json'],
+                       { encoding: 'utf8', cwd: process.cwd() });
+  const tcOut = (tc.stdout || '') + (tc.stderr || '');
+  const tcErrs = (tcOut.match(/error TS\d+/g) || []).length;
+  ok('tsc --checkJs: 0 errors', tcErrs === 0);
+  ok('tsc --checkJs: exit code 0', tc.status === 0);
+  if(tcErrs > 0 || tc.status !== 0){
+    console.log('  ! typecheck failed — sample output:');
+    console.log('    ' + tcOut.split('\n').filter(l => l.includes('error TS')).slice(0, 5).join('\n    '));
+  }
   // Each module should either load OK or fail with a known browser-only
   // error (canvas.getContext, document is undefined, etc.). The summary
   // above tags those as "browser-only (expected)".
