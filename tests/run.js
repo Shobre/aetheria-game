@@ -487,6 +487,25 @@ console.log('=== elites + biome bosses ===');
   ok('elites draw an aura', enemySrc.includes('eliteMod.aura'));
   const gameSrc = readFileSync(new URL('../js/systems/game.js', import.meta.url), 'utf8');
   ok('game rolls elites on spawn', gameSrc.includes('rollEliteMod(') && gameSrc.includes('eliteChance'));
+
+  // ===== Sprint 16: tickStatuses must never throw on undefined-valued status keys =====
+  // History: the initial Sprint 16 fix used `Object.assign({}, {burn:undefined, ...})`
+  // to satisfy Record<StatusId,StatusInstance>. That left undefined values under the
+  // StatusId keys, which made `for(const t in ent.statuses)` iterate them and crash
+  // on `st.time -= dt`. The fix casts `{}` directly via @type and adds a defensive
+  // `if(!st) continue;` in tickStatuses. These tests guard both halves.
+  const statusSrc = readFileSync(new URL('../js/systems/status.js', import.meta.url), 'utf8');
+  ok('tickStatuses skips undefined entries',
+     /for\(const type in ent\.statuses\)[\s\S]{0,80}?if\(!st\) continue/.test(statusSrc));
+  const playerSrc2 = readFileSync(new URL('../js/entities/player.js', import.meta.url), 'utf8');
+  ok('player.statuses does not plant undefined keys',
+     !playerSrc2.includes('Object.assign({}, { burn:undefined'));
+  const enemySrc2 = readFileSync(new URL('../js/entities/enemy.js', import.meta.url), 'utf8');
+  ok('enemy.statuses does not plant undefined keys',
+     !enemySrc2.includes('Object.assign({}, { burn:undefined'));
+  const bossSrc = readFileSync(new URL('../js/entities/boss.js', import.meta.url), 'utf8');
+  ok('boss.statuses does not plant undefined keys',
+     !bossSrc.includes('Object.assign({}, { burn:undefined'));
   ok('game snaps boss off solid tiles', /this\.boss\.x[\s\S]*?nearestOpen/.test(gameSrc));
   // rollEliteMod returns a known key deterministically
   const k = enemySrc.match(/ELITE_MODS = \{([\s\S]*?)\n\};/);

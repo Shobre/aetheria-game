@@ -8,7 +8,7 @@ import { drawPlayerSprite } from '../sprites.js';
 /**
  * @typedef {import('../systems/save.js').SaveState} SaveState
  * @typedef {import('../data/gear.js').Item} Item
- * @typedef {import('../data/gear.js').ItemStats} ItemStats
+ * @typedef {import('../systems/status.js').Statuses} Statuses
  * @typedef {import('../data/gear.js').EquipSlot} EquipSlot
  */
 
@@ -102,7 +102,7 @@ export class Player {
     // load heat state
     this.heat=state.heat||0;
     this._overheatCd=state._overheatCd||0;
-    this.statuses = state.statuses || Object.assign({}, { burn:undefined, poison:undefined, chill:undefined, stun:undefined });
+    this.statuses = state.statuses || /** @type {Statuses} */ ({});
     this.flash=0; this.dead=false;
   }
 

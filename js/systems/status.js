@@ -76,6 +76,7 @@ export function tickStatuses(ent, dt, game, isPlayer){
   let slow = 0, stunned = false;
   for(const type in ent.statuses){
     const st = ent.statuses[type], def = STATUS[type];
+    if(!st) continue; // defensive: skip undefined-valued keys (shouldn't happen, but tickStatus must never throw)
     st.time -= dt;
     if(st.time <= 0){ delete ent.statuses[type]; continue; }
     if(def.dot > 0){

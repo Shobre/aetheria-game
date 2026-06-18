@@ -254,7 +254,7 @@ export class Enemy {
     this.erratic=c.erratic||false;
     this.onHit = /** @type {StatusId|null} */ (c.onHit||null);
     /** @type {Statuses} */
-    this.statuses = Object.assign({}, { burn:undefined, poison:undefined, chill:undefined, stun:undefined });
+    this.statuses = /** @type {Statuses} */ ({});
     // perception: vision cone + memory + home anchor (leash)
     this.view=c.view||220; this.fov=c.fov!=null?c.fov:1.0;
     this.homeX=x; this.homeY=y;

@@ -215,7 +215,7 @@ export class Boss {
     this.dead = false; this.hitFlash = 0; this.frozen = 0;
     this.knockback = { x:0, y:0 };
     /** @type {Statuses} */
-    this.statuses = Object.assign({}, { burn:undefined, poison:undefined, chill:undefined, stun:undefined });
+    this.statuses = /** @type {Statuses} */ ({});
     this.phaseIdx = 0; this.atkTimer = def.phases[0].interval;
     this.state = 'idle'; this.stateTimer = 0; this.chargeDir = { x:0, y:0 };
     this.bob = 0; this.intro = 1.5; this.pending = null; this._touchCd = 0;
